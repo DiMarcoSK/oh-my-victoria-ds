@@ -1,0 +1,13 @@
+classDiagram
+  class Tile { +u8 owner troops terrain bld site happy +u8 popA popB +u8 moveCd atkCd dstX dstY }
+  class Faction { +s16 treasury stock[8] +s16 priceInt sup dem +u8 tax morale rel tariff +u8 literacy militancy +u16 tiles troops prestige pop }
+  class Markets { +s16 priceExt sup dem +uniao ALLY tarifa0 }
+  class GameState { +Tile t[24][32] +Faction f[4] +u8 dip[4][4] +u32 day rng seed +u8 weather evt evtX evtY +bool over dirty menu paused }
+  class Economy { +Eco_Day Cost Build FortUp Recruit Tax +23 obras throughput }
+  class Pops { +Pop_Day Need Count Add +4 classes }
+  class Events { +Evt_Day Name +8 eventos +clima }
+  GameState *-- Tile
+  GameState *-- Faction
+  Economy --> Markets
+  Pops --> Markets
+  Events --> Economy

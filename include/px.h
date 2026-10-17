@@ -1,0 +1,34 @@
+#pragma once
+#include "types.h"
+// px.h — engine de video v0.8: mapa pintado (cartografia, 16px/tile) num
+// buffer-mundo 512x384 "cozido" por tile sob demanda; a tela baixo e um
+// VIEWPORT com copia por row (pan suave por caneta) + overlays animados.
+// Tela cima = HUD executivo (informacao, minimapa, evento) ou arte do menu.
+// fonte 3x5 propria (+ escala 2x), primitivas pixel, zero malloc.
+enum { PX_WORLD_W=MAP_W*16, PX_WORLD_H=MAP_H*16 };
+void Px_Init(void);
+u16 *Px_BackTop(void);
+u16 *Px_BackBot(void);
+u16 Px_Col(u8 r,u8 g,u8 b);
+void Px_PSet(u16 *b,int x,int y,u16 c);
+void Px_Rect(u16 *b,int x,int y,int w,int h,u16 c);
+void Px_Border(u16 *b,int x,int y,int w,int h,u16 c);
+void Px_Clear(u16 *b,u16 c);
+void Px_FlipTop(void);
+void Px_FlipBot(void);
+// Telas: Px_Top = HUD (ou arte do menu); Px_Bot = mapa tocavel (ou menu).
+// Px_Tick: continua o "bakery" do buffer-mundo (barato espalhado por frames).
+void Px_Top(GameState *g);
+void Px_Bot(GameState *g);
+void Px_Tick(GameState *g);
+// Fonte: Px_Text= painel baixo; Px_TextTop= tela cima; Px_TextSc= explcito
+// em buffer, com escala (1=3x5, 2=6x10) para numeros grandes.
+void Px_Text(int x,int y,const char *s,u16 col);
+void Px_TextTop(int x,int y,const char *s,u16 col);
+void Px_TextSc(u16 *dst,int x,int y,const char *s,u16 col,int sc);
+// Barras: Px_Bar desenha no painel baixo; Px_BarT na tela cima.
+void Px_Bar(int x,int y,int w,int pct,u16 col);
+void Px_BarT(int x,int y,int w,int h,int pct,u16 col);
+int Px_Width(const char *s);
+// util de formato compartilhado (HUD/UI)
+void Px_Itoa(int v,char *out); // decimal, sem zeros a esquerda

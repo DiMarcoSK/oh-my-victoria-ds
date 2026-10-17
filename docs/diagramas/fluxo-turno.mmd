@@ -1,0 +1,11 @@
+flowchart TD
+  F[frame] --> Acc[frameAcc++ 15/8/4 por dia]
+  Acc --> Day[Game_Day]
+  Day --> E[Evt_Day clima 7pct + evento 4pct cd20]
+  E --> P[Pop_Day demandas 4 POPs + felicidade + cresce/promove]
+  P --> Ec[Eco_Day x3 23 obras throughput + imposto + salarios]
+  Ec --> C[Combat_Day marchas 2+terreno+forte + dado +-1]
+  C --> D[Dip_Day rel 1x por 2 dias]
+  D --> AI[AI_Day eco-gargalo + militar + ataque + uniao]
+  AI --> M[Mkt_CloseDay int p+=d*s k + ext + uniao-media]
+  M --> R[Recalc dono/tropa/pop + CheckEnd 600prest/200tiles]

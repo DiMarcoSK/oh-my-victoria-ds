@@ -1,0 +1,18 @@
+flowchart LR
+  POP[POPs 4 classes\npeas/work/burg/nobl] --> INT[mercado interno/faccao\npreco por oferta-demanda]
+  GOV[governo MON/DEM/TEO\nimposto+feliz+guerra] --> INT
+  GOV --> FEL[felicidade+literacia\n+prestigio+moral]
+  RUR[rural 4\nfazenda/pomar/mina/poco] --> INT
+  IND[industria 6\nserra/textil/aco/oficina/vinho/vidro\nthroughput sem insumo=menos] --> INT
+  URB[urbana 5\nmercado/banco/univ/teatro/hosp] --> INT
+  URB --> FEL
+  EST[estado 5\nquartel/muralha/forte/templo] --> ORD[marchas+obras\ndefesa custa ouro]
+  MAR[mar 3+alfandega\nporto/estaleiro] --> EXT[mercado externo+tarifa+uniao\nporto gera oferta]
+  INT --> TES[tesouro\nimposto+juros+export]
+  TES --> ORD
+  EXT <--> TES
+  EVT[eventos 8+clima RNG\nseca/chuva] --> INT
+  EVT --> MAP[mapa pixel 16px\n32x24 + sites]
+  MAP --> POP
+  TES --> PREST[prestigio 600 vence]
+  FEL --> PREST

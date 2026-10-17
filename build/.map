@@ -1,0 +1,2640 @@
+Archive member included to satisfy reference by file (symbol)
+
+/home/black/devkitpro/libnds/lib/libnds9.a(background.o)
+                              px_core.o (bgInit_call)
+/home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+                              input.o (scanKeys)
+/home/black/devkitpro/libnds/lib/libnds9.a(trig.o)
+                              /home/black/devkitpro/libnds/lib/libnds9.a(background.o) (sinLerp)
+/home/black/devkitpro/devkitARM/local-lib/libsyncnone.a(syncnone.o)
+                              (__sync_synchronize_none)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-_exit.o)
+                              (_exit)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-fstat.o)
+                              (_fstat_r)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-handle_manager.o)
+                              /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-fstat.o) (__get_handle)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-iosupport.o)
+                              /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-fstat.o) (devoptab_list)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-isatty.o)
+                              (_isatty_r)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-lseek.o)
+                              (_lseek_r)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-read.o)
+                              (_read_r)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-sbrk.o)
+                              (_sbrk_r)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-syscall_support.o)
+                              /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-handle_manager.o) (__libc_lock_acquire)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-write.o)
+                              (_write_r)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-clocks.o)
+                              /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-syscall_support.o) (clock_gettime)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-getreent.o)
+                              /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-handle_manager.o) (__getreent)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-malloc_vars.o)
+                              /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-sbrk.o) (fake_heap_start)
+/home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+                              main.o (threadIrqWait)
+/home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_hot.32.o)
+                              /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o) (threadSwitchTo)
+/home/black/devkitpro/calico/lib/libcalico_ds9.a(mutex.o)
+                              /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o) (threadUpdateDynamicPrio)
+/home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+                              /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-fstat.o) (__errno)
+/home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-copy-fill.32.o)
+                              /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o) (armCopyMem32)
+/home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-context.32.o)
+                              /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_hot.32.o) (armContextSave)
+/home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-shims.32.o)
+                              /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o) (armWaitForIrq)
+/home/black/devkitpro/calico/lib/libcalico_ds9.a(keypad.o)
+                              /home/black/devkitpro/libnds/lib/libnds9.a(keys.o) (keypadGetState)
+/home/black/devkitpro/calico/lib/libcalico_ds9.a(bootstub_arm9.o)
+                              (__ds9_bootstub)
+/home/black/devkitpro/calico/lib/libcalico_ds9.a(excpt_handler.32.o)
+                              /home/black/devkitpro/calico/lib/libcalico_ds9.a(bootstub_arm9.o) (__arm_excpt_rst)
+/home/black/devkitpro/calico/lib/libcalico_ds9.a(touch.o)
+                              input.o (touchRead)
+/home/black/devkitpro/calico/lib/libcalico_ds9.a(tick.o)
+                              /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o) (tickTaskStart)
+/home/black/devkitpro/calico/lib/libcalico_ds9.a(startup.crt0.o)
+                              /home/black/devkitpro/calico/lib/libcalico_ds9.a(bootstub_arm9.o) (crt0Startup)
+/home/black/devkitpro/calico/lib/libcalico_ds9.a(utils.crt0.o)
+                              /home/black/devkitpro/calico/lib/libcalico_ds9.a(startup.crt0.o) (crt0CopyMem32)
+/home/black/devkitpro/calico/lib/libcalico_ds9.a(irq_handler.32.o)
+                              /home/black/devkitpro/calico/lib/libcalico_ds9.a(bootstub_arm9.o) (__arm_excpt_irq)
+/home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+                              /home/black/devkitpro/calico/lib/libcalico_ds9.a(startup.crt0.o) (_pxiInit)
+/home/black/devkitpro/calico/lib/libcalico_ds9.a(mpu_setup.crt0.o)
+                              /home/black/devkitpro/calico/lib/libcalico_ds9.a(startup.crt0.o) (crt0SetupMPU)
+/home/black/devkitpro/calico/lib/libcalico_ds9.a(sys_startup.o)
+                              /home/black/devkitpro/calico/lib/libcalico_ds9.a(startup.crt0.o) (systemStartup)
+/home/black/devkitpro/calico/lib/libcalico_ds9.a(irq.o)
+                              /home/black/devkitpro/calico/lib/libcalico_ds9.a(tick.o) (irqSet)
+/home/black/devkitpro/calico/lib/libcalico_ds9.a(mailbox.o)
+                              /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o) (mailboxTrySend)
+/home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-cache.32.o)
+                              /home/black/devkitpro/calico/lib/libcalico_ds9.a(startup.crt0.o) (armDCacheFlushAll)
+/home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+                              /home/black/devkitpro/calico/lib/libcalico_ds9.a(sys_startup.o) (pmInit)
+/home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivsi3.o)
+                              market.o (__aeabi_uidiv)
+/home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_divsi3.o)
+                              diplomacy.o (__aeabi_idiv)
+/home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_dvmd_tls.o)
+                              /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivsi3.o) (__aeabi_idiv0)
+/home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_aeabi_uldivmod.o)
+                              /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o) (__aeabi_uldivmod)
+/home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_muldi3.o)
+                              /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-syscall_support.o) (__aeabi_lmul)
+/home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivmoddi4.o)
+                              /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_aeabi_uldivmod.o) (__udivmoddi4)
+/home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_clzdi2.o)
+                              /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivmoddi4.o) (__clzdi2)
+/home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_clzsi2.o)
+                              /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_clzdi2.o) (__clzsi2)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-memcpy-stub.o)
+                              market.o (memcpy)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-strlen.o)
+                              /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-iosupport.o) (strlen)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-impure.o)
+                              /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-getreent.o) (_impure_ptr)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-bsearch.o)
+                              /home/black/devkitpro/libnds/lib/libnds9.a(trig.o) (bsearch)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-strchr.o)
+                              /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-iosupport.o) (strchr)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-memset.o)
+                              game.o (memset)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-mallocr.o)
+                              /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o) (_malloc_r)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-strcmp.o)
+                              /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-iosupport.o) (strcmp)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-freer.o)
+                              /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o) (_free_r)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-findfp.o)
+                              /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-impure.o) (__sf)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-init.o)
+                              /home/black/devkitpro/calico/lib/libcalico_ds9.a(bootstub_arm9.o) (__libc_init_array)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-malloc.o)
+                              /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-handle_manager.o) (malloc)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-stdio.o)
+                              /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-findfp.o) (__sread)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-mlock.o)
+                              /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-mallocr.o) (__malloc_lock)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fclose.o)
+                              /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-findfp.o) (_fclose_r)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-exit.o)
+                              /home/black/devkitpro/calico/lib/libcalico_ds9.a(bootstub_arm9.o) (exit)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fini.o)
+                              /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-exit.o) (__libc_fini_array)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-strncmp.o)
+                              /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-iosupport.o) (strncmp)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fwalk.o)
+                              /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-findfp.o) (_fwalk_sglue)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-malignr.o)
+                              /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-malloc.o) (_memalign_r)
+/home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fflush.o)
+                              /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fclose.o) (__sflush_r)
+
+Discarded input sections
+
+ .text          0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crti.o
+ .data          0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crti.o
+ .bss           0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crti.o
+ .data          0x00000000        0x4 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtbegin.o
+ .rodata        0x00000000       0x24 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtbegin.o
+ .text          0x00000000        0x0 ai.o
+ .data          0x00000000        0x0 ai.o
+ .bss           0x00000000        0x0 ai.o
+ .text.AI_Budget
+                0x00000000       0x20 ai.o
+ .text          0x00000000        0x0 combat.o
+ .data          0x00000000        0x0 combat.o
+ .bss           0x00000000        0x0 combat.o
+ .text          0x00000000        0x0 diplomacy.o
+ .data          0x00000000        0x0 diplomacy.o
+ .bss           0x00000000        0x0 diplomacy.o
+ .text.Dip_Get  0x00000000       0x30 diplomacy.o
+ .text.Dip_Set  0x00000000       0x34 diplomacy.o
+ .rodata.Dip_Name.str1.4
+                0x00000000       0x16 diplomacy.o
+ .text.Dip_Name
+                0x00000000       0x2c diplomacy.o
+ .text          0x00000000        0x0 economy.o
+ .data          0x00000000        0x0 economy.o
+ .bss           0x00000000        0x0 economy.o
+ .text.Eco_Cost
+                0x00000000       0x20 economy.o
+ .rodata.Eco_BldDesc.str1.4
+                0x00000000        0x2 economy.o
+ .text.Eco_BldDesc
+                0x00000000       0x20 economy.o
+ .rodata.CSWTCH.16
+                0x00000000       0x58 economy.o
+ .text          0x00000000        0x0 events.o
+ .data          0x00000000        0x0 events.o
+ .bss           0x00000000        0x0 events.o
+ .rodata.Evt_Name.str1.4
+                0x00000000        0x2 events.o
+ .text.Evt_Name
+                0x00000000       0x20 events.o
+ .rodata.str1.4
+                0x00000000       0x3b events.o
+ .rodata.CSWTCH.17
+                0x00000000       0x20 events.o
+ .text          0x00000000        0x0 game.o
+ .data          0x00000000        0x0 game.o
+ .bss           0x00000000        0x0 game.o
+ .text          0x00000000        0x0 gov.o
+ .data          0x00000000        0x0 gov.o
+ .bss           0x00000000        0x0 gov.o
+ .text          0x00000000        0x0 input.o
+ .data          0x00000000        0x0 input.o
+ .bss           0x00000000        0x0 input.o
+ .text          0x00000000        0x0 main.o
+ .data          0x00000000        0x0 main.o
+ .bss           0x00000000        0x0 main.o
+ .text          0x00000000        0x0 map.o
+ .data          0x00000000        0x0 map.o
+ .bss           0x00000000        0x0 map.o
+ .text          0x00000000        0x0 market.o
+ .data          0x00000000        0x0 market.o
+ .bss           0x00000000        0x0 market.o
+ .text.Mkt_Base
+                0x00000000       0x14 market.o
+ .text.Mkt_ExtDem
+                0x00000000       0x18 market.o
+ .text.Mkt_BuyExt
+                0x00000000       0xf0 market.o
+ .rodata.Mkt_Name.str1.4
+                0x00000000        0x2 market.o
+ .text.Mkt_Name
+                0x00000000       0x18 market.o
+ .rodata.Mkt_Short.str1.4
+                0x00000000        0x3 market.o
+ .text.Mkt_Short
+                0x00000000       0x18 market.o
+ .rodata.str1.4
+                0x00000000       0x5e market.o
+ .rodata.CSWTCH.20
+                0x00000000       0x20 market.o
+ .rodata.CSWTCH.18
+                0x00000000       0x20 market.o
+ .text          0x00000000        0x0 pops.o
+ .data          0x00000000        0x0 pops.o
+ .bss           0x00000000        0x0 pops.o
+ .text.Pop_Count
+                0x00000000       0x38 pops.o
+ .text.Pop_Add  0x00000000       0x90 pops.o
+ .text          0x00000000        0x0 px_core.o
+ .data          0x00000000        0x0 px_core.o
+ .bss           0x00000000        0x0 px_core.o
+ .text.Px_TopBuf
+                0x00000000        0x8 px_core.o
+ .text.Px_BotBuf
+                0x00000000        0x8 px_core.o
+ .text          0x00000000        0x0 px_font.o
+ .data          0x00000000        0x0 px_font.o
+ .bss           0x00000000        0x0 px_font.o
+ .text.Px_Width
+                0x00000000       0x20 px_font.o
+ .text          0x00000000        0x0 px_tiles.o
+ .data          0x00000000        0x0 px_tiles.o
+ .bss           0x00000000        0x0 px_tiles.o
+ .text          0x00000000        0x0 rng.o
+ .data          0x00000000        0x0 rng.o
+ .bss           0x00000000        0x0 rng.o
+ .text.Rng_Next
+                0x00000000       0x24 rng.o
+ .text          0x00000000        0x0 save.o
+ .data          0x00000000        0x0 save.o
+ .bss           0x00000000        0x0 save.o
+ .text.Save_Ok  0x00000000        0xc save.o
+ .text          0x00000000        0x0 /home/black/devkitpro/libnds/lib/libnds9.a(background.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/libnds/lib/libnds9.a(background.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/libnds/lib/libnds9.a(background.o)
+ .text.bgIsText
+                0x00000000        0xc /home/black/devkitpro/libnds/lib/libnds9.a(background.o)
+ .data.bgControl
+                0x00000000       0x20 /home/black/devkitpro/libnds/lib/libnds9.a(background.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+ .text.keysDownRepeat
+                0x00000000       0x10 /home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+ .text.keysSetRepeat
+                0x00000000       0x24 /home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+ .text.keysUp   0x00000000       0x10 /home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+ .text.keysCurrent
+                0x00000000       0x1c /home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/libnds/lib/libnds9.a(trig.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/libnds/lib/libnds9.a(trig.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/libnds/lib/libnds9.a(trig.o)
+ .text.asinComp
+                0x00000000       0x20 /home/black/devkitpro/libnds/lib/libnds9.a(trig.o)
+ .text.tanLutLookup
+                0x00000000       0x30 /home/black/devkitpro/libnds/lib/libnds9.a(trig.o)
+ .text.tanLerp  0x00000000       0xac /home/black/devkitpro/libnds/lib/libnds9.a(trig.o)
+ .text.asinLerp
+                0x00000000       0x98 /home/black/devkitpro/libnds/lib/libnds9.a(trig.o)
+ .text.acosLerp
+                0x00000000       0xa0 /home/black/devkitpro/libnds/lib/libnds9.a(trig.o)
+ .text.atanComp
+                0x00000000       0x20 /home/black/devkitpro/libnds/lib/libnds9.a(trig.o)
+ .rodata.TAN_LUT
+                0x00000000      0x204 /home/black/devkitpro/libnds/lib/libnds9.a(trig.o)
+ .text          0x00000000        0x4 /home/black/devkitpro/devkitARM/local-lib/libsyncnone.a(syncnone.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/local-lib/libsyncnone.a(syncnone.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/local-lib/libsyncnone.a(syncnone.o)
+ .comment       0x00000000       0x27 /home/black/devkitpro/devkitARM/local-lib/libsyncnone.a(syncnone.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-_exit.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-_exit.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-_exit.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-fstat.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-fstat.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-fstat.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-handle_manager.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-handle_manager.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-handle_manager.o)
+ .text.__release_handle
+                0x00000000       0x6c /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-handle_manager.o)
+ .text.__alloc_handle
+                0x00000000       0x7c /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-handle_manager.o)
+ .text.dup      0x00000000       0x68 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-handle_manager.o)
+ .text.dup2     0x00000000       0xe0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-handle_manager.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-iosupport.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-iosupport.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-iosupport.o)
+ .text.setDefaultDevice
+                0x00000000       0x10 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-iosupport.o)
+ .text.FindDevice
+                0x00000000       0x64 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-iosupport.o)
+ .text.RemoveDevice
+                0x00000000       0x20 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-iosupport.o)
+ .text.AddDevice
+                0x00000000       0x68 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-iosupport.o)
+ .text.GetDeviceOpTab
+                0x00000000       0x20 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-iosupport.o)
+ .data.defaultDevice
+                0x00000000        0x4 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-iosupport.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-isatty.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-isatty.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-isatty.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-lseek.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-lseek.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-lseek.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-read.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-read.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-read.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-sbrk.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-sbrk.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-sbrk.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-syscall_support.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-syscall_support.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-syscall_support.o)
+ .text.timespec2nsec
+                0x00000000       0x24 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-syscall_support.o)
+ .text.abstimespec2nsec
+                0x00000000       0xc4 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-syscall_support.o)
+ .text.__libc_lock_try_acquire
+                0x00000000       0x1c /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-syscall_support.o)
+ .text.__libc_lock_try_acquire_recursive
+                0x00000000       0x1c /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-syscall_support.o)
+ .text.__libc_cond_signal
+                0x00000000       0x1c /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-syscall_support.o)
+ .text.__libc_cond_broadcast
+                0x00000000       0x1c /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-syscall_support.o)
+ .text.__libc_cond_wait
+                0x00000000       0x20 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-syscall_support.o)
+ .text.__libc_cond_wait_recursive
+                0x00000000       0x20 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-syscall_support.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-write.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-write.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-write.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-clocks.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-clocks.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-clocks.o)
+ .text.clock_gettime
+                0x00000000       0x24 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-clocks.o)
+ .text.clock_settime
+                0x00000000       0x24 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-clocks.o)
+ .text.clock_getres
+                0x00000000       0x24 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-clocks.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-getreent.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-getreent.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-getreent.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-malloc_vars.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-malloc_vars.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-malloc_vars.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .text.threadGetLocalStorageSize
+                0x00000000       0x2c /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .text.threadAttachLocalStorage
+                0x00000000      0x120 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .text.threadPause
+                0x00000000       0x98 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .text.threadSetPrio
+                0x00000000       0xb8 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .text.threadJoin
+                0x00000000       0x58 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .text.threadYield
+                0x00000000       0xb0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .text.threadTimerStartTicks
+                0x00000000       0x14 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .text.threadTimerWait
+                0x00000000       0x38 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_hot.32.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_hot.32.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_hot.32.o)
+ .text.threadUnblockOneByMask
+                0x00000000       0xd8 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_hot.32.o)
+ .text.threadBlockCancel
+                0x00000000       0xb0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_hot.32.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mutex.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mutex.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mutex.o)
+ .text.mutexTryLock
+                0x00000000       0x48 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mutex.o)
+ .text.condvarSignal
+                0x00000000       0x10 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mutex.o)
+ .text.condvarBroadcast
+                0x00000000       0x10 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mutex.o)
+ .text.condvarWait
+                0x00000000       0x84 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mutex.o)
+ .bss.s_cvWaitQueue
+                0x00000000        0x8 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mutex.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .text.__syscall_gettod_r
+                0x00000000       0x30 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .text.__syscall_nanosleep
+                0x00000000       0x58 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .text.__syscall_lock_init
+                0x00000000        0xc /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .text.__syscall_lock_try_acquire
+                0x00000000       0x14 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .text.__syscall_lock_init_recursive
+                0x00000000       0x14 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .text.__syscall_lock_try_acquire_recursive
+                0x00000000       0x50 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .text.__syscall_cond_signal
+                0x00000000       0x10 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .text.__syscall_cond_broadcast
+                0x00000000       0x10 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .text.__syscall_cond_wait
+                0x00000000       0x24 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .text.__syscall_cond_wait_recursive
+                0x00000000       0x44 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .text.__syscall_thread_create
+                0x00000000       0xc8 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .text.__syscall_thread_join
+                0x00000000       0x38 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .text.__syscall_thread_exit
+                0x00000000        0x8 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .text.__syscall_thread_self
+                0x00000000       0x10 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .rodata.__newlib_syscalls
+                0x00000000        0x4 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-copy-fill.32.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-copy-fill.32.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-copy-fill.32.o)
+ .text.armCopyMem32
+                0x00000000       0x4c /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-copy-fill.32.o)
+ .text.armFillMem32
+                0x00000000       0x58 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-copy-fill.32.o)
+ .debug_line    0x00000000       0x7d /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-copy-fill.32.o)
+ .debug_line_str
+                0x00000000       0xc5 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-copy-fill.32.o)
+ .debug_info    0x00000000       0x3b /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-copy-fill.32.o)
+ .debug_abbrev  0x00000000       0x26 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-copy-fill.32.o)
+ .debug_aranges
+                0x00000000       0x28 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-copy-fill.32.o)
+ .debug_str     0x00000000       0xed /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-copy-fill.32.o)
+ .debug_rnglists
+                0x00000000       0x19 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-copy-fill.32.o)
+ .debug_frame   0x00000000       0x30 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-copy-fill.32.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-context.32.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-context.32.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-context.32.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-shims.32.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-shims.32.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-shims.32.o)
+ .text.armGetCpsr
+                0x00000000        0x8 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-shims.32.o)
+ .text.armSetCpsrC
+                0x00000000        0x8 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-shims.32.o)
+ .text.armGetSpsr
+                0x00000000        0x8 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-shims.32.o)
+ .text.armSetSpsr
+                0x00000000        0x8 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-shims.32.o)
+ .text.armSwapWord
+                0x00000000        0x8 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-shims.32.o)
+ .text.armSwapByte
+                0x00000000        0xc /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-shims.32.o)
+ .text.armGetCp15Cr
+                0x00000000        0x8 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-shims.32.o)
+ .text.armSetCp15Cr
+                0x00000000        0x8 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-shims.32.o)
+ .text.armIrqLockByPsr
+                0x00000000       0x14 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-shims.32.o)
+ .text.armIrqUnlockByPsr
+                0x00000000       0x14 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-shims.32.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(keypad.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(keypad.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(keypad.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(bootstub_arm9.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(bootstub_arm9.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(bootstub_arm9.o)
+ .rodata.ref.__newlib_syscalls
+                0x00000000        0x4 /home/black/devkitpro/calico/lib/libcalico_ds9.a(bootstub_arm9.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(excpt_handler.32.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(excpt_handler.32.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(excpt_handler.32.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(touch.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(touch.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(touch.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(tick.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(tick.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(tick.o)
+ .text.tickTaskStop
+                0x00000000       0xc0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(tick.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(startup.crt0.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(startup.crt0.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(startup.crt0.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(utils.crt0.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(utils.crt0.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(utils.crt0.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq_handler.32.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq_handler.32.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq_handler.32.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+ .text.pxiWaitForPing
+                0x00000000        0xc /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+ .text.pxiSendExtPacket
+                0x00000000       0x98 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+ .text.pxiBeginReceive
+                0x00000000       0x2c /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+ .text.pxiEndReceive
+                0x00000000       0xac /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mpu_setup.crt0.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mpu_setup.crt0.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mpu_setup.crt0.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(sys_startup.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(sys_startup.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(sys_startup.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mailbox.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mailbox.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mailbox.o)
+ .text.mailboxTryRecv
+                0x00000000       0x84 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mailbox.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-cache.32.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-cache.32.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-cache.32.o)
+ .text.armDCacheFlush
+                0x00000000       0x1c /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-cache.32.o)
+ .text.armDCacheInvalidate
+                0x00000000       0x1c /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-cache.32.o)
+ .text.armICacheInvalidate
+                0x00000000       0x1c /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-cache.32.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .text.pmAddEventHandler
+                0x00000000       0x3c /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .text.pmRemoveEventHandler
+                0x00000000       0x50 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .text.pmShouldReset
+                0x00000000       0x18 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .text.pmPrepareToReset
+                0x00000000       0x2c /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .text.pmIsSleepAllowed
+                0x00000000       0x18 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .text.pmSetSleepAllowed
+                0x00000000       0x3c /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .text.pmHasResetJumpTarget
+                0x00000000       0x4c /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .text.pmClearResetJumpTarget
+                0x00000000       0x30 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .text.pmEnterSleep
+                0x00000000       0xcc /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .text.pmMainLoop
+                0x00000000       0x74 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .data          0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivsi3.o)
+ .bss           0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivsi3.o)
+ .data          0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_divsi3.o)
+ .bss           0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_divsi3.o)
+ .data          0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_dvmd_tls.o)
+ .bss           0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_dvmd_tls.o)
+ .text          0x00000000       0x3c /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_aeabi_uldivmod.o)
+ .data          0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_aeabi_uldivmod.o)
+ .bss           0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_aeabi_uldivmod.o)
+ .debug_line    0x00000000       0x4e /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_aeabi_uldivmod.o)
+ .debug_line_str
+                0x00000000       0x8b /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_aeabi_uldivmod.o)
+ .debug_info    0x00000000       0x24 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_aeabi_uldivmod.o)
+ .debug_abbrev  0x00000000       0x14 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_aeabi_uldivmod.o)
+ .debug_aranges
+                0x00000000       0x20 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_aeabi_uldivmod.o)
+ .debug_str     0x00000000       0x97 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_aeabi_uldivmod.o)
+ .debug_frame   0x00000000       0x2c /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_aeabi_uldivmod.o)
+ .text          0x00000000       0x64 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_muldi3.o)
+ .data          0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_muldi3.o)
+ .bss           0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_muldi3.o)
+ .debug_info    0x00000000      0x420 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_muldi3.o)
+ .debug_abbrev  0x00000000      0x152 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_muldi3.o)
+ .debug_loclists
+                0x00000000      0x12e /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_muldi3.o)
+ .debug_aranges
+                0x00000000       0x20 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_muldi3.o)
+ .debug_rnglists
+                0x00000000       0x1f /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_muldi3.o)
+ .debug_line    0x00000000      0x110 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_muldi3.o)
+ .debug_str     0x00000000      0x66f /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_muldi3.o)
+ .comment       0x00000000       0x27 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_muldi3.o)
+ .debug_frame   0x00000000       0x34 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_muldi3.o)
+ .text          0x00000000      0x19c /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivmoddi4.o)
+ .data          0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivmoddi4.o)
+ .bss           0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivmoddi4.o)
+ .ARM.extab     0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivmoddi4.o)
+ .ARM.exidx     0x00000000        0x8 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivmoddi4.o)
+ .debug_info    0x00000000      0x3a3 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivmoddi4.o)
+ .debug_abbrev  0x00000000      0x120 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivmoddi4.o)
+ .debug_loclists
+                0x00000000      0x29b /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivmoddi4.o)
+ .debug_aranges
+                0x00000000       0x20 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivmoddi4.o)
+ .debug_line    0x00000000      0x1b2 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivmoddi4.o)
+ .debug_str     0x00000000      0x645 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivmoddi4.o)
+ .comment       0x00000000       0x27 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivmoddi4.o)
+ .debug_frame   0x00000000       0x3c /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivmoddi4.o)
+ .text          0x00000000       0x28 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_clzdi2.o)
+ .data          0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_clzdi2.o)
+ .bss           0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_clzdi2.o)
+ .debug_line    0x00000000       0x54 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_clzdi2.o)
+ .debug_line_str
+                0x00000000       0x8f /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_clzdi2.o)
+ .debug_info    0x00000000       0x31 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_clzdi2.o)
+ .debug_abbrev  0x00000000       0x28 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_clzdi2.o)
+ .debug_aranges
+                0x00000000       0x20 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_clzdi2.o)
+ .debug_str     0x00000000       0xa4 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_clzdi2.o)
+ .text          0x00000000       0x48 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_clzsi2.o)
+ .data          0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_clzsi2.o)
+ .bss           0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_clzsi2.o)
+ .debug_line    0x00000000       0x57 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_clzsi2.o)
+ .debug_line_str
+                0x00000000       0x8f /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_clzsi2.o)
+ .debug_info    0x00000000       0x31 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_clzsi2.o)
+ .debug_abbrev  0x00000000       0x28 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_clzsi2.o)
+ .debug_aranges
+                0x00000000       0x20 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_clzsi2.o)
+ .debug_str     0x00000000       0xa4 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_clzsi2.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-memcpy-stub.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-memcpy-stub.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-memcpy-stub.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-strlen.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-strlen.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-strlen.o)
+ .text.strlen   0x00000000       0x60 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-strlen.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-impure.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-impure.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-impure.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-bsearch.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-bsearch.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-bsearch.o)
+ .text.bsearch  0x00000000       0x58 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-bsearch.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-strchr.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-strchr.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-strchr.o)
+ .text.strchr   0x00000000       0xbc /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-strchr.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-memset.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-memset.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-memset.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-mallocr.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-mallocr.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-mallocr.o)
+ .text._malloc_r
+                0x00000000      0x550 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-mallocr.o)
+ .bss.__malloc_max_total_mem
+                0x00000000        0x4 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-mallocr.o)
+ .bss.__malloc_max_sbrked_mem
+                0x00000000        0x4 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-mallocr.o)
+ .text          0x00000000      0x224 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-strcmp.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-strcmp.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-strcmp.o)
+ .debug_frame   0x00000000       0x40 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-strcmp.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-freer.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-freer.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-freer.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-findfp.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-findfp.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-findfp.o)
+ .text.stdio_exit_handler
+                0x00000000       0x20 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-findfp.o)
+ .text.cleanup_stdio
+                0x00000000       0x40 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-findfp.o)
+ .text.__fp_lock
+                0x00000000       0x20 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-findfp.o)
+ .text.__fp_unlock
+                0x00000000       0x20 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-findfp.o)
+ .text.global_stdio_init.part.0
+                0x00000000      0x120 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-findfp.o)
+ .text.__sfp    0x00000000       0xcc /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-findfp.o)
+ .text.__sinit  0x00000000       0x3c /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-findfp.o)
+ .text.__sfp_lock_acquire
+                0x00000000       0x14 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-findfp.o)
+ .text.__sfp_lock_release
+                0x00000000       0x14 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-findfp.o)
+ .text.__fp_lock_all
+                0x00000000       0x24 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-findfp.o)
+ .text.__fp_unlock_all
+                0x00000000       0x24 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-findfp.o)
+ .bss.__sfp_recursive_mutex
+                0x00000000        0xc /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-findfp.o)
+ .data.__sglue  0x00000000        0xc /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-findfp.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-init.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-init.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-init.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-malloc.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-malloc.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-malloc.o)
+ .text.malloc   0x00000000       0x28 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-malloc.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-stdio.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-stdio.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-stdio.o)
+ .text.__sread  0x00000000       0x34 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-stdio.o)
+ .text.__seofread
+                0x00000000        0x4 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-stdio.o)
+ .text.__swrite
+                0x00000000       0x4c /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-stdio.o)
+ .text.__sseek  0x00000000       0x3c /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-stdio.o)
+ .text.__sclose
+                0x00000000       0x10 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-stdio.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-mlock.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-mlock.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-mlock.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fclose.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fclose.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fclose.o)
+ .text._fclose_r
+                0x00000000       0xe0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fclose.o)
+ .text.fclose   0x00000000       0x14 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fclose.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-exit.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-exit.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-exit.o)
+ .bss.__stdio_exit_handler
+                0x00000000        0x4 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-exit.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fini.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fini.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fini.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-strncmp.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-strncmp.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-strncmp.o)
+ .text.strncmp  0x00000000       0x70 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-strncmp.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fwalk.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fwalk.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fwalk.o)
+ .text._fwalk_sglue
+                0x00000000       0x4c /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fwalk.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-malignr.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-malignr.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-malignr.o)
+ .text._memalign_r
+                0x00000000      0x118 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-malignr.o)
+ .text          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fflush.o)
+ .data          0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fflush.o)
+ .bss           0x00000000        0x0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fflush.o)
+ .text.__sflush_r
+                0x00000000      0x180 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fflush.o)
+ .text._fflush_r
+                0x00000000       0x70 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fflush.o)
+ .text.fflush   0x00000000       0x30 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fflush.o)
+ .text          0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtend.o
+ .data          0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtend.o
+ .bss           0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtend.o
+ .rodata        0x00000000       0x24 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtend.o
+ .text          0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtn.o
+ .data          0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtn.o
+ .bss           0x00000000        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtn.o
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+lma9             0x02004000         0x0027c000
+lma9i            0x02400000         0x00280000
+vectors          0x00000000         0x00000020
+itcm             0x01ff8020         0x00007fe0
+main             0x02001000         0x00f7f000
+dtcm             0x02ff0000         0x00003e80
+dldi             0x0380b000         0x00004000
+stub             0x0e000000         0x00004000
+tls              0x00000000         0x00000400
+*default*        0x00000000         0xffffffff
+
+Linker script and memory map
+
+                0x00000000                        __sync_synchronize = __sync_synchronize_none
+LOAD /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crti.o
+LOAD /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtbegin.o
+LOAD ai.o
+LOAD combat.o
+LOAD diplomacy.o
+LOAD economy.o
+LOAD events.o
+LOAD game.o
+LOAD gov.o
+LOAD input.o
+LOAD main.o
+LOAD map.o
+LOAD market.o
+LOAD pops.o
+LOAD px_core.o
+LOAD px_font.o
+LOAD px_tiles.o
+LOAD rng.o
+LOAD save.o
+LOAD /home/black/devkitpro/libnds/lib/libnds9.a
+START GROUP
+LOAD /home/black/devkitpro/libnds/lib/libnds9.a
+LOAD /home/black/devkitpro/devkitARM/local-lib/libsyncnone.a
+LOAD /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a
+LOAD /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libnosys.a
+LOAD /home/black/devkitpro/calico/lib/libcalico_ds9.a
+END GROUP
+START GROUP
+LOAD /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a
+LOAD /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a
+LOAD /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libc.a
+END GROUP
+LOAD /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtend.o
+LOAD /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtn.o
+                0x02ff3e80                        PROVIDE (__sp_usr = (ORIGIN (dtcm) + LENGTH (dtcm)))
+                0x02ff3f80                        PROVIDE (__sp_irq = (__sp_usr + 0x100))
+                0x02ff3fc0                        PROVIDE (__sp_svc = (__sp_irq + 0x40))
+                0x02ff3ff8                        PROVIDE (__irq_flags = (__sp_svc + 0x38))
+                [!provide]                        PROVIDE (__irq_vector = (__sp_svc + 0x3c))
+                [!provide]                        PROVIDE (__arm_excpt_rst = 0xffff0000)
+                [!provide]                        PROVIDE (__arm_excpt_und = 0xffff0004)
+                0xffff0008                        PROVIDE (__arm_excpt_svc = 0xffff0008)
+                [!provide]                        PROVIDE (__arm_excpt_pabt = 0xffff000c)
+                [!provide]                        PROVIDE (__arm_excpt_dabt = 0xffff0010)
+                [!provide]                        PROVIDE (__arm_excpt_irq = 0xffff0018)
+                [!provide]                        PROVIDE (__arm_excpt_fiq = 0xffff001c)
+                0x00000000                        PROVIDE (__end__ = 0x0)
+
+.secure         0x0e000000      0x800 load address 0x02004000
+                0x0e0007fc                        . = (. + 0x7fc)
+ *fill*         0x0e000000      0x7fc 00000000
+                0x0e0007fc        0x4 LONG 0x0
+
+.bootstub       0x0e000800      0x198 load address 0x02004800
+ *(.bootstub .bootstub.*)
+ .bootstub.__ds9_bootstub
+                0x0e000800      0x198 /home/black/devkitpro/calico/lib/libcalico_ds9.a(bootstub_arm9.o)
+                0x0e000800                __ds9_bootstub
+                0x0e000998                        . = ALIGN (0x4)
+
+.crt0           0x02001000      0x3c0 load address 0x02004998
+ *(.crt0 .crt0.*)
+ .crt0.__ds9_bootstub_trampoline
+                0x02001000       0x60 /home/black/devkitpro/calico/lib/libcalico_ds9.a(bootstub_arm9.o)
+ *.crt0.*(.text .stub .text.* .gnu.linkonce.t.*)
+ .text.crt0ProcessLoadList
+                0x02001060       0x74 /home/black/devkitpro/calico/lib/libcalico_ds9.a(startup.crt0.o)
+                0x02001060                crt0ProcessLoadList
+ .text.crt0Startup
+                0x020010d4      0x180 /home/black/devkitpro/calico/lib/libcalico_ds9.a(startup.crt0.o)
+                0x020010d4                crt0Startup
+ .text.crt0CopyMem32
+                0x02001254       0x4c /home/black/devkitpro/calico/lib/libcalico_ds9.a(utils.crt0.o)
+                0x02001254                crt0CopyMem32
+ .text.crt0FillMem32
+                0x020012a0       0x58 /home/black/devkitpro/calico/lib/libcalico_ds9.a(utils.crt0.o)
+                0x020012a0                crt0FillMem32
+ .text.crt0SetupMPU
+                0x020012f8       0xb4 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mpu_setup.crt0.o)
+                0x020012f8                crt0SetupMPU
+ *.crt0.*(.glue_7t .glue_7 .vfp11_veneer .v4_bx)
+ *.crt0.*(.rodata .rodata.* .gnu.linkonce.r.*)
+ *.crt0.*(.rodata1)
+                0x020013c0                        . = ALIGN (0x20)
+ *fill*         0x020013ac       0x14 ff
+                0x02004998                        PROVIDE (__crt0_lma = LOADADDR (.crt0))
+                0x02001000                        PROVIDE (__crt0_start = ADDR (.crt0))
+                0x020013c0                        PROVIDE (__crt0_end = (ADDR (.crt0) + SIZEOF (.crt0)))
+                0x00000001                        ASSERT (((__crt0_end <= LOADADDR (.bootstub)) || (__crt0_start >= (LOADADDR (.bootstub) + SIZEOF (.bootstub)))), Error: crt0 section overlaps initial bootstrap)
+
+.dldi           0x0380b000        0x0 load address 0x02004d58
+ *(.dldi)
+                0x00000000                        PROVIDE (__dldi_lma = SIZEOF (.dldi)?LOADADDR (.dldi):0x0)
+
+.vectors        0x00000000       0x20 load address 0x02004d58
+ *(.vectors)
+ .vectors       0x00000000       0x20 /home/black/devkitpro/calico/lib/libcalico_ds9.a(bootstub_arm9.o)
+
+.itcm           0x01ff8020      0x644 load address 0x02004d78
+ *(.itcm .itcm.*)
+ .itcm          0x01ff8020       0x30 /home/black/devkitpro/calico/lib/libcalico_ds9.a(bootstub_arm9.o)
+                0x01ff8038                __excpt_vectors
+ *.itcm.*(.text .stub .text.* .gnu.linkonce.t.*)
+ *.32.o(.text .stub .text.* .gnu.linkonce.t.*)
+ .text.threadSwitchTo
+                0x01ff8050       0x7c /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_hot.32.o)
+                0x01ff8050                threadSwitchTo
+ .text.threadBlock
+                0x01ff80cc       0xd4 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_hot.32.o)
+                0x01ff80cc                threadBlock
+ .text.threadUnblockOneByValue
+                0x01ff81a0       0xd4 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_hot.32.o)
+                0x01ff81a0                threadUnblockOneByValue
+ .text.threadUnblockAllByValue
+                0x01ff8274      0x138 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_hot.32.o)
+                0x01ff8274                threadUnblockAllByValue
+ .text.threadUnblockAllByMask
+                0x01ff83ac       0xf0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_hot.32.o)
+                0x01ff83ac                threadUnblockAllByMask
+ .text.armContextSave
+                0x01ff849c       0x2c /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-context.32.o)
+                0x01ff849c                armContextSave
+ .text.armContextLoad
+                0x01ff84c8       0x20 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-context.32.o)
+                0x01ff84c8                armContextLoad
+                0x01ff84cc                armContextLoadFromSvc
+ .text.armWaitForIrq
+                0x01ff84e8        0x8 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-shims.32.o)
+                0x01ff84e8                armWaitForIrq
+ .text.__excpt_entry
+                0x01ff84f0       0x50 /home/black/devkitpro/calico/lib/libcalico_ds9.a(excpt_handler.32.o)
+                0x01ff84f0                __arm_excpt_rst
+                0x01ff84f4                __arm_excpt_pabt
+                0x01ff84f8                __arm_excpt_und
+                0x01ff8504                __arm_excpt_dabt
+ .text.__arm_excpt_irq
+                0x01ff8540       0xe4 /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq_handler.32.o)
+                0x01ff8540                __arm_excpt_irq
+ .text.armDrainWriteBuffer
+                0x01ff8624        0xc /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-cache.32.o)
+                0x01ff8624                armDrainWriteBuffer
+ .text.armDCacheFlushAll
+                0x01ff8630       0x28 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-cache.32.o)
+                0x01ff8630                armDCacheFlushAll
+ .text.armICacheInvalidateAll
+                0x01ff8658        0xc /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-cache.32.o)
+                0x01ff8658                armICacheInvalidateAll
+ *.itcm.*(.glue_7t .glue_7 .vfp11_veneer .v4_bx)
+ *.32.o(.glue_7t .glue_7 .vfp11_veneer .v4_bx)
+ *.itcm.*(.rodata .rodata.* .gnu.linkonce.r.*)
+ *.32.o(.rodata .rodata.* .gnu.linkonce.r.*)
+ *.itcm.*(.rodata1)
+ *.32.o(.rodata1)
+                0x01ff8664                        . = ALIGN (0x4)
+                0x02004d58                        PROVIDE (__itcm_lma = LOADADDR (.vectors))
+                0x01ff8000                        PROVIDE (__itcm_start = (ADDR (.itcm) - SIZEOF (.vectors)))
+                0x01ff8664                        PROVIDE (__itcm_end = (ADDR (.itcm) + SIZEOF (.itcm)))
+                0x00000001                        ASSERT (((__itcm_lma + SIZEOF (.vectors)) == LOADADDR (.itcm)), Error: gap between vectors and itcm)
+
+.dtcm           0x02ff0000        0x0 load address 0x020053bc
+ *(.dtcm .dtcm.*)
+ *.32.o(.data .data.* .gnu.linkonce.d.*)
+ *.32.o(.data1)
+                0x02ff0000                        . = ALIGN (0x4)
+                [!provide]                        PROVIDE (__dtcm_lma = LOADADDR (.dtcm))
+                0x02ff0000                        PROVIDE (__dtcm_start = ADDR (.dtcm))
+                0x02ff0000                        PROVIDE (__dtcm_end = (ADDR (.dtcm) + SIZEOF (.dtcm)))
+
+.dtcm.bss       0x02ff0000       0x98 load address 0x020053bc
+ *(.sbss .sbss.*)
+ *.32.o(.dynbss)
+ *.32.o(.bss .bss.* .gnu.linkonce.b.*)
+ .bss.__irq_table
+                0x02ff0000       0x80 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_hot.32.o)
+                0x02ff0000                __irq_table
+ .bss.__sched_state
+                0x02ff0080       0x18 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_hot.32.o)
+                0x02ff0080                __sched_state
+ *.32.o(COMMON)
+                0x02ff0098                        . = ALIGN (0x4)
+                [!provide]                        PROVIDE (__dtcm_bss_start = ADDR (.dtcm.bss))
+                0x02ff0098                        PROVIDE (__dtcm_bss_end = (ADDR (.dtcm.bss) + SIZEOF (.dtcm.bss)))
+
+.main           0x020013c0     0x89f0 load address 0x020053bc
+ *(SORT_NONE(.init))
+ .init          0x020013c0        0x4 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crti.o
+                0x020013c0                _init
+ .init          0x020013c4        0x8 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtn.o
+ EXCLUDE_FILE(*.twl.*) *(.text.unlikely .text.*_unlikely .text.unlikely.*)
+ EXCLUDE_FILE(*.twl.*) *(.text.exit .text.exit.*)
+ .text.exit     0x020013cc       0x24 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-exit.o)
+                0x020013cc                exit
+ EXCLUDE_FILE(*.twl.*) *(.text.startup .text.startup.*)
+ .text.startup.main
+                0x020013f0       0x60 main.o
+                0x020013f0                main
+ EXCLUDE_FILE(*.twl.*) *(.text.hot .text.hot.*)
+ EXCLUDE_FILE(*.twl.*) *(.text .iplt .stub .text.* .gnu.linkonce.t.*)
+ .text          0x02001450       0xb4 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtbegin.o
+ .iplt          0x02001504        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtbegin.o
+ .text.FBuild   0x02001504       0xf4 ai.o
+ .text.AI_Day   0x020015f8      0x808 ai.o
+                0x020015f8                AI_Day
+ .text.Combat_Pow
+                0x02001e00       0xf4 combat.o
+                0x02001e00                Combat_Pow
+ .text.Combat_Order
+                0x02001ef4       0xe4 combat.o
+                0x02001ef4                Combat_Order
+ .text.Combat_Day
+                0x02001fd8      0x180 combat.o
+                0x02001fd8                Combat_Day
+ .text.Dip_Init
+                0x02002158       0x2c diplomacy.o
+                0x02002158                Dip_Init
+ .text.Dip_CanAtk
+                0x02002184       0x38 diplomacy.o
+                0x02002184                Dip_CanAtk
+ .text.Dip_Day  0x020021bc       0xd4 diplomacy.o
+                0x020021bc                Dip_Day
+ .text.Dip_Peace
+                0x02002290       0xc0 diplomacy.o
+                0x02002290                Dip_Peace
+ .text.Dip_Ally
+                0x02002350       0x90 diplomacy.o
+                0x02002350                Dip_Ally
+ .text.Eco_BldName
+                0x020023e0       0x20 economy.o
+                0x020023e0                Eco_BldName
+ .text.Eco_DiffName
+                0x02002400       0x18 economy.o
+                0x02002400                Eco_DiffName
+ .text.Eco_BotQ7
+                0x02002418       0x1c economy.o
+                0x02002418                Eco_BotQ7
+ .text.Eco_Tax  0x02002434       0x30 economy.o
+                0x02002434                Eco_Tax
+ .text.Eco_Build
+                0x02002464       0xa8 economy.o
+                0x02002464                Eco_Build
+ .text.Eco_FortUp
+                0x0200250c       0x54 economy.o
+                0x0200250c                Eco_FortUp
+ .text.Eco_Recruit
+                0x02002560      0x1bc economy.o
+                0x02002560                Eco_Recruit
+ .text.Eco_Day  0x0200271c      0xb14 economy.o
+                0x0200271c                Eco_Day
+ .text.Evt_Day  0x02003230      0x484 events.o
+                0x02003230                Evt_Day
+ .text.Game_Ptr
+                0x020036b4        0x8 game.o
+                0x020036b4                Game_Ptr
+ .text.Game_Init
+                0x020036bc       0xa4 game.o
+                0x020036bc                Game_Init
+ .text.Game_New
+                0x02003760       0x94 game.o
+                0x02003760                Game_New
+ .text.Game_CheckEnd
+                0x020037f4       0xc0 game.o
+                0x020037f4                Game_CheckEnd
+ .text.Game_Day
+                0x020038b4       0x6c game.o
+                0x020038b4                Game_Day
+ .text.Game_Frame
+                0x02003920       0x64 game.o
+                0x02003920                Game_Frame
+ .text.Gov_Init
+                0x02003984       0x28 gov.o
+                0x02003984                Gov_Init
+ .text.Gov_Switch
+                0x020039ac       0x80 gov.o
+                0x020039ac                Gov_Switch
+ .text.Gov_Cycle
+                0x02003a2c       0x88 gov.o
+                0x02003a2c                Gov_Cycle
+ .text.Gov_Name
+                0x02003ab4       0x18 gov.o
+                0x02003ab4                Gov_Name
+ .text.Gov_Short
+                0x02003acc       0x18 gov.o
+                0x02003acc                Gov_Short
+ .text.Cam      0x02003ae4       0x54 input.o
+ .text.In_Handle
+                0x02003b38      0x7d0 input.o
+                0x02003b38                In_Handle
+ .text.Map_Gen  0x02004308      0x314 map.o
+                0x02004308                Map_Gen
+ .text.Map_Get  0x0200461c       0x20 map.o
+                0x0200461c                Map_Get
+ .text.Map_Recalc
+                0x0200463c       0xa4 map.o
+                0x0200463c                Map_Recalc
+ .text.Map_Init
+                0x020046e0      0x13c map.o
+                0x020046e0                Map_Init
+ .text.Map_Def  0x0200481c       0x24 map.o
+                0x0200481c                Map_Def
+ .text.Mkt_Init
+                0x02004840       0xa0 market.o
+                0x02004840                Mkt_Init
+ .text.Mkt_IntPrice
+                0x020048e0       0x2c market.o
+                0x020048e0                Mkt_IntPrice
+ .text.Mkt_ExtPrice
+                0x0200490c       0x20 market.o
+                0x0200490c                Mkt_ExtPrice
+ .text.Mkt_IntSup
+                0x0200492c       0x24 market.o
+                0x0200492c                Mkt_IntSup
+ .text.Mkt_IntDem
+                0x02004950       0x24 market.o
+                0x02004950                Mkt_IntDem
+ .text.Mkt_ExtSup
+                0x02004974       0x18 market.o
+                0x02004974                Mkt_ExtSup
+ .text.Mkt_CloseDay
+                0x0200498c      0x1d0 market.o
+                0x0200498c                Mkt_CloseDay
+ .text.Mkt_BuyInt
+                0x02004b5c       0xa8 market.o
+                0x02004b5c                Mkt_BuyInt
+ .text.Mkt_SellExt
+                0x02004c04      0x114 market.o
+                0x02004c04                Mkt_SellExt
+ .text.Pop_Need
+                0x02004d18       0x54 pops.o
+                0x02004d18                Pop_Need
+ .text.Pop_Day  0x02004d6c      0x658 pops.o
+                0x02004d6c                Pop_Day
+ .text.Px_Col   0x020053c4       0x18 px_core.o
+                0x020053c4                Px_Col
+ .text.Px_PSet  0x020053dc       0x14 px_core.o
+                0x020053dc                Px_PSet
+ .text.Px_Rect  0x020053f0       0xb0 px_core.o
+                0x020053f0                Px_Rect
+ .text.Px_Border
+                0x020054a0       0xfc px_core.o
+                0x020054a0                Px_Border
+ .text.Px_Init  0x0200559c       0xc4 px_core.o
+                0x0200559c                Px_Init
+ .text.Px_FlipTop
+                0x02005660       0x38 px_core.o
+                0x02005660                Px_FlipTop
+ .text.Px_FlipBot
+                0x02005698       0x38 px_core.o
+                0x02005698                Px_FlipBot
+ .text.Px_BackTop
+                0x020056d0        0x8 px_core.o
+                0x020056d0                Px_BackTop
+ .text.Px_BackBot
+                0x020056d8        0x8 px_core.o
+                0x020056d8                Px_BackBot
+ .text.Px_Clear
+                0x020056e0       0x10 px_core.o
+                0x020056e0                Px_Clear
+ .text.Px_Text  0x020056f0       0xb4 px_font.o
+                0x020056f0                Px_Text
+ .text.Px_TextTop
+                0x020057a4       0xb0 px_font.o
+                0x020057a4                Px_TextTop
+ .text.Px_Bar   0x02005854       0x70 px_font.o
+                0x02005854                Px_Bar
+ .text.Box      0x020058c4       0x70 px_tiles.o
+ .text.Px_Top   0x02005934      0xaf4 px_tiles.o
+                0x02005934                Px_Top
+ .text.Px_Bot   0x02006428      0x5d8 px_tiles.o
+                0x02006428                Px_Bot
+ .text.Rng_Init
+                0x02006a00       0x10 rng.o
+                0x02006a00                Rng_Init
+ .text.Rng_Range
+                0x02006a10       0x34 rng.o
+                0x02006a10                Rng_Range
+ .text.Rng_Chance
+                0x02006a44       0x40 rng.o
+                0x02006a44                Rng_Chance
+ .text.Save_W   0x02006a84       0x5c save.o
+                0x02006a84                Save_W
+ .text.Save_R   0x02006ae0       0x3c save.o
+                0x02006ae0                Save_R
+ .text.Save_Clr
+                0x02006b1c       0x20 save.o
+                0x02006b1c                Save_Clr
+ .text.checkIfText
+                0x02006b3c       0x6c /home/black/devkitpro/libnds/lib/libnds9.a(background.o)
+                0x02006b3c                checkIfText
+ .text.bgUpdate
+                0x02006ba8       0xe8 /home/black/devkitpro/libnds/lib/libnds9.a(background.o)
+                0x02006ba8                bgUpdate
+ .text.bgInit_call
+                0x02006c90       0xa8 /home/black/devkitpro/libnds/lib/libnds9.a(background.o)
+                0x02006c90                bgInit_call
+ .text.bgInitSub_call
+                0x02006d38       0xb0 /home/black/devkitpro/libnds/lib/libnds9.a(background.o)
+                0x02006d38                bgInitSub_call
+ .text.scanKeys
+                0x02006de8       0x6c /home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+                0x02006de8                scanKeys
+ .text.keysHeld
+                0x02006e54        0xc /home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+                0x02006e54                keysHeld
+ .text.keysDown
+                0x02006e60       0x10 /home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+                0x02006e60                keysDown
+ .text.sinLutLookup
+                0x02006e70       0x4c /home/black/devkitpro/libnds/lib/libnds9.a(trig.o)
+                0x02006e70                sinLutLookup
+ .text.sinLerp  0x02006ebc       0x38 /home/black/devkitpro/libnds/lib/libnds9.a(trig.o)
+                0x02006ebc                sinLerp
+ .text.cosLerp  0x02006ef4       0x44 /home/black/devkitpro/libnds/lib/libnds9.a(trig.o)
+                0x02006ef4                cosLerp
+ .text._exit    0x02006f38       0x14 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-_exit.o)
+                0x02006f38                _exit
+ .text._fstat_r
+                0x02006f4c       0x5c /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-fstat.o)
+                0x02006f4c                _fstat_r
+ .text.__get_handle
+                0x02006fa8       0x34 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-handle_manager.o)
+                0x02006fa8                __get_handle
+ .text._close_r
+                0x02006fdc       0xb0 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-handle_manager.o)
+                0x02006fdc                _close_r
+ .text.null_write
+                0x0200708c        0x4 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-iosupport.o)
+ .text._isatty_r
+                0x02007090        0x4 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-isatty.o)
+                0x02007090                _isatty_r
+ .text._lseek_r
+                0x02007094       0x64 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-lseek.o)
+                0x02007094                _lseek_r
+ .text._read_r  0x020070f8       0x5c /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-read.o)
+                0x020070f8                _read_r
+ .text._sbrk_r  0x02007154       0x50 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-sbrk.o)
+                0x02007154                _sbrk_r
+ .text.__libc_lock_acquire
+                0x020071a4       0x18 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-syscall_support.o)
+                0x020071a4                __libc_lock_acquire
+ .text.__libc_lock_release
+                0x020071bc       0x18 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-syscall_support.o)
+                0x020071bc                __libc_lock_release
+ .text.__libc_lock_acquire_recursive
+                0x020071d4       0x18 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-syscall_support.o)
+                0x020071d4                __libc_lock_acquire_recursive
+ .text.__libc_lock_release_recursive
+                0x020071ec       0x18 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-syscall_support.o)
+                0x020071ec                __libc_lock_release_recursive
+ .text._write_r
+                0x02007204       0x5c /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-write.o)
+                0x02007204                _write_r
+ .text.__getreent
+                0x02007260       0x20 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-getreent.o)
+                0x02007260                __getreent
+ .text._threadTickTask
+                0x02007280       0x10 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .text.threadExit
+                0x02007290       0xa0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+                0x02007290                threadExit
+ .text._threadInit
+                0x02007330       0x98 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+                0x02007330                _threadInit
+ .text.threadPrepare
+                0x020073c8      0x134 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+                0x020073c8                threadPrepare
+ .text.threadStart
+                0x020074fc       0x94 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+                0x020074fc                threadStart
+ .text.threadIrqWait
+                0x02007590       0xa4 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+                0x02007590                threadIrqWait
+ .text.threadSleepTicks
+                0x02007634       0x58 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+                0x02007634                threadSleepTicks
+ .text.threadUpdateDynamicPrio
+                0x0200768c      0x1d4 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mutex.o)
+                0x0200768c                threadUpdateDynamicPrio
+ .text.threadRemoveWaiter
+                0x02007860      0x148 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mutex.o)
+ .text.mutexLock
+                0x020079a8      0x138 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mutex.o)
+                0x020079a8                mutexLock
+ .text.mutexUnlock
+                0x02007ae0       0xbc /home/black/devkitpro/calico/lib/libcalico_ds9.a(mutex.o)
+                0x02007ae0                mutexUnlock
+ .text.__syscall_getreent
+                0x02007b9c       0x14 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+                0x02007b9c                __syscall_getreent
+ .text.__errno  0x02007bb0       0x24 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+                0x02007bb0                __errno
+ .text.__syscall_lock_acquire
+                0x02007bd4        0x4 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+                0x02007bd4                __syscall_lock_acquire
+ .text.__syscall_lock_release
+                0x02007bd8        0x4 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+                0x02007bd8                __syscall_lock_release
+ .text.__syscall_lock_acquire_recursive
+                0x02007bdc       0x4c /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+                0x02007bdc                __syscall_lock_acquire_recursive
+ .text.__syscall_lock_release_recursive
+                0x02007c28       0x18 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+                0x02007c28                __syscall_lock_release_recursive
+ .text.keypadGetState
+                0x02007c40       0x28 /home/black/devkitpro/calico/lib/libcalico_ds9.a(keypad.o)
+                0x02007c40                keypadGetState
+ .text.touchRead
+                0x02007c68       0x58 /home/black/devkitpro/calico/lib/libcalico_ds9.a(touch.o)
+                0x02007c68                touchRead
+ .text._tickCountIsr
+                0x02007cc0       0x1c /home/black/devkitpro/calico/lib/libcalico_ds9.a(tick.o)
+ .text._tickTaskSchedule.part.0.isra.0
+                0x02007cdc       0x84 /home/black/devkitpro/calico/lib/libcalico_ds9.a(tick.o)
+ .text.tickInit
+                0x02007d60       0xa0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(tick.o)
+                0x02007d60                tickInit
+ .text.tickGetCount
+                0x02007e00       0x5c /home/black/devkitpro/calico/lib/libcalico_ds9.a(tick.o)
+                0x02007e00                tickGetCount
+ .text._tickTaskIsr
+                0x02007e5c      0x110 /home/black/devkitpro/calico/lib/libcalico_ds9.a(tick.o)
+ .text.tickTaskStart
+                0x02007f6c      0x144 /home/black/devkitpro/calico/lib/libcalico_ds9.a(tick.o)
+                0x02007f6c                tickTaskStart
+ .text._pxiMailboxHandler
+                0x020080b0        0x4 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+ .text._pxiRecvUnhandled
+                0x020080b4        0x4 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+                0x020080b4                _pxiRecvUnhandled
+ .text._pxiRecvIrqHandler
+                0x020080b8      0x154 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+ .text._pxiInit
+                0x0200820c       0x58 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+                0x0200820c                _pxiInit
+ .text.pxiSetHandler
+                0x02008264       0x74 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+                0x02008264                pxiSetHandler
+ .text.pxiSetMailbox
+                0x020082d8       0x68 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+                0x020082d8                pxiSetMailbox
+ .text.pxiWaitRemote
+                0x02008340       0x38 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+                0x02008340                pxiWaitRemote
+ .text.pxiSendPacket
+                0x02008378       0x50 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+                0x02008378                pxiSendPacket
+ .text.systemUserStartup
+                0x020083c8        0x4 /home/black/devkitpro/calico/lib/libcalico_ds9.a(sys_startup.o)
+                0x020083c8                systemUserStartup
+ .text.systemStartup
+                0x020083cc      0x110 /home/black/devkitpro/calico/lib/libcalico_ds9.a(sys_startup.o)
+                0x020083cc                systemStartup
+ .text.irqSet   0x020084dc       0x64 /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq.o)
+                0x020084dc                irqSet
+ .text.mailboxTrySend
+                0x02008540       0x98 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mailbox.o)
+                0x02008540                mailboxTrySend
+ .text.mailboxRecv
+                0x020085d8       0x98 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mailbox.o)
+                0x020085d8                mailboxRecv
+ .text._pmCallEventHandlers
+                0x02008670       0x40 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .text._pmPxiThreadMain
+                0x020086b0       0x9c /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .text._pmResetPxiHandler
+                0x0200874c       0x28 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .text.systemUserExit
+                0x02008774        0x4 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+                0x02008774                systemUserExit
+ .text.systemErrorExit
+                0x02008778        0x4 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+                0x02008778                systemErrorExit
+ .text.__syscall_exit
+                0x0200877c      0x138 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+                0x0200877c                __syscall_exit
+ .text.pmInit   0x020088b4       0x58 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+                0x020088b4                pmInit
+ .text          0x0200890c      0x11c /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivsi3.o)
+                0x0200890c                __udivsi3
+                0x0200890c                __aeabi_uidiv
+                0x02008a08                __aeabi_uidivmod
+ .text          0x02008a28      0x150 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_divsi3.o)
+                0x02008a28                __aeabi_idiv
+                0x02008a28                __divsi3
+                0x02008b58                __aeabi_idivmod
+ .text          0x02008b78        0x4 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_dvmd_tls.o)
+                0x02008b78                __aeabi_ldiv0
+                0x02008b78                __aeabi_idiv0
+ .text.memcpy   0x02008b7c       0xac /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-memcpy-stub.o)
+                0x02008b7c                memcpy
+ .text.memset   0x02008c28       0x8c /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-memset.o)
+                0x02008c28                memset
+ .text._malloc_trim_r
+                0x02008cb4       0xac /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-freer.o)
+                0x02008cb4                _malloc_trim_r
+ .text._free_r  0x02008d60      0x1d8 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-freer.o)
+                0x02008d60                _free_r
+ .text.__libc_init_array
+                0x02008f38       0x54 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-init.o)
+                0x02008f38                __libc_init_array
+ .text.free     0x02008f8c       0x14 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-malloc.o)
+                0x02008f8c                free
+ .text.__malloc_lock
+                0x02008fa0       0x14 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-mlock.o)
+                0x02008fa0                __malloc_lock
+ .text.__malloc_unlock
+                0x02008fb4       0x14 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-mlock.o)
+                0x02008fb4                __malloc_unlock
+ .text.__call_exitprocs
+                0x02008fc8        0xc /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-exit.o)
+                0x02008fc8                __call_exitprocs
+ .text.__libc_fini_array
+                0x02008fd4       0x30 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fini.o)
+                0x02008fd4                __libc_fini_array
+ EXCLUDE_FILE(*.twl.*) *(.glue_7t .glue_7 .vfp11_veneer .v4_bx)
+ .glue_7        0x02009004        0x0 linker stubs
+ .glue_7t       0x02009004        0x0 linker stubs
+ .vfp11_veneer  0x02009004        0x0 linker stubs
+ .v4_bx         0x02009004        0x0 linker stubs
+ *(SORT_NONE(.fini))
+ .fini          0x02009004        0x4 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crti.o
+                0x02009004                _fini
+ .fini          0x02009008        0x8 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtn.o
+ .fini.__stub   0x02009010        0x8 linker stubs
+ EXCLUDE_FILE(*.twl.*) *(.rodata .rodata.* .gnu.linkonce.r.*)
+ .rodata.Eco_BldName.str1.4
+                0x02009018      0x5fc economy.o
+                                  0x7 (size before relaxing)
+ .rodata.Eco_DiffName.str1.4
+                0x02009614        0x2 economy.o
+ .rodata.Eco_Day
+                0x02009614       0x5c economy.o
+ .rodata.str1.4
+                0x02009670      0x28b economy.o
+ .rodata.CSWTCH.18
+                0x02009670       0x10 economy.o
+ .rodata.CSWTCH.14
+                0x02009680       0x58 economy.o
+ .rodata.CSWTCH.12
+                0x020096d8       0x58 economy.o
+ .rodata.Evt_Day.str1.4
+                0x02009730       0xb7 events.o
+ .rodata.Evt_Day
+                0x02009730       0x48 events.o
+ .rodata.Game_Init.str1.4
+                0x02009778       0x19 game.o
+ .rodata.Game_New.str1.4
+                0x02009778       0x17 game.o
+ .rodata.Game_CheckEnd.str1.4
+                0x02009778       0x1e game.o
+ .rodata.Gov_Name.str1.4
+                0x02009778        0x2 gov.o
+ .rodata.Gov_Short.str1.4
+                0x02009778        0x4 gov.o
+ .rodata.str1.4
+                0x02009778       0x2e gov.o
+ .rodata.CSWTCH.6
+                0x02009778        0xc gov.o
+ .rodata.CSWTCH.4
+                0x02009784        0xc gov.o
+ .rodata.In_Handle.str1.4
+                0x02009790       0xd7 input.o
+ .rodata        0x02009790       0x18 map.o
+ .rodata.CSWTCH.2
+                0x020097a8       0x20 market.o
+ .rodata.BASE   0x020097c8       0x10 market.o
+ .rodata.CSWTCH.5
+                0x020097d8       0xe8 px_font.o
+ .rodata.G_SPC  0x020098c0        0x5 px_font.o
+ *fill*         0x020098c5        0x3 ff
+ .rodata.G_PCT  0x020098c8        0x5 px_font.o
+ *fill*         0x020098cd        0x3 ff
+ .rodata.G_GT   0x020098d0        0x5 px_font.o
+ *fill*         0x020098d5        0x3 ff
+ .rodata.G_SLA  0x020098d8        0x5 px_font.o
+ *fill*         0x020098dd        0x3 ff
+ .rodata.G_AT   0x020098e0        0x5 px_font.o
+ *fill*         0x020098e5        0x3 ff
+ .rodata.G_EXC  0x020098e8        0x5 px_font.o
+ *fill*         0x020098ed        0x3 ff
+ .rodata.G_MIN  0x020098f0        0x5 px_font.o
+ *fill*         0x020098f5        0x3 ff
+ .rodata.G_PLUS
+                0x020098f8        0x5 px_font.o
+ *fill*         0x020098fd        0x3 ff
+ .rodata.G_COL  0x02009900        0x5 px_font.o
+ *fill*         0x02009905        0x3 ff
+ .rodata.G_DOT  0x02009908        0x5 px_font.o
+ *fill*         0x0200990d        0x3 ff
+ .rodata.G_9    0x02009910        0x5 px_font.o
+ *fill*         0x02009915        0x3 ff
+ .rodata.G_8    0x02009918        0x5 px_font.o
+ *fill*         0x0200991d        0x3 ff
+ .rodata.G_7    0x02009920        0x5 px_font.o
+ *fill*         0x02009925        0x3 ff
+ .rodata.G_6    0x02009928        0x5 px_font.o
+ *fill*         0x0200992d        0x3 ff
+ .rodata.G_5    0x02009930        0x5 px_font.o
+ *fill*         0x02009935        0x3 ff
+ .rodata.G_4    0x02009938        0x5 px_font.o
+ *fill*         0x0200993d        0x3 ff
+ .rodata.G_3    0x02009940        0x5 px_font.o
+ *fill*         0x02009945        0x3 ff
+ .rodata.G_2    0x02009948        0x5 px_font.o
+ *fill*         0x0200994d        0x3 ff
+ .rodata.G_1    0x02009950        0x5 px_font.o
+ *fill*         0x02009955        0x3 ff
+ .rodata.G_0    0x02009958        0x5 px_font.o
+ *fill*         0x0200995d        0x3 ff
+ .rodata.G_Z    0x02009960        0x5 px_font.o
+ *fill*         0x02009965        0x3 ff
+ .rodata.G_Y    0x02009968        0x5 px_font.o
+ *fill*         0x0200996d        0x3 ff
+ .rodata.G_X    0x02009970        0x5 px_font.o
+ *fill*         0x02009975        0x3 ff
+ .rodata.G_W    0x02009978        0x5 px_font.o
+ *fill*         0x0200997d        0x3 ff
+ .rodata.G_V    0x02009980        0x5 px_font.o
+ *fill*         0x02009985        0x3 ff
+ .rodata.G_U    0x02009988        0x5 px_font.o
+ *fill*         0x0200998d        0x3 ff
+ .rodata.G_T    0x02009990        0x5 px_font.o
+ *fill*         0x02009995        0x3 ff
+ .rodata.G_S    0x02009998        0x5 px_font.o
+ *fill*         0x0200999d        0x3 ff
+ .rodata.G_R    0x020099a0        0x5 px_font.o
+ *fill*         0x020099a5        0x3 ff
+ .rodata.G_Q    0x020099a8        0x5 px_font.o
+ *fill*         0x020099ad        0x3 ff
+ .rodata.G_P    0x020099b0        0x5 px_font.o
+ *fill*         0x020099b5        0x3 ff
+ .rodata.G_O    0x020099b8        0x5 px_font.o
+ *fill*         0x020099bd        0x3 ff
+ .rodata.G_N    0x020099c0        0x5 px_font.o
+ *fill*         0x020099c5        0x3 ff
+ .rodata.G_M    0x020099c8        0x5 px_font.o
+ *fill*         0x020099cd        0x3 ff
+ .rodata.G_L    0x020099d0        0x5 px_font.o
+ *fill*         0x020099d5        0x3 ff
+ .rodata.G_K    0x020099d8        0x5 px_font.o
+ *fill*         0x020099dd        0x3 ff
+ .rodata.G_J    0x020099e0        0x5 px_font.o
+ *fill*         0x020099e5        0x3 ff
+ .rodata.G_I    0x020099e8        0x5 px_font.o
+ *fill*         0x020099ed        0x3 ff
+ .rodata.G_H    0x020099f0        0x5 px_font.o
+ *fill*         0x020099f5        0x3 ff
+ .rodata.G_G    0x020099f8        0x5 px_font.o
+ *fill*         0x020099fd        0x3 ff
+ .rodata.G_F    0x02009a00        0x5 px_font.o
+ *fill*         0x02009a05        0x3 ff
+ .rodata.G_E    0x02009a08        0x5 px_font.o
+ *fill*         0x02009a0d        0x3 ff
+ .rodata.G_D    0x02009a10        0x5 px_font.o
+ *fill*         0x02009a15        0x3 ff
+ .rodata.G_C    0x02009a18        0x5 px_font.o
+ *fill*         0x02009a1d        0x3 ff
+ .rodata.G_B    0x02009a20        0x5 px_font.o
+ *fill*         0x02009a25        0x3 ff
+ .rodata.G_A    0x02009a28        0x5 px_font.o
+ .rodata.Px_Top.str1.4
+                0x02009a2d       0xb4 px_tiles.o
+ *fill*         0x02009a2d        0x3 ff
+ .rodata.Px_Top
+                0x02009a30      0x1e0 px_tiles.o
+ .rodata.Px_Bot.str1.4
+                0x02009c10       0x79 px_tiles.o
+ .rodata.str1.4
+                0x02009c10       0x14 px_tiles.o
+ .rodata.CSWTCH.84
+                0x02009c10        0xc px_tiles.o
+ .rodata        0x02009c1c        0xe px_tiles.o
+ .rodata.Save_W.str1.4
+                0x02009c2a        0x8 save.o
+ *fill*         0x02009c2a        0x2 ff
+ .rodata.SIN_LUT
+                0x02009c2c      0x102 /home/black/devkitpro/libnds/lib/libnds9.a(trig.o)
+                0x02009c2c                SIN_LUT
+ .rodata.str1.4
+                0x02009d2e        0x8 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-iosupport.o)
+ *fill*         0x02009d2e        0x2 ff
+ .rodata.dotab_stdnull
+                0x02009d30       0x80 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-iosupport.o)
+                0x02009d30                dotab_stdnull
+ EXCLUDE_FILE(*.twl.*) *(.rodata1)
+                0x02009db0                        . = ALIGN (0x4)
+
+.main.rw        0x02009db0     0x1710 load address 0x0200ddac
+ EXCLUDE_FILE(*.twl.*) *(.data .data.* .gnu.linkonce.d.*)
+ .data.cyc      0x02009db0        0x1 input.o
+ *fill*         0x02009db1        0x3 ff
+ .data.bgTransform
+                0x02009db4       0x20 /home/black/devkitpro/libnds/lib/libnds9.a(background.o)
+                0x02009db4                bgTransform
+ .data.bgScrollTable
+                0x02009dd4       0x20 /home/black/devkitpro/libnds/lib/libnds9.a(background.o)
+                0x02009dd4                bgScrollTable
+ .data.count    0x02009df4        0x1 /home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+ .data.repeat   0x02009df5        0x1 /home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+ .data.delay    0x02009df6        0x1 /home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+ *fill*         0x02009df7        0x1 ff
+ .data.handles  0x02009df8     0x1000 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-handle_manager.o)
+ .data.__stderr_handle
+                0x0200adf8        0xc /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-handle_manager.o)
+ .data.__stdout_handle
+                0x0200ae04        0xc /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-handle_manager.o)
+ .data.__stdin_handle
+                0x0200ae10        0xc /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-handle_manager.o)
+ .data.devoptab_list
+                0x0200ae1c       0x8c /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-iosupport.o)
+                0x0200ae1c                devoptab_list
+ .data._impure_ptr
+                0x0200aea8        0x4 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-impure.o)
+                0x0200aea8                _impure_ptr
+ *fill*         0x0200aeac        0x4 ff
+ .data._impure_data
+                0x0200aeb0      0x200 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-impure.o)
+                0x0200aeb0                _impure_data
+ .data.__malloc_sbrk_base
+                0x0200b0b0        0x4 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-mallocr.o)
+                0x0200b0b0                __malloc_sbrk_base
+ .data.__malloc_trim_threshold
+                0x0200b0b4        0x4 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-mallocr.o)
+                0x0200b0b4                __malloc_trim_threshold
+ .data.__malloc_av_
+                0x0200b0b8      0x408 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-mallocr.o)
+                0x0200b0b8                __malloc_av_
+ EXCLUDE_FILE(*.twl.*) *(.data1)
+ EXCLUDE_FILE(*.twl.*) *(.igot.plt)
+ .igot.plt      0x0200b4c0        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtbegin.o
+                0x0200b4c0                        . = ALIGN (0x4)
+
+.tm_clone_table
+                0x0200b4c0        0x0 load address 0x0200f4bc
+ .tm_clone_table
+                0x0200b4c0        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtbegin.o
+ .tm_clone_table
+                0x0200b4c0        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtend.o
+
+.ARM.extab
+ *(.ARM.extab* .gnu.linkonce.armextab.*)
+
+.ARM.exidx      0x0200b4c0        0x0 load address 0x0200f4bc
+ *(.ARM.exidx* .gnu.linkonce.armexidx.*)
+                [!provide]                        PROVIDE (__exidx_start = ADDR (.ARM.exidx))
+                [!provide]                        PROVIDE (__exidx_end = (ADDR (.ARM.exidx) + SIZEOF (.ARM.exidx)))
+
+.eh_frame_hdr
+ *(.eh_frame_hdr)
+ *(.eh_frame_entry .eh_frame_entry.*)
+
+.eh_frame       0x0200b4c0        0x4 load address 0x0200f4bc
+ *(.eh_frame)
+ .eh_frame      0x0200b4c0        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtbegin.o
+ .eh_frame      0x0200b4c0        0x4 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtend.o
+ *(.eh_frame.*)
+
+.gcc_except_table
+ *(.gcc_except_table .gcc_except_table.*)
+
+.gnu_extab
+ *(.gnu_extab*)
+
+.tinfo          0x0200b4c4        0xc load address 0x0200f4c0
+                0x0200b4c4        0x4 LONG 0x200b4d8 __tls_start
+                0x0200b4c8        0x4 LONG 0x0 SIZEOF (.main.tls)
+                0x0200b4cc        0x4 LONG 0x0 SIZEOF (.tdata)
+                0x0200b4c4                        PROVIDE (__tls_info = ADDR (.tinfo))
+
+.preinit_array  0x0200b4d0        0x0 load address 0x0200f4cc
+                0x0200b4d0                        PROVIDE (__preinit_array_start = .)
+ *(.preinit_array)
+                0x0200b4d0                        PROVIDE (__preinit_array_end = .)
+
+.init_array     0x0200b4d0        0x4 load address 0x0200f4cc
+                0x0200b4d0                        PROVIDE (__init_array_start = .)
+ *(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*))
+ *(.init_array .ctors)
+ .init_array    0x0200b4d0        0x4 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtbegin.o
+                0x0200b4d4                        PROVIDE (__init_array_end = .)
+
+.fini_array     0x0200b4d4        0x4 load address 0x0200f4d0
+                0x0200b4d4                        PROVIDE (__fini_array_start = .)
+ *(SORT_BY_INIT_PRIORITY(.fini_array.*) SORT_BY_INIT_PRIORITY(.dtors.*))
+ *(.fini_array .dtors)
+ .fini_array    0x0200b4d4        0x4 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtbegin.o
+                0x0200b4d8                        PROVIDE (__fini_array_end = .)
+                [!provide]                        PROVIDE (__main_lma = LOADADDR (.main))
+                0x020013c0                        PROVIDE (__main_start = ADDR (.main))
+                0x0200b4d8                        PROVIDE (__main_end = (ADDR (.fini_array) + SIZEOF (.fini_array)))
+
+.tdata          0x00000000        0x0 load address 0x0200f4d4
+ *(.tdata .tdata.* .gnu.linkonce.td.*)
+                0x00000000                        . = ALIGN (0x4)
+
+.tbss           0x00000000        0x0 load address 0x0200f4d4
+ *(.tbss .tbss.* .gnu.linkonce.tb.*)
+ *(.tcommon)
+                0x00000000                        . = ALIGN (0x4)
+                0x00000001                        ASSERT (((ALIGNOF (.tdata) <= 0x8) || (ALIGNOF (.tbss) <= 0x8)), Error: TLS is overaligned (up to 8-byte alignment is supported))
+                0x00000001                        ASSERT (((ADDR (.tbss) + SIZEOF (.tbss)) <= (ORIGIN (tls) + LENGTH (tls))), Error: TLS section too large)
+
+.main.tls       0x0200b4d8        0x0
+                0x0200b4d8                        . = (. + ((ADDR (.tbss) + SIZEOF (.tbss)) - ADDR (.tdata)))
+                [!provide]                        PROVIDE (__tls_lma = LOADADDR (.tdata))
+                0x0200b4d8                        PROVIDE (__tls_start = ADDR (.main.tls))
+                0x0200b4d8                        PROVIDE (__tls_end = (ADDR (.main.tls) + SIZEOF (.tdata)))
+
+.main.bss       0x0200b4d8    0x35d60
+ EXCLUDE_FILE(*.twl.*) *(.dynbss)
+ EXCLUDE_FILE(*.twl.*) *(.bss .bss.* .gnu.linkonce.b.*)
+ .bss           0x0200b4d8       0x1c /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtbegin.o
+ .bss.fY        0x0200b4f4      0x400 ai.o
+ .bss.fX        0x0200b8f4      0x400 ai.o
+ .bss.G         0x0200bcf4     0x2650 game.o
+ .bss.good      0x0200e344        0x1 input.o
+ *fill*         0x0200e345        0x3 
+ .bss.backBot   0x0200e348    0x18000 px_core.o
+ .bss.backTop   0x02026348    0x18000 px_core.o
+ .bss.s_tick    0x0203e348        0x4 px_tiles.o
+ .bss.ok        0x0203e34c        0x1 save.o
+ *fill*         0x0203e34d        0x3 
+ .bss.slot      0x0203e350     0x2650 save.o
+ .bss.bgIsTextLut
+                0x020409a0        0x8 /home/black/devkitpro/libnds/lib/libnds9.a(background.o)
+                0x020409a0                bgIsTextLut
+ .bss.bgState   0x020409a8      0x140 /home/black/devkitpro/libnds/lib/libnds9.a(background.o)
+                0x020409a8                bgState
+ .bss.keysrepeat
+                0x02040ae8        0x2 /home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+ *fill*         0x02040aea        0x2 
+ .bss.s_keypad  0x02040aec        0x4 /home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+ .bss.__hndl_lock
+                0x02040af0        0x4 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-handle_manager.o)
+ .bss.heap_start.0
+                0x02040af4        0x4 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-sbrk.o)
+ .bss.fake_heap_start
+                0x02040af8        0x4 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-malloc_vars.o)
+                0x02040af8                fake_heap_start
+ .bss.fake_heap_end
+                0x02040afc        0x4 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-malloc_vars.o)
+                0x02040afc                fake_heap_end
+ .bss.s_sleepThreads
+                0x02040b00        0x8 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .bss.s_joinThreads
+                0x02040b08        0x8 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .bss.s_idleThread
+                0x02040b10       0x70 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .bss.s_mainThread
+                0x02040b80       0x70 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .bss.s_defaultErrno.0
+                0x02040bf0        0x4 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .bss.s_firstTask
+                0x02040bf4        0x4 /home/black/devkitpro/calico/lib/libcalico_ds9.a(tick.o)
+ .bss.s_highTickCount
+                0x02040bf8        0x8 /home/black/devkitpro/calico/lib/libcalico_ds9.a(tick.o)
+ .bss.s_tickInit
+                0x02040c00        0x1 /home/black/devkitpro/calico/lib/libcalico_ds9.a(tick.o)
+ *fill*         0x02040c01        0x3 
+ .bss.__stacksize__
+                0x02040c04        0x4 /home/black/devkitpro/calico/lib/libcalico_ds9.a(startup.crt0.o)
+                0x02040c04                __stacksize__
+ .bss.g_isTwlMode
+                0x02040c08        0x1 /home/black/devkitpro/calico/lib/libcalico_ds9.a(startup.crt0.o)
+                0x02040c08                g_isTwlMode
+ *fill*         0x02040c09        0x3 
+ .bss.s_pxiChannels
+                0x02040c0c      0x1f0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+ .bss.s_pxiRecvState
+                0x02040dfc        0x4 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+ .bss.s_pxiRecvQueue
+                0x02040e00        0x8 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+ .bss.s_pxiSendMutex
+                0x02040e08        0x4 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+ .bss.s_mailboxRecvQueue
+                0x02040e0c        0x8 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mailbox.o)
+ *fill*         0x02040e14        0x4 
+ .bss.s_pmPxiThreadStack
+                0x02040e18      0x200 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .bss.s_pmPxiThread
+                0x02041018       0x70 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .bss.s_pmState
+                0x02041088        0x8 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .bss.__malloc_current_mallinfo
+                0x02041090       0x28 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-mallocr.o)
+                0x02041090                __malloc_current_mallinfo
+ .bss.__malloc_top_pad
+                0x020410b8        0x4 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-mallocr.o)
+                0x020410b8                __malloc_top_pad
+ *fill*         0x020410bc        0x4 
+ .bss.__sf      0x020410c0      0x168 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-findfp.o)
+                0x020410c0                __sf
+ .bss.__stdio_exit_handler
+                0x02041228        0x4 /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-findfp.o)
+                0x02041228                __stdio_exit_handler
+ .bss.__malloc_recursive_mutex
+                0x0204122c        0xc /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-mlock.o)
+ EXCLUDE_FILE(*.twl.*) *(COMMON)
+                0x02041238                        . = ALIGN (0x4)
+                [!provide]                        PROVIDE (__main_bss_start = ADDR (.main.bss))
+                0x02041238                        PROVIDE (__main_bss_end = (ADDR (.main.bss) + SIZEOF (.main.bss)))
+                0x02041238                        . = .
+                0x02041238                        PROVIDE (__heap_start_ntr = .)
+                0x00000001                        ASSERT ((. <= 0x2380000), Error: DS-mode sections overflow DS ARM9 memory size (3.5 MB))
+
+.twl            0x02041240        0x0 load address 0x02400000
+ *(.twl .twl.*)
+ *.twl.*(.text .stub .text.* .gnu.linkonce.t.*)
+ *.twl.*(.glue_7t .glue_7 .vfp11_veneer .v4_bx)
+ *.twl.*(.rodata .rodata.* .gnu.linkonce.r.*)
+ *.twl.*(.rodata1)
+                0x02041240                        . = ALIGN (0x4)
+
+.twl.rw         0x02041240        0x0 load address 0x02400000
+ *.twl.*(.data .data.* .gnu.linkonce.d.*)
+ *.twl.*(.data1)
+                0x02041240                        . = ALIGN (0x4)
+                0x02400000                        PROVIDE (__twl_lma = LOADADDR (.twl))
+                0x02041240                        PROVIDE (__twl_start = ADDR (.twl))
+                0x02041240                        PROVIDE (__twl_end = (ADDR (.twl.rw) + SIZEOF (.twl.rw)))
+
+.twl.bss        0x02041240        0x0 load address 0x02400000
+ *(.twl_bss .twl_bss.*)
+ *.twl.*(.dynbss)
+ *.twl.*(.bss .bss.* .gnu.linkonce.b.*)
+ *.twl.*(COMMON)
+                0x02041240                        . = ALIGN (0x4)
+                [!provide]                        PROVIDE (__twl_bss_start = ADDR (.twl.bss))
+                0x02041240                        PROVIDE (__twl_bss_end = (ADDR (.twl.bss) + SIZEOF (.twl.bss)))
+                0x02041240                        . = .
+                0x02041240                        PROVIDE (__heap_start_twl = .)
+
+.loadlist       0x0e000998       0x30 load address 0x0200f4d4
+                0x0e000998        0x4 LONG 0x1ff8000 __itcm_start
+                0x0e00099c        0x4 LONG 0x1ff8664 __itcm_end
+                0x0e0009a0        0x4 LONG 0x1ff8664 __itcm_end
+                0x0e0009a4        0x4 LONG 0x2ff0000 __dtcm_start
+                0x0e0009a8        0x4 LONG 0x2ff0000 __dtcm_end
+                0x0e0009ac        0x4 LONG 0x2ff0098 __dtcm_bss_end
+                0x0e0009b0        0x4 LONG 0x20013c0 __main_start
+                0x0e0009b4        0x4 LONG 0x200b4d8 __main_end
+                0x0e0009b8        0x4 LONG 0x200b4d8 __main_end
+                0x0e0009bc        0x4 LONG 0x200b4d8 __tls_start
+                0x0e0009c0        0x4 LONG 0x200b4d8 __tls_end
+                0x0e0009c4        0x4 LONG 0x2041238 __main_bss_end
+                0x02004d58                        PROVIDE (__loadlist_lma = __itcm_lma)
+                0x0200f4d4                        PROVIDE (__loadlist_start = LOADADDR (.loadlist))
+                0x0200f504                        PROVIDE (__loadlist_end = (LOADADDR (.loadlist) + SIZEOF (.loadlist)))
+
+.twl.loadlist   0x0e0009c8        0xc load address 0x02400000
+                0x0e0009c8        0x4 LONG 0x2041240 __twl_start
+                0x0e0009cc        0x4 LONG 0x2041240 __twl_end
+                0x0e0009d0        0x4 LONG 0x2041240 __twl_bss_end
+                0x02400000                        PROVIDE (__twl_loadlist_lma = __twl_lma)
+                0x02400000                        PROVIDE (__twl_loadlist_start = LOADADDR (.twl.loadlist))
+                0x0240000c                        PROVIDE (__twl_loadlist_end = (LOADADDR (.twl.loadlist) + SIZEOF (.twl.loadlist)))
+
+.rel.dyn        0x0e0009d4        0x0 load address 0x0240000c
+ .rel.iplt      0x0e0009d4        0x0 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtbegin.o
+
+.stab
+ *(.stab)
+
+.stabstr
+ *(.stabstr)
+
+.stab.excl
+ *(.stab.excl)
+
+.stab.exclstr
+ *(.stab.exclstr)
+
+.stab.index
+ *(.stab.index)
+
+.stab.indexstr
+ *(.stab.indexstr)
+
+.comment        0x00000000       0x3e
+ *(.comment)
+ .comment       0x00000000       0x3e /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtbegin.o
+                                 0x27 (size before relaxing)
+ .comment       0x0000003e       0x27 ai.o
+ .comment       0x0000003e       0x27 combat.o
+ .comment       0x0000003e       0x27 diplomacy.o
+ .comment       0x0000003e       0x27 economy.o
+ .comment       0x0000003e       0x27 events.o
+ .comment       0x0000003e       0x27 game.o
+ .comment       0x0000003e       0x27 gov.o
+ .comment       0x0000003e       0x27 input.o
+ .comment       0x0000003e       0x27 main.o
+ .comment       0x0000003e       0x27 map.o
+ .comment       0x0000003e       0x27 market.o
+ .comment       0x0000003e       0x27 pops.o
+ .comment       0x0000003e       0x27 px_core.o
+ .comment       0x0000003e       0x27 px_font.o
+ .comment       0x0000003e       0x27 px_tiles.o
+ .comment       0x0000003e       0x27 rng.o
+ .comment       0x0000003e       0x27 save.o
+ .comment       0x0000003e       0x19 /home/black/devkitpro/libnds/lib/libnds9.a(background.o)
+ .comment       0x0000003e       0x19 /home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+ .comment       0x0000003e       0x19 /home/black/devkitpro/libnds/lib/libnds9.a(trig.o)
+ .comment       0x0000003e       0x19 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .comment       0x0000003e       0x19 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_hot.32.o)
+ .comment       0x0000003e       0x19 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mutex.o)
+ .comment       0x0000003e       0x19 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .comment       0x0000003e       0x19 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-shims.32.o)
+ .comment       0x0000003e       0x19 /home/black/devkitpro/calico/lib/libcalico_ds9.a(keypad.o)
+ .comment       0x0000003e       0x19 /home/black/devkitpro/calico/lib/libcalico_ds9.a(touch.o)
+ .comment       0x0000003e       0x19 /home/black/devkitpro/calico/lib/libcalico_ds9.a(tick.o)
+ .comment       0x0000003e       0x19 /home/black/devkitpro/calico/lib/libcalico_ds9.a(startup.crt0.o)
+ .comment       0x0000003e       0x19 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+ .comment       0x0000003e       0x19 /home/black/devkitpro/calico/lib/libcalico_ds9.a(sys_startup.o)
+ .comment       0x0000003e       0x19 /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq.o)
+ .comment       0x0000003e       0x19 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mailbox.o)
+ .comment       0x0000003e       0x19 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .comment       0x0000003e       0x27 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtend.o
+
+.gnu.build.attributes
+ *(.gnu.build.attributes .gnu.build.attributes.*)
+
+.debug
+ *(.debug)
+
+.line
+ *(.line)
+
+.debug_srcinfo
+ *(.debug_srcinfo)
+
+.debug_sfnames
+ *(.debug_sfnames)
+
+.debug_aranges  0x00000000      0xb90
+ *(.debug_aranges)
+ .debug_aranges
+                0x00000000       0x30 ai.o
+ .debug_aranges
+                0x00000030       0x30 combat.o
+ .debug_aranges
+                0x00000060       0x58 diplomacy.o
+ .debug_aranges
+                0x000000b8       0x68 economy.o
+ .debug_aranges
+                0x00000120       0x28 events.o
+ .debug_aranges
+                0x00000148       0x48 game.o
+ .debug_aranges
+                0x00000190       0x40 gov.o
+ .debug_aranges
+                0x000001d0       0x28 input.o
+ .debug_aranges
+                0x000001f8       0x20 main.o
+ .debug_aranges
+                0x00000218       0x40 map.o
+ .debug_aranges
+                0x00000258       0x88 market.o
+ .debug_aranges
+                0x000002e0       0x38 pops.o
+ .debug_aranges
+                0x00000318       0x78 px_core.o
+ .debug_aranges
+                0x00000390       0x38 px_font.o
+ .debug_aranges
+                0x000003c8       0x30 px_tiles.o
+ .debug_aranges
+                0x000003f8       0x38 rng.o
+ .debug_aranges
+                0x00000430       0x38 save.o
+ .debug_aranges
+                0x00000468       0x40 /home/black/devkitpro/libnds/lib/libnds9.a(background.o)
+ .debug_aranges
+                0x000004a8       0x50 /home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+ .debug_aranges
+                0x000004f8       0x60 /home/black/devkitpro/libnds/lib/libnds9.a(trig.o)
+ .debug_aranges
+                0x00000558       0x90 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .debug_aranges
+                0x000005e8       0x50 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_hot.32.o)
+ .debug_aranges
+                0x00000638       0x58 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mutex.o)
+ .debug_aranges
+                0x00000690       0xb8 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .debug_aranges
+                0x00000748       0x28 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-context.32.o)
+ .debug_aranges
+                0x00000770       0x70 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-shims.32.o)
+ .debug_aranges
+                0x000007e0       0x20 /home/black/devkitpro/calico/lib/libcalico_ds9.a(keypad.o)
+ .debug_aranges
+                0x00000800       0x38 /home/black/devkitpro/calico/lib/libcalico_ds9.a(bootstub_arm9.o)
+ .debug_aranges
+                0x00000838       0x20 /home/black/devkitpro/calico/lib/libcalico_ds9.a(excpt_handler.32.o)
+ .debug_aranges
+                0x00000858       0x20 /home/black/devkitpro/calico/lib/libcalico_ds9.a(touch.o)
+ .debug_aranges
+                0x00000878       0x50 /home/black/devkitpro/calico/lib/libcalico_ds9.a(tick.o)
+ .debug_aranges
+                0x000008c8       0x28 /home/black/devkitpro/calico/lib/libcalico_ds9.a(startup.crt0.o)
+ .debug_aranges
+                0x000008f0       0x28 /home/black/devkitpro/calico/lib/libcalico_ds9.a(utils.crt0.o)
+ .debug_aranges
+                0x00000918       0x20 /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq_handler.32.o)
+ .debug_aranges
+                0x00000938       0x78 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+ .debug_aranges
+                0x000009b0       0x20 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mpu_setup.crt0.o)
+ .debug_aranges
+                0x000009d0       0x28 /home/black/devkitpro/calico/lib/libcalico_ds9.a(sys_startup.o)
+ .debug_aranges
+                0x000009f8       0x20 /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq.o)
+ .debug_aranges
+                0x00000a18       0x30 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mailbox.o)
+ .debug_aranges
+                0x00000a48       0x48 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-cache.32.o)
+ .debug_aranges
+                0x00000a90       0xa0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .debug_aranges
+                0x00000b30       0x20 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivsi3.o)
+ .debug_aranges
+                0x00000b50       0x20 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_divsi3.o)
+ .debug_aranges
+                0x00000b70       0x20 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_dvmd_tls.o)
+
+.debug_pubnames
+ *(.debug_pubnames)
+
+.debug_info     0x00000000    0x1c0b5
+ *(.debug_info .gnu.linkonce.wi.*)
+ .debug_info    0x00000000     0x1211 ai.o
+ .debug_info    0x00001211      0xa7d combat.o
+ .debug_info    0x00001c8e      0x9a0 diplomacy.o
+ .debug_info    0x0000262e     0x1604 economy.o
+ .debug_info    0x00003c32      0xc47 events.o
+ .debug_info    0x00004879      0xa62 game.o
+ .debug_info    0x000052db      0x71a gov.o
+ .debug_info    0x000059f5     0x10f3 input.o
+ .debug_info    0x00006ae8      0x63e main.o
+ .debug_info    0x00007126      0xcfb map.o
+ .debug_info    0x00007e21     0x101a market.o
+ .debug_info    0x00008e3b     0x1dc8 pops.o
+ .debug_info    0x0000ac03     0x12f4 px_core.o
+ .debug_info    0x0000bef7      0x884 px_font.o
+ .debug_info    0x0000c77b     0x20c8 px_tiles.o
+ .debug_info    0x0000e843      0x63e rng.o
+ .debug_info    0x0000ee81      0x67e save.o
+ .debug_info    0x0000f4ff      0xa36 /home/black/devkitpro/libnds/lib/libnds9.a(background.o)
+ .debug_info    0x0000ff35      0x48d /home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+ .debug_info    0x000103c2      0x77c /home/black/devkitpro/libnds/lib/libnds9.a(trig.o)
+ .debug_info    0x00010b3e     0x2067 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .debug_info    0x00012ba5     0x12a7 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_hot.32.o)
+ .debug_info    0x00013e4c      0xfec /home/black/devkitpro/calico/lib/libcalico_ds9.a(mutex.o)
+ .debug_info    0x00014e38     0x1754 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .debug_info    0x0001658c       0x3b /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-context.32.o)
+ .debug_info    0x000165c7      0x385 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-shims.32.o)
+ .debug_info    0x0001694c      0x1c6 /home/black/devkitpro/calico/lib/libcalico_ds9.a(keypad.o)
+ .debug_info    0x00016b12       0x3e /home/black/devkitpro/calico/lib/libcalico_ds9.a(bootstub_arm9.o)
+ .debug_info    0x00016b50       0x5d /home/black/devkitpro/calico/lib/libcalico_ds9.a(excpt_handler.32.o)
+ .debug_info    0x00016bad      0x26f /home/black/devkitpro/calico/lib/libcalico_ds9.a(touch.o)
+ .debug_info    0x00016e1c      0xc64 /home/black/devkitpro/calico/lib/libcalico_ds9.a(tick.o)
+ .debug_info    0x00017a80      0x4e1 /home/black/devkitpro/calico/lib/libcalico_ds9.a(startup.crt0.o)
+ .debug_info    0x00017f61       0x3b /home/black/devkitpro/calico/lib/libcalico_ds9.a(utils.crt0.o)
+ .debug_info    0x00017f9c       0x33 /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq_handler.32.o)
+ .debug_info    0x00017fcf     0x13e2 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+ .debug_info    0x000193b1       0x33 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mpu_setup.crt0.o)
+ .debug_info    0x000193e4      0x5d5 /home/black/devkitpro/calico/lib/libcalico_ds9.a(sys_startup.o)
+ .debug_info    0x000199b9      0x28e /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq.o)
+ .debug_info    0x00019c47      0x822 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mailbox.o)
+ .debug_info    0x0001a469       0x67 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-cache.32.o)
+ .debug_info    0x0001a4d0     0x1b2d /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .debug_info    0x0001bffd       0x3e /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivsi3.o)
+ .debug_info    0x0001c03b       0x3e /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_divsi3.o)
+ .debug_info    0x0001c079       0x3c /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_dvmd_tls.o)
+
+.debug_abbrev   0x00000000     0x61cb
+ *(.debug_abbrev)
+ .debug_abbrev  0x00000000      0x263 ai.o
+ .debug_abbrev  0x00000263      0x263 combat.o
+ .debug_abbrev  0x000004c6      0x27c diplomacy.o
+ .debug_abbrev  0x00000742      0x379 economy.o
+ .debug_abbrev  0x00000abb      0x299 events.o
+ .debug_abbrev  0x00000d54      0x1f4 game.o
+ .debug_abbrev  0x00000f48      0x22e gov.o
+ .debug_abbrev  0x00001176      0x331 input.o
+ .debug_abbrev  0x000014a7      0x1c7 main.o
+ .debug_abbrev  0x0000166e      0x2b4 map.o
+ .debug_abbrev  0x00001922      0x32d market.o
+ .debug_abbrev  0x00001c4f      0x34c pops.o
+ .debug_abbrev  0x00001f9b      0x3ae px_core.o
+ .debug_abbrev  0x00002349      0x1fb px_font.o
+ .debug_abbrev  0x00002544      0x31a px_tiles.o
+ .debug_abbrev  0x0000285e      0x1e9 rng.o
+ .debug_abbrev  0x00002a47      0x1c8 save.o
+ .debug_abbrev  0x00002c0f      0x364 /home/black/devkitpro/libnds/lib/libnds9.a(background.o)
+ .debug_abbrev  0x00002f73      0x273 /home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+ .debug_abbrev  0x000031e6      0x26c /home/black/devkitpro/libnds/lib/libnds9.a(trig.o)
+ .debug_abbrev  0x00003452      0x634 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .debug_abbrev  0x00003a86      0x373 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_hot.32.o)
+ .debug_abbrev  0x00003df9      0x392 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mutex.o)
+ .debug_abbrev  0x0000418b      0x4bf /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .debug_abbrev  0x0000464a       0x26 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-context.32.o)
+ .debug_abbrev  0x00004670      0x1c3 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-shims.32.o)
+ .debug_abbrev  0x00004833       0xd0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(keypad.o)
+ .debug_abbrev  0x00004903       0x26 /home/black/devkitpro/calico/lib/libcalico_ds9.a(bootstub_arm9.o)
+ .debug_abbrev  0x00004929       0x26 /home/black/devkitpro/calico/lib/libcalico_ds9.a(excpt_handler.32.o)
+ .debug_abbrev  0x0000494f      0x11a /home/black/devkitpro/calico/lib/libcalico_ds9.a(touch.o)
+ .debug_abbrev  0x00004a69      0x329 /home/black/devkitpro/calico/lib/libcalico_ds9.a(tick.o)
+ .debug_abbrev  0x00004d92      0x1d6 /home/black/devkitpro/calico/lib/libcalico_ds9.a(startup.crt0.o)
+ .debug_abbrev  0x00004f68       0x26 /home/black/devkitpro/calico/lib/libcalico_ds9.a(utils.crt0.o)
+ .debug_abbrev  0x00004f8e       0x28 /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq_handler.32.o)
+ .debug_abbrev  0x00004fb6      0x445 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+ .debug_abbrev  0x000053fb       0x28 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mpu_setup.crt0.o)
+ .debug_abbrev  0x00005423      0x1f4 /home/black/devkitpro/calico/lib/libcalico_ds9.a(sys_startup.o)
+ .debug_abbrev  0x00005617      0x1c1 /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq.o)
+ .debug_abbrev  0x000057d8      0x2c4 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mailbox.o)
+ .debug_abbrev  0x00005a9c       0x26 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-cache.32.o)
+ .debug_abbrev  0x00005ac2      0x693 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .debug_abbrev  0x00006155       0x28 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivsi3.o)
+ .debug_abbrev  0x0000617d       0x28 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_divsi3.o)
+ .debug_abbrev  0x000061a5       0x26 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_dvmd_tls.o)
+
+.debug_line     0x00000000    0x142fa
+ *(.debug_line .debug_line.* .debug_line_end)
+ .debug_line    0x00000000      0xe44 ai.o
+ .debug_line    0x00000e44      0x7bf combat.o
+ .debug_line    0x00001603      0x642 diplomacy.o
+ .debug_line    0x00001c45     0x11b3 economy.o
+ .debug_line    0x00002df8      0xaf3 events.o
+ .debug_line    0x000038eb      0x76a game.o
+ .debug_line    0x00004055      0x3a7 gov.o
+ .debug_line    0x000043fc     0x11a7 input.o
+ .debug_line    0x000055a3      0x295 main.o
+ .debug_line    0x00005838      0xe9f map.o
+ .debug_line    0x000066d7      0xa1d market.o
+ .debug_line    0x000070f4     0x14d0 pops.o
+ .debug_line    0x000085c4      0x962 px_core.o
+ .debug_line    0x00008f26      0x461 px_font.o
+ .debug_line    0x00009387     0x16f3 px_tiles.o
+ .debug_line    0x0000aa7a      0x304 rng.o
+ .debug_line    0x0000ad7e      0x36f save.o
+ .debug_line    0x0000b0ed      0x61c /home/black/devkitpro/libnds/lib/libnds9.a(background.o)
+ .debug_line    0x0000b709      0x457 /home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+ .debug_line    0x0000bb60      0x77f /home/black/devkitpro/libnds/lib/libnds9.a(trig.o)
+ .debug_line    0x0000c2df     0x11fe /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .debug_line    0x0000d4dd      0xed6 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_hot.32.o)
+ .debug_line    0x0000e3b3      0xd5e /home/black/devkitpro/calico/lib/libcalico_ds9.a(mutex.o)
+ .debug_line    0x0000f111      0x9aa /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .debug_line    0x0000fabb       0x69 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-context.32.o)
+ .debug_line    0x0000fb24      0x36d /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-shims.32.o)
+ .debug_line    0x0000fe91      0x232 /home/black/devkitpro/calico/lib/libcalico_ds9.a(keypad.o)
+ .debug_line    0x000100c3      0x108 /home/black/devkitpro/calico/lib/libcalico_ds9.a(bootstub_arm9.o)
+ .debug_line    0x000101cb       0x66 /home/black/devkitpro/calico/lib/libcalico_ds9.a(excpt_handler.32.o)
+ .debug_line    0x00010231      0x2a1 /home/black/devkitpro/calico/lib/libcalico_ds9.a(touch.o)
+ .debug_line    0x000104d2      0xbae /home/black/devkitpro/calico/lib/libcalico_ds9.a(tick.o)
+ .debug_line    0x00011080      0x480 /home/black/devkitpro/calico/lib/libcalico_ds9.a(startup.crt0.o)
+ .debug_line    0x00011500       0x7d /home/black/devkitpro/calico/lib/libcalico_ds9.a(utils.crt0.o)
+ .debug_line    0x0001157d       0x92 /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq_handler.32.o)
+ .debug_line    0x0001160f      0xb09 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+ .debug_line    0x00012118       0x6e /home/black/devkitpro/calico/lib/libcalico_ds9.a(mpu_setup.crt0.o)
+ .debug_line    0x00012186      0x65d /home/black/devkitpro/calico/lib/libcalico_ds9.a(sys_startup.o)
+ .debug_line    0x000127e3      0x3b3 /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq.o)
+ .debug_line    0x00012b96      0x5e7 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mailbox.o)
+ .debug_line    0x0001317d       0xb2 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-cache.32.o)
+ .debug_line    0x0001322f      0xfa7 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .debug_line    0x000141d6       0x67 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivsi3.o)
+ .debug_line    0x0001423d       0x73 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_divsi3.o)
+ .debug_line    0x000142b0       0x4a /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_dvmd_tls.o)
+
+.debug_frame    0x00000000     0x19ac
+ *(.debug_frame)
+ .debug_frame   0x00000000       0x78 ai.o
+ .debug_frame   0x00000078       0x88 combat.o
+ .debug_frame   0x00000100       0xf8 diplomacy.o
+ .debug_frame   0x000001f8      0x10c economy.o
+ .debug_frame   0x00000304       0x48 events.o
+ .debug_frame   0x0000034c       0x9c game.o
+ .debug_frame   0x000003e8       0x80 gov.o
+ .debug_frame   0x00000468       0x4c input.o
+ .debug_frame   0x000004b4       0x2c main.o
+ .debug_frame   0x000004e0       0xac map.o
+ .debug_frame   0x0000058c      0x17c market.o
+ .debug_frame   0x00000708       0x6c pops.o
+ .debug_frame   0x00000774      0x10c px_core.o
+ .debug_frame   0x00000880       0xa0 px_font.o
+ .debug_frame   0x00000920       0x90 px_tiles.o
+ .debug_frame   0x000009b0       0x60 rng.o
+ .debug_frame   0x00000a10       0x6c save.o
+ .debug_frame   0x00000a7c       0xb4 /home/black/devkitpro/libnds/lib/libnds9.a(background.o)
+ .debug_frame   0x00000b30       0x98 /home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+ .debug_frame   0x00000bc8       0xd8 /home/black/devkitpro/libnds/lib/libnds9.a(trig.o)
+ .debug_frame   0x00000ca0      0x1bc /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .debug_frame   0x00000e5c       0xe0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_hot.32.o)
+ .debug_frame   0x00000f3c      0x118 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mutex.o)
+ .debug_frame   0x00001054      0x1d8 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .debug_frame   0x0000122c       0x30 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-context.32.o)
+ .debug_frame   0x0000125c       0xc0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-shims.32.o)
+ .debug_frame   0x0000131c       0x20 /home/black/devkitpro/calico/lib/libcalico_ds9.a(keypad.o)
+ .debug_frame   0x0000133c       0x30 /home/black/devkitpro/calico/lib/libcalico_ds9.a(bootstub_arm9.o)
+ .debug_frame   0x0000136c       0x28 /home/black/devkitpro/calico/lib/libcalico_ds9.a(touch.o)
+ .debug_frame   0x00001394       0xf0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(tick.o)
+ .debug_frame   0x00001484       0x58 /home/black/devkitpro/calico/lib/libcalico_ds9.a(startup.crt0.o)
+ .debug_frame   0x000014dc       0x30 /home/black/devkitpro/calico/lib/libcalico_ds9.a(utils.crt0.o)
+ .debug_frame   0x0000150c       0x20 /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq_handler.32.o)
+ .debug_frame   0x0000152c      0x15c /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+ .debug_frame   0x00001688       0x20 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mpu_setup.crt0.o)
+ .debug_frame   0x000016a8       0x38 /home/black/devkitpro/calico/lib/libcalico_ds9.a(sys_startup.o)
+ .debug_frame   0x000016e0       0x28 /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq.o)
+ .debug_frame   0x00001708       0x64 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mailbox.o)
+ .debug_frame   0x0000176c       0x70 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-cache.32.o)
+ .debug_frame   0x000017dc      0x190 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .debug_frame   0x0000196c       0x20 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivsi3.o)
+ .debug_frame   0x0000198c       0x20 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_divsi3.o)
+
+.debug_str      0x00000000     0x4370
+ *(.debug_str)
+ .debug_str     0x00000000     0x4370 ai.o
+                                0x743 (size before relaxing)
+ .debug_str     0x00004370      0x60f combat.o
+ .debug_str     0x00004370      0x411 diplomacy.o
+ .debug_str     0x00004370      0x6b7 economy.o
+ .debug_str     0x00004370      0x5dc events.o
+ .debug_str     0x00004370      0x51d game.o
+ .debug_str     0x00004370      0x402 gov.o
+ .debug_str     0x00004370      0x688 input.o
+ .debug_str     0x00004370      0x413 main.o
+ .debug_str     0x00004370      0x5c3 map.o
+ .debug_str     0x00004370      0x67c market.o
+ .debug_str     0x00004370      0x68c pops.o
+ .debug_str     0x00004370      0xa90 px_core.o
+ .debug_str     0x00004370      0x335 px_font.o
+ .debug_str     0x00004370      0x76b px_tiles.o
+ .debug_str     0x00004370      0x3c6 rng.o
+ .debug_str     0x00004370      0x48d save.o
+ .debug_str     0x00004370      0x76c /home/black/devkitpro/libnds/lib/libnds9.a(background.o)
+ .debug_str     0x00004370      0x2eb /home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+ .debug_str     0x00004370      0x2d5 /home/black/devkitpro/libnds/lib/libnds9.a(trig.o)
+ .debug_str     0x00004370      0xa3c /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .debug_str     0x00004370      0x508 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_hot.32.o)
+ .debug_str     0x00004370      0x518 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mutex.o)
+ .debug_str     0x00004370      0xc06 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .debug_str     0x00004370       0xef /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-context.32.o)
+ .debug_str     0x00004370      0x286 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-shims.32.o)
+ .debug_str     0x00004370      0x2a0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(keypad.o)
+ .debug_str     0x00004370       0xfe /home/black/devkitpro/calico/lib/libcalico_ds9.a(bootstub_arm9.o)
+ .debug_str     0x00004370      0x128 /home/black/devkitpro/calico/lib/libcalico_ds9.a(excpt_handler.32.o)
+ .debug_str     0x00004370      0x2c3 /home/black/devkitpro/calico/lib/libcalico_ds9.a(touch.o)
+ .debug_str     0x00004370      0x3b6 /home/black/devkitpro/calico/lib/libcalico_ds9.a(tick.o)
+ .debug_str     0x00004370      0x39e /home/black/devkitpro/calico/lib/libcalico_ds9.a(startup.crt0.o)
+ .debug_str     0x00004370       0xf6 /home/black/devkitpro/calico/lib/libcalico_ds9.a(utils.crt0.o)
+ .debug_str     0x00004370       0xe1 /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq_handler.32.o)
+ .debug_str     0x00004370      0x9a7 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+ .debug_str     0x00004370       0xe3 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mpu_setup.crt0.o)
+ .debug_str     0x00004370      0x3d9 /home/black/devkitpro/calico/lib/libcalico_ds9.a(sys_startup.o)
+ .debug_str     0x00004370      0x24b /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq.o)
+ .debug_str     0x00004370      0x3c2 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mailbox.o)
+ .debug_str     0x00004370      0x143 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-cache.32.o)
+ .debug_str     0x00004370      0xd83 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .debug_str     0x00004370       0xb6 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivsi3.o)
+ .debug_str     0x00004370       0xb4 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_divsi3.o)
+ .debug_str     0x00004370       0xb7 /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_dvmd_tls.o)
+
+.debug_loc
+ *(.debug_loc)
+
+.debug_macinfo
+ *(.debug_macinfo)
+
+.debug_weaknames
+ *(.debug_weaknames)
+
+.debug_funcnames
+ *(.debug_funcnames)
+
+.debug_typenames
+ *(.debug_typenames)
+
+.debug_varnames
+ *(.debug_varnames)
+
+.debug_pubtypes
+ *(.debug_pubtypes)
+
+.debug_ranges
+ *(.debug_ranges)
+
+.debug_macro
+ *(.debug_macro)
+
+.debug_addr
+ *(.debug_addr)
+
+.ARM.attributes
+                0x00000000       0x27
+ *(.ARM.attributes)
+ .ARM.attributes
+                0x00000000       0x1c /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crti.o
+ .ARM.attributes
+                0x0000001c       0x2a /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtbegin.o
+ .ARM.attributes
+                0x00000046       0x2b ai.o
+ .ARM.attributes
+                0x00000071       0x2b combat.o
+ .ARM.attributes
+                0x0000009c       0x2b diplomacy.o
+ .ARM.attributes
+                0x000000c7       0x2b economy.o
+ .ARM.attributes
+                0x000000f2       0x2b events.o
+ .ARM.attributes
+                0x0000011d       0x2b game.o
+ .ARM.attributes
+                0x00000148       0x2b gov.o
+ .ARM.attributes
+                0x00000173       0x2b input.o
+ .ARM.attributes
+                0x0000019e       0x2b main.o
+ .ARM.attributes
+                0x000001c9       0x2b map.o
+ .ARM.attributes
+                0x000001f4       0x2b market.o
+ .ARM.attributes
+                0x0000021f       0x2b pops.o
+ .ARM.attributes
+                0x0000024a       0x2b px_core.o
+ .ARM.attributes
+                0x00000275       0x2b px_font.o
+ .ARM.attributes
+                0x000002a0       0x2b px_tiles.o
+ .ARM.attributes
+                0x000002cb       0x2b rng.o
+ .ARM.attributes
+                0x000002f6       0x2b save.o
+ .ARM.attributes
+                0x00000321       0x2b /home/black/devkitpro/libnds/lib/libnds9.a(background.o)
+ .ARM.attributes
+                0x0000034c       0x2b /home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+ .ARM.attributes
+                0x00000377       0x2b /home/black/devkitpro/libnds/lib/libnds9.a(trig.o)
+ .ARM.attributes
+                0x000003a2       0x2b /home/black/devkitpro/devkitARM/local-lib/libsyncnone.a(syncnone.o)
+ .ARM.attributes
+                0x000003cd       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-_exit.o)
+ .ARM.attributes
+                0x000003f7       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-fstat.o)
+ .ARM.attributes
+                0x00000421       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-handle_manager.o)
+ .ARM.attributes
+                0x0000044b       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-iosupport.o)
+ .ARM.attributes
+                0x00000475       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-isatty.o)
+ .ARM.attributes
+                0x0000049f       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-lseek.o)
+ .ARM.attributes
+                0x000004c9       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-read.o)
+ .ARM.attributes
+                0x000004f3       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-sbrk.o)
+ .ARM.attributes
+                0x0000051d       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-syscall_support.o)
+ .ARM.attributes
+                0x00000547       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-write.o)
+ .ARM.attributes
+                0x00000571       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-clocks.o)
+ .ARM.attributes
+                0x0000059b       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-getreent.o)
+ .ARM.attributes
+                0x000005c5       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libsysbase.a(libsysbase_libsysbase_a-malloc_vars.o)
+ .ARM.attributes
+                0x000005ef       0x2b /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .ARM.attributes
+                0x0000061a       0x2b /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_hot.32.o)
+ .ARM.attributes
+                0x00000645       0x2b /home/black/devkitpro/calico/lib/libcalico_ds9.a(mutex.o)
+ .ARM.attributes
+                0x00000670       0x2b /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .ARM.attributes
+                0x0000069b       0x1b /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-copy-fill.32.o)
+ .ARM.attributes
+                0x000006b6       0x1b /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-context.32.o)
+ .ARM.attributes
+                0x000006d1       0x2b /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-shims.32.o)
+ .ARM.attributes
+                0x000006fc       0x2b /home/black/devkitpro/calico/lib/libcalico_ds9.a(keypad.o)
+ .ARM.attributes
+                0x00000727       0x1b /home/black/devkitpro/calico/lib/libcalico_ds9.a(bootstub_arm9.o)
+ .ARM.attributes
+                0x00000742       0x1b /home/black/devkitpro/calico/lib/libcalico_ds9.a(excpt_handler.32.o)
+ .ARM.attributes
+                0x0000075d       0x2b /home/black/devkitpro/calico/lib/libcalico_ds9.a(touch.o)
+ .ARM.attributes
+                0x00000788       0x2b /home/black/devkitpro/calico/lib/libcalico_ds9.a(tick.o)
+ .ARM.attributes
+                0x000007b3       0x2b /home/black/devkitpro/calico/lib/libcalico_ds9.a(startup.crt0.o)
+ .ARM.attributes
+                0x000007de       0x1b /home/black/devkitpro/calico/lib/libcalico_ds9.a(utils.crt0.o)
+ .ARM.attributes
+                0x000007f9       0x1b /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq_handler.32.o)
+ .ARM.attributes
+                0x00000814       0x2b /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+ .ARM.attributes
+                0x0000083f       0x1b /home/black/devkitpro/calico/lib/libcalico_ds9.a(mpu_setup.crt0.o)
+ .ARM.attributes
+                0x0000085a       0x2b /home/black/devkitpro/calico/lib/libcalico_ds9.a(sys_startup.o)
+ .ARM.attributes
+                0x00000885       0x2b /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq.o)
+ .ARM.attributes
+                0x000008b0       0x2b /home/black/devkitpro/calico/lib/libcalico_ds9.a(mailbox.o)
+ .ARM.attributes
+                0x000008db       0x1b /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-cache.32.o)
+ .ARM.attributes
+                0x000008f6       0x2b /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+ .ARM.attributes
+                0x00000921       0x1c /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivsi3.o)
+ .ARM.attributes
+                0x0000093d       0x1c /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_divsi3.o)
+ .ARM.attributes
+                0x00000959       0x1c /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_dvmd_tls.o)
+ .ARM.attributes
+                0x00000975       0x1c /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_aeabi_uldivmod.o)
+ .ARM.attributes
+                0x00000991       0x2a /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_muldi3.o)
+ .ARM.attributes
+                0x000009bb       0x2a /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivmoddi4.o)
+ .ARM.attributes
+                0x000009e5       0x1c /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_clzdi2.o)
+ .ARM.attributes
+                0x00000a01       0x1c /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_clzsi2.o)
+ .ARM.attributes
+                0x00000a1d       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-memcpy-stub.o)
+ .ARM.attributes
+                0x00000a47       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-strlen.o)
+ .ARM.attributes
+                0x00000a71       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-impure.o)
+ .ARM.attributes
+                0x00000a9b       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-bsearch.o)
+ .ARM.attributes
+                0x00000ac5       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-strchr.o)
+ .ARM.attributes
+                0x00000aef       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-memset.o)
+ .ARM.attributes
+                0x00000b19       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-mallocr.o)
+ .ARM.attributes
+                0x00000b43       0x1a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-strcmp.o)
+ .ARM.attributes
+                0x00000b5d       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-freer.o)
+ .ARM.attributes
+                0x00000b87       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-findfp.o)
+ .ARM.attributes
+                0x00000bb1       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-init.o)
+ .ARM.attributes
+                0x00000bdb       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-malloc.o)
+ .ARM.attributes
+                0x00000c05       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-stdio.o)
+ .ARM.attributes
+                0x00000c2f       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-mlock.o)
+ .ARM.attributes
+                0x00000c59       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fclose.o)
+ .ARM.attributes
+                0x00000c83       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-exit.o)
+ .ARM.attributes
+                0x00000cad       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fini.o)
+ .ARM.attributes
+                0x00000cd7       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-strncmp.o)
+ .ARM.attributes
+                0x00000d01       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fwalk.o)
+ .ARM.attributes
+                0x00000d2b       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-malignr.o)
+ .ARM.attributes
+                0x00000d55       0x2a /home/black/devkitpro/devkitARM/arm-none-eabi/lib/thumb/libg.a(libc_a-fflush.o)
+ .ARM.attributes
+                0x00000d7f       0x2a /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtend.o
+ .ARM.attributes
+                0x00000da9       0x1c /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/crtn.o
+ *(.gnu.attributes)
+
+.note.gnu.arm.ident
+ *(.note.gnu.arm.ident)
+
+/DISCARD/
+ *(.note.GNU-stack)
+ *(.gnu_debuglink)
+ *(.gnu.lto_*)
+ *(.stack)
+OUTPUT(/mnt/c/Users/black/Documents/labs/ohmyvictoriads/ohmyvictoria_ds.elf elf32-littlearm)
+LOAD linker stubs
+
+.debug_loclists
+                0x00000000     0xcc3d
+ .debug_loclists
+                0x00000000      0xe8f ai.o
+ .debug_loclists
+                0x00000e8f      0x488 combat.o
+ .debug_loclists
+                0x00001317      0x596 diplomacy.o
+ .debug_loclists
+                0x000018ad      0xc7b economy.o
+ .debug_loclists
+                0x00002528      0x62e events.o
+ .debug_loclists
+                0x00002b56      0x20c game.o
+ .debug_loclists
+                0x00002d62      0x29d gov.o
+ .debug_loclists
+                0x00002fff      0x3c7 input.o
+ .debug_loclists
+                0x000033c6       0x2b main.o
+ .debug_loclists
+                0x000033f1      0x56e map.o
+ .debug_loclists
+                0x0000395f      0xdb8 market.o
+ .debug_loclists
+                0x00004717     0x174c pops.o
+ .debug_loclists
+                0x00005e63      0x77e px_core.o
+ .debug_loclists
+                0x000065e1      0x442 px_font.o
+ .debug_loclists
+                0x00006a23     0x1563 px_tiles.o
+ .debug_loclists
+                0x00007f86      0x198 rng.o
+ .debug_loclists
+                0x0000811e       0xb4 save.o
+ .debug_loclists
+                0x000081d2      0x2fa /home/black/devkitpro/libnds/lib/libnds9.a(background.o)
+ .debug_loclists
+                0x000084cc       0xa4 /home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+ .debug_loclists
+                0x00008570      0x87e /home/black/devkitpro/libnds/lib/libnds9.a(trig.o)
+ .debug_loclists
+                0x00008dee      0xbc9 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .debug_loclists
+                0x000099b7      0xcc9 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_hot.32.o)
+ .debug_loclists
+                0x0000a680      0x808 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mutex.o)
+ .debug_loclists
+                0x0000ae88      0x505 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .debug_loclists
+                0x0000b38d       0xd8 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-shims.32.o)
+ .debug_loclists
+                0x0000b465       0xac /home/black/devkitpro/calico/lib/libcalico_ds9.a(touch.o)
+ .debug_loclists
+                0x0000b511      0x53d /home/black/devkitpro/calico/lib/libcalico_ds9.a(tick.o)
+ .debug_loclists
+                0x0000ba4e      0x10d /home/black/devkitpro/calico/lib/libcalico_ds9.a(startup.crt0.o)
+ .debug_loclists
+                0x0000bb5b      0x735 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+ .debug_loclists
+                0x0000c290      0x150 /home/black/devkitpro/calico/lib/libcalico_ds9.a(sys_startup.o)
+ .debug_loclists
+                0x0000c3e0       0xb0 /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq.o)
+ .debug_loclists
+                0x0000c490      0x31c /home/black/devkitpro/calico/lib/libcalico_ds9.a(mailbox.o)
+ .debug_loclists
+                0x0000c7ac      0x491 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+
+.debug_rnglists
+                0x00000000     0x2565
+ .debug_rnglists
+                0x00000000      0x23f ai.o
+ .debug_rnglists
+                0x0000023f       0x8e combat.o
+ .debug_rnglists
+                0x000002cd       0xc3 diplomacy.o
+ .debug_rnglists
+                0x00000390      0x143 economy.o
+ .debug_rnglists
+                0x000004d3      0x118 events.o
+ .debug_rnglists
+                0x000005eb       0x6b game.o
+ .debug_rnglists
+                0x00000656       0x4b gov.o
+ .debug_rnglists
+                0x000006a1      0x10e input.o
+ .debug_rnglists
+                0x000007af       0x22 main.o
+ .debug_rnglists
+                0x000007d1      0x1bf map.o
+ .debug_rnglists
+                0x00000990      0x140 market.o
+ .debug_rnglists
+                0x00000ad0      0x41d pops.o
+ .debug_rnglists
+                0x00000eed      0x121 px_core.o
+ .debug_rnglists
+                0x0000100e       0xaf px_font.o
+ .debug_rnglists
+                0x000010bd      0x1ec px_tiles.o
+ .debug_rnglists
+                0x000012a9       0x31 rng.o
+ .debug_rnglists
+                0x000012da       0x31 save.o
+ .debug_rnglists
+                0x0000130b       0x61 /home/black/devkitpro/libnds/lib/libnds9.a(background.o)
+ .debug_rnglists
+                0x0000136c       0x67 /home/black/devkitpro/libnds/lib/libnds9.a(keys.o)
+ .debug_rnglists
+                0x000013d3       0x9c /home/black/devkitpro/libnds/lib/libnds9.a(trig.o)
+ .debug_rnglists
+                0x0000146f      0x30a /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_cold.o)
+ .debug_rnglists
+                0x00001779      0x2d7 /home/black/devkitpro/calico/lib/libcalico_ds9.a(thread_hot.32.o)
+ .debug_rnglists
+                0x00001a50      0x249 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mutex.o)
+ .debug_rnglists
+                0x00001c99      0x107 /home/black/devkitpro/calico/lib/libcalico_ds9.a(newlib_syscalls.o)
+ .debug_rnglists
+                0x00001da0       0x19 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-context.32.o)
+ .debug_rnglists
+                0x00001db9       0x67 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-shims.32.o)
+ .debug_rnglists
+                0x00001e20       0x22 /home/black/devkitpro/calico/lib/libcalico_ds9.a(keypad.o)
+ .debug_rnglists
+                0x00001e42       0x26 /home/black/devkitpro/calico/lib/libcalico_ds9.a(bootstub_arm9.o)
+ .debug_rnglists
+                0x00001e68       0x1f /home/black/devkitpro/calico/lib/libcalico_ds9.a(touch.o)
+ .debug_rnglists
+                0x00001e87      0x1ae /home/black/devkitpro/calico/lib/libcalico_ds9.a(tick.o)
+ .debug_rnglists
+                0x00002035       0x41 /home/black/devkitpro/calico/lib/libcalico_ds9.a(startup.crt0.o)
+ .debug_rnglists
+                0x00002076       0x19 /home/black/devkitpro/calico/lib/libcalico_ds9.a(utils.crt0.o)
+ .debug_rnglists
+                0x0000208f      0x1a6 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pxi.o)
+ .debug_rnglists
+                0x00002235       0x71 /home/black/devkitpro/calico/lib/libcalico_ds9.a(sys_startup.o)
+ .debug_rnglists
+                0x000022a6       0x3a /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq.o)
+ .debug_rnglists
+                0x000022e0       0xc4 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mailbox.o)
+ .debug_rnglists
+                0x000023a4       0x31 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-cache.32.o)
+ .debug_rnglists
+                0x000023d5      0x190 /home/black/devkitpro/calico/lib/libcalico_ds9.a(pm.o)
+
+.debug_line_str
+                0x00000000      0x2bb
+ .debug_line_str
+                0x00000000      0x2bb /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-context.32.o)
+                                 0xc3 (size before relaxing)
+ .debug_line_str
+                0x000002bb       0xc7 /home/black/devkitpro/calico/lib/libcalico_ds9.a(bootstub_arm9.o)
+ .debug_line_str
+                0x000002bb       0xca /home/black/devkitpro/calico/lib/libcalico_ds9.a(excpt_handler.32.o)
+ .debug_line_str
+                0x000002bb       0xcc /home/black/devkitpro/calico/lib/libcalico_ds9.a(utils.crt0.o)
+ .debug_line_str
+                0x000002bb       0xc3 /home/black/devkitpro/calico/lib/libcalico_ds9.a(irq_handler.32.o)
+ .debug_line_str
+                0x000002bb       0xc8 /home/black/devkitpro/calico/lib/libcalico_ds9.a(mpu_setup.crt0.o)
+ .debug_line_str
+                0x000002bb       0xc1 /home/black/devkitpro/calico/lib/libcalico_ds9.a(arm-cache.32.o)
+ .debug_line_str
+                0x000002bb       0x8f /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_udivsi3.o)
+ .debug_line_str
+                0x000002bb       0x8f /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_divsi3.o)
+ .debug_line_str
+                0x000002bb       0x8f /home/black/dkproot/usr/bin/../lib/gcc/arm-none-eabi/13.2.1/thumb/nofp/libgcc.a(_dvmd_tls.o)
