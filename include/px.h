@@ -1,5 +1,6 @@
 #pragma once
 #include "types.h"
+#include "hot.h"
 // px.h — engine de video v0.8: mapa pintado (cartografia, 16px/tile) num
 // buffer-mundo 512x384 "cozido" por tile sob demanda; a tela baixo e um
 // VIEWPORT com copia por row (pan suave por caneta) + overlays animados.
@@ -14,8 +15,17 @@ void Px_PSet(u16 *b,int x,int y,u16 c);
 void Px_Rect(u16 *b,int x,int y,int w,int h,u16 c);
 void Px_Border(u16 *b,int x,int y,int w,int h,u16 c);
 void Px_Clear(u16 *b,u16 c);
+// Flip = PEDIDO: a troca acontece em Px_VSync, logo apos o VBlank (ADR-36).
+// Px_BackTop e' a pagina ESCONDIDA na VRAM (so' acessos de 16/32 bits:
+// nada de memcpy/memset da newlib nela; use Px_Copy16).
 void Px_FlipTop(void);
 void Px_FlipBot(void);
+void Px_VSync(void);    // main.c: logo apos swiWaitForVBlank
+void Px_Present(void);  // espera o VBlank e troca ja' (tela antes de trabalho longo)
+int Px_Vb(void);        // VBlanks do ultimo quadro (1 = 60 fps; teto 4): passo da camera/simulacao
+u32 Px_Ticks(void);      // relogio de orcamento (523656/s no DS; 0 no host)
+u32 Px_FrameTicks(void); // ticks desde o ultimo VBlank (quanto o quadro ja' gastou)
+HOT_CALL void Px_Copy16(u16 *d,const u16 *s,int n);   // copia segura p/ VRAM (ARM, ITCM)
 // Redesenho so' da tela de cima no proximo quadro (pan do mapa: o painel de
 // baixo fica como esta'). main.c consome com Px_TakeTop.
 void Px_WantTop(void);

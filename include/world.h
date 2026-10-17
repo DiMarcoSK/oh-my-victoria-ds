@@ -154,6 +154,7 @@ typedef struct {
 } World;
 
 extern u8 W_OWNER[W_CELLS];
+extern u32 W_OwnVer;       // contador de trocas de dono (so' o SetOwner sobe; o render compara)
 extern u8 W_TERR[W_CELLS];
 extern u8 W_CORE[W_CELLS]; // nucleo: nacao+1 dona "de direito" (0 = nenhuma)
 // Depois da geracao: campo p/ o render (World_Field) — terra = relevo 0..255

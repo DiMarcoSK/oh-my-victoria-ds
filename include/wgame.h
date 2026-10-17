@@ -1,6 +1,7 @@
 #pragma once
 #include "types.h"
 #include "world.h"
+#include "hot.h"
 // wgame.h — partida no mundo celular (mapa-mundi 1800 / aleatorio / blitz),
 // tela SCR_WORLD (v0.9 + M1). O mundo (World + grades W_*) vive em .bss,
 // fora do GameState (trava de 14KB, DESIGN 9.1); aqui mora so' o estado de
@@ -65,6 +66,7 @@ typedef struct {
  s16 rankTop;         // ranking: primeira linha visivel
  u32 propSeen;        // dia da ultima proposta que ja pausou o jogo
  bool propRun;        // o jogo corria quando a proposta chegou (volta a correr)
+ u8 botLazy;          // ficha do painel pendente durante o pan (quadros desde o pedido; ADR-36)
 } WGame;
 // Gabinete (tela de baixo): geometria compartilhada por px_ledger.c e wgame.c
 enum { LG_TAB_Y=2, LG_TAB_H=28, LG_ACT_X=16, LG_ACT_Y=120, LG_ACT_W=224, LG_ACT_H=28, LG_BACK_Y=156 };
@@ -83,6 +85,7 @@ World *WG_World(void);
 // Gera o mundo e posiciona camera/cursor na capital do jogador. diff 0..2.
 void WG_New(u8 mode,u8 hist,u8 size,u8 nNat,u8 diff,u32 seed,int nat);
 void WG_Frame(GameState *g);   // dias conforme velocidade (parado na pausa)
+void WG_Idle(GameState *g);    // fim do quadro: usa a folga p/ pintar o mapa a' frente (ADR-36)
 void WG_Goto(int x,int y);     // poe a celula sob a mira (camera centrada nela)
 void WG_Input(GameState *g,u32 down,u32 held,bool tDown,bool tUp,bool tHeld,int tx,int ty);
 void WG_CityInput(GameState *g,u32 down,bool tDown,int tx,int ty); // SCR_CITY
@@ -107,11 +110,14 @@ void PxW_Stats(void);          // centros/caixas p/ rotulos + minimapa (volta in
 void PxW_StatsStep(int rows);  // idem, incremental: algumas linhas por quadro
 // camada do mapa com cache incremental (px_mapr.c, ADR-24)
 void PxM_Update(World *w,const WGame *s);
-void PxM_Blit(u16 *d);
-void PxM_Overlay(u16 *d,const World *w,const WGame *s,int phase);
+HOT_CALL void PxM_Blit(u16 *d);   // cache (anel) -> tela, so' acessos 16/32 bits (ITCM)
+HOT_CALL void PxM_Overlay(u16 *d,const World *w,const WGame *s,int phase);
 void PxM_Invalidate(void);
+// render-ahead: pinta a margem a' frente da camera (budget em ticks, 0 = so' o
+// teto de passos). So' vale com a camera do ultimo PxM_Update.
+void PxM_Ahead(const World *w,const WGame *s,u32 budget,int maxSteps);
 u16 *PxM_Scratch(void);       // LAYER emprestado (cena da cidade); invalida o cache
-const u8 *PxM_Key(void);      // dono por pixel do viewport (0xFE fora, 0xFF mar)
+u8 PxM_KeyAt(int sx,int sy);  // dono do pixel (sx,sy) do viewport (0xFE fora, 0xFF mar)
 // px_city.c: arte das cidades (procedural)
 void PxC_Building(u16 *d,int x,int yb,int w,u8 k,u8 style,u16 year,u32 seed,int tick,u8 natFlag);
 void PxC_MapCities(u16 *d,const World *w,const WGame *s);

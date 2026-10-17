@@ -16,7 +16,15 @@ ARCH := -march=armv5te -mtune=arm946e-s -mthumb -mthumb-interwork
 GAME_TITLE := OH MY VICTORIA DS!
 GAME_SUBTITLE1 := v0.8 caneta+mapa
 GAME_SUBTITLE2 := aba de obras/mercado   
-CFLAGS := -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections $(ARCH) $(INCLUDE) -DARM9
+# -fno-tree-loop-distribute-patterns: o GCC NAO troca laco de pixel por
+# memset/memcpy da newlib, que desalinhados escrevem BYTE — e a VRAM ignora
+# escrita de 8 bits (a tela de cima e' desenhada direto na VRAM, ADR-36).
+CFLAGS := -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections -fno-tree-loop-distribute-patterns $(ARCH) $(INCLUDE) -DARM9
+# make PROF=1: medidor de quadro na tela de cima (prof.h). Rode no melonDS/DS
+# p/ ver ms por secao; o build normal nao tem custo nenhum.
+ifdef PROF
+CFLAGS += -DOMV_PROF
+endif
 CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
 ASFLAGS := -g $(ARCH)
 LDFLAGS := -specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)

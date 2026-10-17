@@ -39,7 +39,9 @@ static void Frames(GameState*g,int n){
   if(g->dirty){Px_Top(g);Px_Bot(g);g->dirty=false;g->dirtyBot=false;Px_TakeTop();}
   else if(g->dirtyBot){Px_Bot(g);g->dirtyBot=false;if(Px_TakeTop())Px_Top(g);}
   else if(Px_TakeTop())Px_Top(g);
-  else if((f%15)==0){Px_Top(g);Px_Bot(g);}
+  else if((f%15)==0){Px_Top(g);if(!(g->screen==SCR_WORLD||g->screen==SCR_CITY||g->screen==SCR_LEDGER||g->screen==SCR_RANK))Px_Bot(g);}   // = main.c (BotStill)
+  WG_Idle(g);                       // = main.c: render-ahead na folga
+  Px_VSync();                       // troca de pagina como no DS (ADR-36)
   host_down=0;                      // keysDown so' vale 1 frame
  }
 }
@@ -106,6 +108,25 @@ int main(void){
   printf("  pan: %d px em 20 quadros, deslizou %d px ao soltar, v=%d\n",(int)((p1-p0)>>4),(int)((s->pX-p1)>>4),s->vX);
   if(p1-p0<20*16*2){printf("FALHA: segurar a seta nao andou o mapa\n");bad=1;}
   if(s->vX){printf("FALHA: o mapa nao parou depois de soltar\n");bad=1;}}
+ // cache em anel (ADR-36): o mapa montado por faixas durante o pan tem que
+ // ser IGUAL ao repintado do zero (o pontilhado e' preso ao mundo). So' o
+ // aro de 1px da vista pode diferir (la' o vizinho de fora e' desconhecido).
+ {static u16 A[256*192],B[256*192];WGame*s=WG_Ptr();
+  static const u32 DIRS[4]={KEY_RIGHT|KEY_DOWN,KEY_LEFT,KEY_UP|KEY_LEFT,KEY_DOWN};
+  for(int z=1;z<5;z++){
+   while(s->zoom<z)Press(g,KEY_R);
+   while(s->zoom>z)Press(g,KEY_L);
+   long bad1=0;
+   for(int k=0;k<4;k++){
+    Hold(g,DIRS[k],9+k*5);Frames(g,6);
+    PxM_Update(WG_World(),s);PxM_Blit(A);PxM_Overlay(A,WG_World(),s,1);
+    PxM_Invalidate();PxM_Update(WG_World(),s);PxM_Blit(B);PxM_Overlay(B,WG_World(),s,1);
+    for(int y=WG_MAP_Y+1;y<191;y++)for(int x=1;x<255;x++)if(A[y*256+x]!=B[y*256+x])bad1++;
+   }
+   printf("  anel z%d: %ld px diferentes entre pan incremental e repintura\n",z,bad1);
+   if(bad1){printf("FALHA: cache em anel divergiu da repintura (z%d)\n",z);bad=1;}
+  }
+  while(s->zoom>3)Press(g,KEY_L);}
  {World*w=WG_World();u8 fra=World_CountryOfNat(w,Nat_Find("FRA"));WG_Goto(w->c[fra].capX+3,w->c[fra].capY+4);}
  Hold(g,KEY_DOWN,3);
  Shot(g,"13_cursor_franca");

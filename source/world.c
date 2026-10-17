@@ -1,4 +1,5 @@
 #include "world.h"
+#include "hot.h"   // HOT_ARM: dia em ARM (divisao por constante = smull exato; ADR-36)
 #include "city.h"
 #include "earth.h"
 #include "history.h"
@@ -8,6 +9,7 @@
 // Custos e taxas sao proposta de design: balancear aqui.
 
 u8 W_OWNER[W_CELLS];
+u32 W_OwnVer;          // sobe a cada dono trocado (SetOwner): o render sabe se precisa reler (ADR-36)
 u8 W_TERR[W_CELLS];
 u8 W_CORE[W_CELLS];
 static u8 W_AUX[W_CELLS];   // geracao: distancia da semente | dia: carimbo de conquista
@@ -196,7 +198,7 @@ static void SetOwner(World *w,u32 i,u8 to){
   if(f->pop&&f->popK){moved=(u32)((u64)f->popK*cw/f->pop);if(moved>f->popK)moved=f->popK;f->popK-=moved;}
   f->pop=f->pop>cw?f->pop-cw:0;if(f->terr[t])f->terr[t]--;}
  else moved=TER_POP[t]*20;   // terra livre: poucos milhares de habitantes
- W_OWNER[i]=to;
+ W_OWNER[i]=to;W_OwnVer++;
  // render incremental: so' o bloco 8x8 desta celula sera redesenhado
  {u32 b=(i/w->w/8)*W_BLK_W+(i%w->w)/8;w->dirtyBlk[b>>3]|=(u8)(1u<<(b&7));}
  if((W_CITYB[i>>3]>>(i&7))&1)City_OnOwner(w,i,to);
@@ -698,7 +700,7 @@ void World_SetPlayer(World *w,u8 ci){
  if(ci&&ci<w->nC)w->c[ci].player=true;
 }
 
-static void Fronts(World *w){
+HOT_ARM static void Fronts(World *w){
  // carimbo 1..255; no inicio de cada ciclo de 255 dias os carimbos sao
  // limpos, entao "W_AUX == stamp" significa "conquistada hoje"
  u8 stamp=(u8)(w->day%255u+1u);
@@ -783,7 +785,7 @@ static void Fronts(World *w){
 }
 
 // ===================== IA =====================
-static void AI(World *w,u8 ci,bool declare){
+HOT_ARM static void AI(World *w,u8 ci,bool declare){
  WCountry *c=&w->c[ci];
  // paz quando a guerra vai mal
  // objetivo de guerra cumprido: a IA assina a paz e fica com o que tomou
@@ -881,7 +883,7 @@ void World_Day(World *w){
  if(w->ended&&!w->eternal)return;
  for(int ph=0;ph<WD_PHASES;ph++)World_DayPhase(w,ph);
 }
-static void DayBegin(World *w){
+HOT_ARM static void DayBegin(World *w){
  w->day++;Cal_Next(&w->date);
  bool newYear=(w->date.m==1&&w->date.d==1);
  for(u8 ci=1;ci<w->nC;ci++){
@@ -901,7 +903,7 @@ static void DayBegin(World *w){
  }
  PT(0,City_Day(w));
 }
-void World_DayPhase(World *w,int ph){
+HOT_ARM void World_DayPhase(World *w,int ph){
  switch(ph){
   case 0:if(w->ended&&!w->eternal)return;DayBegin(w);break;
   case 1:if((w->day%7)==0)PT(1,WEco_Week(w));break;

@@ -225,15 +225,22 @@ static inline u16 Darken(u16 c,int k){ // k/16 de escurecimento
  int r=(c&31)*(16-k)/16,g=((c>>5)&31)*(16-k)/16,b=((c>>10)&31)*(16-k)/16;
  return (u16)(BIT(15)|(b<<10)|(g<<5)|r);
 }
+// borda queimada: so' a faixa de e0 px em volta (antes: varria o retangulo
+// inteiro e dividia por pixel da faixa; o peso por distancia e' tabela)
 static void Burn(u16*d,int x,int y,int w,int h,int e0){
+ int KT[8];if(e0>8)e0=8;
+ for(int e=0;e<e0;e++)KT[e]=(e0-e)*(e0-e)*9/(e0*e0);
  for(int j=0;j<h;j++){
   int py=y+j;if(py<0||py>191)continue;
   int ey=j<h-1-j?j:h-1-j;
-  for(int i=0;i<w;i++){
+  // linha do miolo: so' as colunas das pontas podem estar na faixa:
+  // [0,a1) e [b0,w), com a1<=b0 (laco com limite fixo, sem pulo de indice)
+  int a1=ey<e0?w:(e0<w?e0:w),b0=ey<e0?w:(w-e0>a1?w-e0:a1);
+  for(int pass=0;pass<2;pass++)for(int i=pass?b0:0,ie=pass?w:a1;i<ie;i++){
    int ex=i<w-1-i?i:w-1-i;
    int e=ex<ey?ex:ey;if(e>=e0)continue;
    int px=x+i;if(px<0||px>255)continue;
-   int k=(e0-e)*(e0-e)*9/(e0*e0);if(ex<e0&&ey<e0)k+=1;
+   int k=KT[e];if(ex<e0&&ey<e0)k+=1;
    d[py*256+px]=Darken(d[py*256+px],k>9?9:k);
   }
  }
@@ -256,13 +263,30 @@ void Ui_ParchOrn(u16*d,int x,int y,int w,int h){
 // Painel navy da concept: ardosia com degrade suave e borda ouro dupla.
 // Ui_NavyOrn acrescenta os cantos dourados (telas de menu; no jogo o painel
 // tem conteudo encostado nas bordas).
+// graos do navy e do fundo: o padrao so' depende de (x,y) da tela. Antes
+// cada redesenho recalculava um hash de 3 multiplicacoes por pixel (~740 mil
+// instrucoes so' o fundo do painel). Agora: mascara de bits (navy) e uma
+// copia pronta do fundo, feitas 1x (ADR-36). Mesmo pixel de antes.
+static u32 SPK[192][8];static bool spkOk;        // bit = (H2p(x,y)&15)==0
+static void SpkInit(void){
+ for(int y=0;y<192;y++)for(int x=0;x<256;x++)if((H2p(x,y)&15)==0)SPK[y][x>>5]|=1u<<(x&31);
+ spkOk=true;
+}
 void Ui_Navy(u16*d,int x,int y,int w,int h){
+ if(!spkOk)SpkInit();
+ const u16 SP=PXC(5,6,8);
  for(int j=0;j<h;j++){
   int py=y+j;if(py<0||py>191)continue;
   int t=j*6/(h?h:1);
   u16 c=PXC(4-t/3,5-t/3,7-t/3+0);
   int x0=x<0?0:x,x1=x+w>256?256:x+w;
-  for(int px=x0;px<x1;px++)d[py*256+px]=((H2p(px,py)&15)==0)?PXC(5,6,8):c;
+  if(x0>=x1)continue;
+  u16 *row=d+py*256;
+  for(int px=x0;px<x1;px++)row[px]=c;
+  for(int wv=x0>>5;wv<=(x1-1)>>5;wv++)for(u32 m=SPK[py][wv];m;m&=m-1){
+   int px=(wv<<5)|(31-__builtin_clz(m&-m));
+   if(px>=x0&&px<x1)row[px]=SP;
+  }
  }
  Px_Border(d,x,y,w,h,C_GOLD);
  Px_Border(d,x+2,y+2,w-4,h-4,C_GOLD_DIM);
@@ -277,9 +301,13 @@ void Ui_NavyOrn(u16*d,int x,int y,int w,int h){
  }
 }
 // Fundo de tela navy com grao de 1 passo (couro da mesa do ministro).
+static u16 BACKD[256*192] __attribute__((aligned(32)));static bool backOk;
 void Ui_Backdrop(u16*d){
- for(int y=0;y<192;y++)for(int x=0;x<256;x++)
-  d[y*256+x]=((H2p(x,y)&7)==0)?C_NAVY:C_NAVY_BG;
+ if(!backOk){
+  for(int y=0;y<192;y++)for(int x=0;x<256;x++)BACKD[y*256+x]=((H2p(x,y)&7)==0)?C_NAVY:C_NAVY_BG;
+  backOk=true;
+ }
+ Px_Copy16(d,BACKD,256*192);     // d pode ser a pagina de cima (VRAM): so' 16/32 bits
 }
 void Ui_TextC(u16*d,int cx,int y,const char*s,int big,u16 col){
  const Font*f=big?&F_SERIF12:&F_SERIF8;

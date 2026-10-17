@@ -9,6 +9,7 @@
 #include "wdiplo.h"
 #include "history.h"
 #include "wrank.h"
+#include "prof.h"
 // wgame.c — partida no mundo celular (SCR_WORLD). Ver wgame.h.
 // O World e as grades W_* sao estaticos (.bss); nada aqui conta nos 14KB do
 // GameState. Toda regra de jogo esta em world.c/history.c; este arquivo so'
@@ -320,6 +321,14 @@ static bool MoveCursor(u32 held){
  Derive();
  return cx!=S.curX||cy!=S.curY||ox!=S.camX||oy!=S.camY||sx!=S.subX||sy!=S.subY||rx!=(S.rX>>4)||ry!=(S.rY>>4);
 }
+// Passo fixo de 1/60 s: o quadro que levou N VBlanks anda N passos (ADR-36).
+// Sem isso, quadro pesado = mapa mais lento E aos trancos; com isso a
+// velocidade na tela e' sempre a mesma, so' a amostragem cai.
+static bool MoveSteps(u32 held){bool mv=false;for(int i=Px_Vb();i>0;i--)mv|=MoveCursor(held);return mv;}
+// Mapa andando e a mira cruzando paises: a ficha do painel (tela de baixo
+// inteira + DMA de 96KB) sai no maximo ~6x/s e na hora em que o mapa para.
+// Antes: redesenho a cada pais cruzado = tranco no meio do pan (ADR-36).
+static void BotLazy(void){if(!S.botLazy)S.botLazy=1;}
 // Layout Invertida: o mapa esta na tela de toque. Arrastar = pan (pixel a
 // pixel); tocar e soltar sem arrastar = mira ali.
 static s16 tLastX,tLastY,tAccX,tAccY;static bool tDrag;
@@ -366,7 +375,7 @@ void WG_Input(GameState *g,u32 d,u32 h,bool tDown,bool tUp,bool tHeld,int tx,int
   if(d&KEY_B){S.dipOpen=false;g->dirtyBot=true;d&=~(u32)KEY_B;}
   if(!S.dipOpen)return;
   // a folha segue a mira: o mapa continua andando com as setas (layout Normal)
-  if(!swap&&MoveCursor(h)){Px_WantTop();if(Hover()){ActBuild();g->dirtyBot=true;}}
+  if(!swap&&MoveSteps(h)){Px_WantTop();if(Hover()){ActBuild();BotLazy();}}
   if(d&KEY_L){SetZoom(S.zoom-1);g->dirty=true;}
   if(d&KEY_R){SetZoom(S.zoom+1);g->dirty=true;}
   return;
@@ -391,7 +400,7 @@ void WG_Input(GameState *g,u32 d,u32 h,bool tDown,bool tUp,bool tHeld,int tx,int
    }
   }else{DipOpen();g->dirtyBot=true;}   // A = interagir com o que esta' sob a mira
  }
- if(MoveCursor(h)){Px_WantTop();if(Hover())g->dirtyBot=true;}
+ if(MoveSteps(h)){Px_WantTop();if(Hover())BotLazy();}
  if(swap)TouchMap(g,tDown,tUp,tHeld,tx,ty);
  else if(tDown){int id=Ui_Hit(UI_WORLD,tx,ty);if(id>0)Act(g,id);}
 }
@@ -408,10 +417,11 @@ static void DayDone(GameState *g){
  if(S.speed<=3||(W.day&1))g->dirtyBot=true;
 }
 void WG_Frame(GameState *g){
- S.tick++;PxS_Frame();
+ S.tick+=(u32)Px_Vb();PxS_Frame();
  // cena da cidade: so' os sprites vivos mudam; ~20 quadros/s (fundo em cache)
  if(g->screen==SCR_CITY&&(S.tick%3)==0&&!g->dirty){PxC_Scene(Px_BackTop(),S.cityIdx);Px_FlipTop();}
  if(S.toastT&&!--S.toastT)g->dirtyBot=true;
+ if(S.botLazy&&((!S.vX&&!S.vY)||++S.botLazy>10)){g->dirtyBot=true;S.botLazy=0;}
  if(S.btnT&&!--S.btnT)g->dirtyBot=true;
  if(S.bannerT&&!--S.bannerT)g->dirty=true;
  // cidade tomada enquanto aberta: volta ao mapa (o painel nao tem mais dono)
@@ -426,19 +436,45 @@ void WG_Frame(GameState *g){
  // rotulos/minimapa: algumas linhas do mundo por quadro (nunca engasga)
  if(g->screen==SCR_WORLD)PxW_StatsStep(S.speed>=5?6:12);
  // dia em andamento: uma fase por quadro (o trabalho do dia se espalha pelos
- // quadros em vez de pesar todo num so': o mapa nao engasga ao virar o dia)
- if(S.phase){
+ // quadros em vez de pesar todo num so': o mapa nao engasga ao virar o dia).
+ // Velocidades 4 e 5 (dia mais curto que as 4 fases): antes o dia INTEIRO
+ // caia num quadro (~36 ms no ARM9 = 15-20 fps). Agora as fases correm ate'
+ // um ORCAMENTO de tempo por quadro (Px_Ticks, ADR-36): no DS o dia leva uns
+ // quadros e o mapa fica a 60 fps; no DSi (2x) cabe mais por quadro. No host
+ // o relogio fica parado = dia inteiro no quadro, igual a antes.
+ static const u8 FPD[6]={0,24,12,6,3,1}; // frames por dia, velocidade 1..5
+ static const u16 BUDGET[6]={0,0,0,0,2100,4200};   // ~4 e ~8 ms (1/523656 s)
+ bool slow=FPD[S.speed]>WD_PHASES;
+ u32 t0=Px_Ticks();
+ if(S.phase&&slow){
   World_DayPhase(&W,S.phase);
   if(++S.phase>=WD_PHASES){S.phase=0;DayDone(g);}
   return;
  }
- if(S.paused||S.dead||W.ended)return;
- static const u8 FPD[6]={0,24,12,6,3,1}; // frames por dia, velocidade 1..5
- if(++S.frameAcc<FPD[S.speed])return;
- S.frameAcc=0;
- if(FPD[S.speed]>WD_PHASES){World_DayPhase(&W,0);S.phase=1;return;}
- World_Day(&W);
- DayDone(g);
+ if(!S.phase){
+  if(S.paused||S.dead||W.ended)return;
+  S.frameAcc=(u16)(S.frameAcc+Px_Vb());   // relogio do jogo em VBlanks, nao em quadros desenhados
+  if(S.frameAcc<FPD[S.speed])return;
+  S.frameAcc=0;
+  World_DayPhase(&W,0);S.phase=1;
+  if(slow)return;
+ }
+ while(S.phase&&(u32)(Px_Ticks()-t0)<BUDGET[S.speed]){
+  World_DayPhase(&W,S.phase);
+  if(++S.phase>=WD_PHASES){S.phase=0;DayDone(g);}
+ }
+}
+
+// Folga do fim do quadro (ADR-36): se o quadro ainda nao gastou ~11 ms dos
+// 16,7 (sobra p/ o DMA do painel no VBlank e p/ variacao), pinta o mapa a'
+// frente da camera ate' la'. No host (sem relogio) = 2 passos por quadro.
+void WG_Idle(GameState *g){
+ if(g->screen!=SCR_WORLD||g->dirty)return;
+ enum { LIM=5700 };                       // ticks de 1/523656 s
+ u32 used=Px_FrameTicks();
+ bool clock=Px_Ticks()!=0;
+ if(clock&&used>=LIM)return;
+ PROF(PF_AHD,PxM_Ahead(&W,&S,clock?LIM-used:0,clock?64:2));
 }
 
 // ---------------- Gabinete (SCR_LEDGER) ----------------

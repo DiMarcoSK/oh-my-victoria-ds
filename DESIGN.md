@@ -769,4 +769,5 @@ O SDD sec 14.9 tem as fases técnicas F1–F8 das telas. O mundo entra em marcos
 - Texto de eventos e nomes em PT + EN pode passar de centenas de KB: reavaliar NitroFS (ADR-14 do SDD prevê isso).
 - Em 2025 existem ~195 Estados, mais povos e entidades históricas: o catálogo passa de 300 e o limite de 254 donos simultâneos (`u8`) fica apertado. Se um mundo real chegar perto disso, o dono da célula vira `u16` (+96KB de RAM) — decisão do SDD.
 - 82 mil dias de partida: tudo que é "por dia" precisa ser barato ou escalonado; contadores de dia são `u32`.
+- **Fluidez (medida, SDD ADR-36):** o alvo é o mapa a 60 fps no pan no DSi (ARM9 a 134 MHz) e jogável no DS. No ARM9 emulado o dia do mapa-múndi custa ~36 ms de piso (acima dos 30 ms planejados), por isso ele roda em fases e, nas velocidades 4–5, por orçamento de tempo por quadro: quando a CPU não dá conta, quem cede é o relógio do jogo, nunca a fluidez da tela. Medir com `make PROF=1` no melonDS/DS.
 - Seleção de país com ≥150 opções: a tela "Escolha sua nação" vira **carrossel de 5 estandartes com filtro por continente**, mais a opção de escolher tocando no mapa (SDD sec 14.4).

@@ -27,6 +27,8 @@ typedef int64_t  s64;
 #define BgType_Bmp16       2
 #define BgSize_B16_256x256 0
 #define VRAM_A_MAIN_BG     1
+#define VRAM_A_MAIN_BG_0x06000000 1
+#define VRAM_B_MAIN_BG_0x06020000 2
 #define VRAM_C_SUB_BG      3
 
 #define KEY_A      (1u<<0)
@@ -45,15 +47,21 @@ typedef int64_t  s64;
 
 typedef struct { s32 px, py; u16 x, y; } touchPosition;
 
-extern u16 host_bmp_main[256*192];
-extern u16 host_bmp_sub[256*192];
-#define BG_BMP_RAM(n)     (host_bmp_main)
-#define BG_BMP_RAM_SUB(n) (host_bmp_sub)
+// VRAM principal: 2 paginas 256x256 (bancos A+B, base em blocos de 16KB)
+extern u16 host_vram_main[256*256*2];
+extern u16 host_bmp_sub[256*256];
+#define BG_BMP_RAM(n)     (host_vram_main+(n)*8192)
+#define BG_BMP_RAM_SUB(n) (host_bmp_sub+(n)*8192)
 
 void videoSetMode(int m);
 void videoSetModeSub(int m);
 void vramSetBankA(int v);
+void vramSetBankB(int v);
 void vramSetBankC(int v);
+void bgSetMapBase(int id,unsigned base);
+void dmaCopyWords(int ch,const void*src,void*dst,u32 size);
+static inline bool isDSiMode(void){return false;}
+static inline bool setCpuClock(bool s){(void)s;return false;}
 int  bgInit(int bg,int type,int size,int mapbase,int tilebase);
 int  bgInitSub(int bg,int type,int size,int mapbase,int tilebase);
 void dmaCopy(const void*src,void*dst,u32 size);

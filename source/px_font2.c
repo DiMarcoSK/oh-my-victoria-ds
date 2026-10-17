@@ -30,7 +30,8 @@ static void Mix(u16 *dst,int x,int y,u16 col,int q){
  if(x<0||x>255||y<0||y>191)return;
  if(q>=3){dst[y*256+x]=col;return;}
  u16 b=dst[y*256+x];
- int r=((b&31)*(3-q)+(col&31)*q)/3,g=(((b>>5)&31)*(3-q)+((col>>5)&31)*q)/3,bl=(((b>>10)&31)*(3-q)+((col>>10)&31)*q)/3;
+ // x/3 = x*43>>7, exato p/ x<=93 (31*3): sem __aeabi_idiv no Thumb
+ int r=(((b&31)*(3-q)+(col&31)*q)*43)>>7,g=((((b>>5)&31)*(3-q)+((col>>5)&31)*q)*43)>>7,bl=((((b>>10)&31)*(3-q)+((col>>10)&31)*q)*43)>>7;
  dst[y*256+x]=(u16)(BIT(15)|(bl<<10)|(g<<5)|r);
 }
 // nivel 0..3 do pixel (c,r) do glifo (1bpp vira 0/3)
@@ -98,11 +99,62 @@ int Px_Width2Ex(const char *s,const Font *f,int sp,int sc,int flags){
 }
 // Texto com contorno de 1 px (sc px se ampliado) nas 8 direcoes: nomes no mapa
 // e logo. Desenha o contorno primeiro e o miolo por cima.
-void Px_Text2Out(u16 *dst,int x,int y,const char *s,const Font *f,u16 col,u16 out,int sp,int sc,int flags){
- if(sc<1)sc=1;
+// sc=1 (todo rotulo do mapa, a cada quadro do pan): contorno por DILATACAO
+// (ADR-36). A cobertura do texto e' rasterizada 1x numa mascara CV; o
+// contorno de um pixel = soma da cobertura dos 8 vizinhos (teto 3). Antes o
+// texto inteiro era desenhado 9x (8 deslocamentos + miolo: 9x UTF-8, busca
+// de glifo e mistura). Serifa 8 (1bpp) sai identica; na 12 (2bpp) a borda
+// antisserrilhada soma em vez de misturar em serie (diferenca de 1 nivel).
+enum { CVW=264, CVH=32, CVX=4, CVY=8 };
+static u8 CV[CVH][CVW];
+static void Text2OutSlow(u16 *dst,int x,int y,const char *s,const Font *f,u16 col,u16 out,int sp,int sc,int flags){
  for(int dy=-1;dy<=1;dy++)for(int dx=-1;dx<=1;dx++)
   if(dx||dy)Px_Text2Ex(dst,x+dx*sc,y+dy*sc,s,f,out,sp,sc,flags);
  Px_Text2Ex(dst,x,y,s,f,col,sp,sc,flags);
+}
+void Px_Text2Out(u16 *dst,int x,int y,const char *s,const Font *f,u16 col,u16 out,int sp,int sc,int flags){
+ if(sc<1)sc=1;
+ if(sc!=1||Px_Width2Ex(s,f,sp,1,flags)+2*CVX>CVW){Text2OutSlow(dst,x,y,s,f,col,out,sp,sc,flags);return;}
+ // 1) cobertura do texto na mascara (origem da mascara = (x-CVX, y-CVY))
+ int r0=CVH,r1=-1,c0=CVW,c1=-1,cx=0;
+ while(*s){
+  int cp=U8(&s);
+  if(cp=='\n')break;
+  if(flags&TX_UPPER)cp=Up(f,cp);
+  const Glyph *g=F_Glyph(f,cp);
+  if(!g&&cp!=' ')g=F_Glyph(f,'?');
+  if(!g){if(cp==' ')cx+=f->caph/2+1+sp;continue;}
+  const u8 *bits=f->bits+g->off;int stride=Stride(f,g);
+  int gx=CVX+cx+g->left,gy=CVY+f->caph-g->top;
+  for(int r=0;r<g->h;r++){
+   int rr=gy+r;if(rr<1||rr>CVH-2)continue;
+   for(int c=0;c<g->w;c++){
+    int cc=gx+c;if(cc<1||cc>CVW-2)continue;
+    int q=Lv(f,bits,stride,c,r);
+    if(q>CV[rr][cc]){CV[rr][cc]=(u8)q;
+     if(rr<r0)r0=rr;
+     if(rr>r1)r1=rr;
+     if(cc<c0)c0=cc;
+     if(cc>c1)c1=cc;}
+   }
+  }
+  cx+=g->adv+sp;
+ }
+ if(r1<0)return;
+ int ox=x-CVX,oy=y-CVY;
+ // 2) contorno: soma dos 8 vizinhos (a mascara tem 1px de folga em volta)
+ for(int rr=r0-1;rr<=r1+1;rr++){
+  const u8 *U=CV[rr-1],*M=CV[rr],*D=CV[rr+1];
+  for(int cc=c0-1;cc<=c1+1;cc++){
+   int h=U[cc-1]+U[cc]+U[cc+1]+M[cc-1]+M[cc+1]+D[cc-1]+D[cc]+D[cc+1];
+   if(h)Mix(dst,ox+cc,oy+rr,out,h>3?3:h);
+  }
+ }
+ // 3) miolo por cima e limpa so' o que sujou
+ for(int rr=r0;rr<=r1;rr++)for(int cc=c0;cc<=c1;cc++){
+  int q=CV[rr][cc];if(!q)continue;
+  Mix(dst,ox+cc,oy+rr,col,q);CV[rr][cc]=0;
+ }
 }
 void Px_Text2(u16 *dst,int x,int y,const char *s,const Font *f,u16 col){
  int cx=x;

@@ -1,4 +1,5 @@
 #include "wecon.h"
+#include "hot.h"
 #include "city.h"
 #include "str.h"
 #include "wdiplo.h"
@@ -201,7 +202,7 @@ static u16 PriceOf(int g,s32 d,s32 s){
  return (u16)(GD_BASE[g]*r/256);
 }
 
-void WEco_Week(World *w){
+HOT_ARM void WEco_Week(World *w){
  const int Y=w->date.y;
  // 1) campo + necessidades rurais, por pais
  for(u8 ci=1;ci<w->nC;ci++){

@@ -1,4 +1,5 @@
 #include "city.h"
+#include "hot.h"
 #include "earth.h"
 #include "str.h"
 #include "wecon.h"
@@ -130,7 +131,7 @@ int City_Slots(u8 tier){static const u8 S[CT_COUNT]={3,5,8,12};return tier<CT_CO
 int City_NextPop(u8 tier){static const u16 N[CT_COUNT]={10,50,400,0};return tier<CT_COUNT?N[tier]:0;}
 static bool Has(const WCity *c,u8 k){for(int s=0;s<CITY_SLOTS;s++)if(c->bld[s]==k)return true;return false;}
 static int Count(const WCity *c,u8 k){int n=0;for(int s=0;s<CITY_SLOTS;s++)if(c->bld[s]==k)n++;return n;}
-int City_PopCap(const WCity *c){
+HOT_ARM int City_PopCap(const WCity *c){
  static const u16 B[CT_COUNT]={14,70,460,3000};
  int m=100+20*Count(c,BK_FAZENDA)+10*Count(c,BK_PORTO)+15*Count(c,BK_FERROVIA);
  return B[c->tier%CT_COUNT]*m/100;
@@ -562,7 +563,7 @@ static void AiFound(World *w,u8 ci){
   if(x<w->w&&y<w->h&&City_CanFound(w,ci,x,y)){City_Found(w,ci,x,y);return;}
  }
 }
-void City_Day(World *w){
+HOT_ARM void City_Day(World *w){
  for(u8 ci=1;ci<w->nC;ci++){w->c[ci].cityGold=0;w->c[ci].cityCap=0;w->c[ci].nCity=0;}
  bool newYear=(w->date.m==1&&w->date.d==1);
  for(int i=0;i<w->nCity;i++){

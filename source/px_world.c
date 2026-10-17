@@ -13,6 +13,7 @@
 #include "wdiplo.h"
 #include "history.h"
 #include "settings.h"
+#include "prof.h"
 // px_world.c — render da partida no mundo celular (DESIGN.md sec 4.2/4.3).
 // Tela do MAPA: barra de recursos 20px + mapa politico 256x172 em 5 zooms:
 //  Z0 mundo inteiro (2 celulas/px) .. Z4 detalhe (8 px/celula).
@@ -38,16 +39,25 @@ static CStat ST[W_MAXC+1],ST2[W_MAXC+1];
 enum { MINI_W=64, MINI_H=24 };
 static u16 MINI[MINI_W*MINI_H];
 static int statRow=-1;
+static u32 statVer;               // sobe a cada publicacao de ST (rotulos reordenam so' ai)
+static u32 statOwn=~0u,statDay;   // W_OwnVer e dia no comeco da ultima varredura
 static void StatClear(CStat *t){for(int i=0;i<=W_MAXC;i++){t[i].sx=t[i].sy=t[i].n=0;t[i].x0=t[i].y0=0xFFFF;t[i].x1=t[i].y1=0;}}
+// por CORRIDA de celulas do mesmo dono (as linhas tem corridas longas): a
+// estatistica e' atualizada 1x por corrida, nao por celula (ADR-36). Somas
+// inteiras exatas: sx += a+...+b = (a+b)(b-a+1)/2.
 static void StatRows(const World *w,CStat *t,int y0,int y1){
+ const int W=w->w;
  for(int y=y0;y<y1;y++){
   const u8 *row=&W_OWNER[World_Idx(w,0,y)];
-  for(int x=0;x<w->w;x++){
-   u8 o=row[x];if(!o)continue;
+  for(int x=0;x<W;){
+   u8 o=row[x];int a=x;
+   while(++x<W&&row[x]==o){}
+   if(!o)continue;
+   int b=x-1;u32 len=(u32)(b-a+1);
    CStat *s=&t[o];
-   s->sx+=(u32)x;s->sy+=(u32)y;s->n++;
-   if(x<s->x0)s->x0=(u16)x;
-   if(x>s->x1)s->x1=(u16)x;
+   s->sx+=(u32)(a+b)*len/2;s->sy+=(u32)y*len;s->n+=len;
+   if(a<s->x0)s->x0=(u16)a;
+   if(b>s->x1)s->x1=(u16)b;
    if(y<s->y0)s->y0=(u16)y;
    if(y>s->y1)s->y1=(u16)y;
   }
@@ -68,14 +78,16 @@ static void Minimap_Build(const World *w){
 }
 void PxW_Stats(void){              // volta completa de uma vez (inicio da partida)
  const World *w=WG_World();
- StatClear(ST);StatRows(w,ST,0,w->h);Minimap_Build(w);statRow=-1;
+ StatClear(ST);StatRows(w,ST,0,w->h);Minimap_Build(w);statRow=-1;statVer++;statOwn=W_OwnVer;statDay=w->day;
 }
 void PxW_StatsStep(int rows){
  const World *w=WG_World();
- if(statRow<0){StatClear(ST2);statRow=0;}
+ // nova volta so' se algum dono mudou desde a ultima (parado/pausado = zero custo;
+ // antes varria 6 mil celulas por quadro mesmo sem nada mudar)
+ if(statRow<0){if(statOwn==W_OwnVer&&w->day-statDay<30)return;statOwn=W_OwnVer;statDay=w->day;StatClear(ST2);statRow=0;}   // +1 volta por mes: cor de pais que mudou sem trocar celula
  int y1=statRow+rows;if(y1>w->h)y1=w->h;
  StatRows(w,ST2,statRow,y1);statRow=y1;
- if(statRow>=w->h){for(int i=0;i<=W_MAXC;i++)ST[i]=ST2[i];Minimap_Build(w);statRow=-1;}
+ if(statRow>=w->h){for(int i=0;i<=W_MAXC;i++)ST[i]=ST2[i];Minimap_Build(w);statRow=-1;statVer++;}
 }
 
 // ---- utilitarios de texto ----
@@ -98,7 +110,8 @@ static const char *NatName(const World *w,u8 ci){return ci?NATIONS[w->c[ci].nat]
 // ---- mapa ----
 static int RelX(const World *w,int a,int b){
  int d=b-a;
- if(w->wrap){d%=w->w;if(d<-w->w/2)d+=w->w;else if(d>=w->w/2)d-=w->w;}
+ // entradas em [0,w): |d|<w e o % (divisao em software no Thumb) e' inutil
+ if(w->wrap){if(d<=-w->w||d>=w->w)d%=w->w;if(d<-w->w/2)d+=w->w;else if(d>=w->w/2)d-=w->w;}
  return d;
 }
 // celula -> pixel do viewport (centro da celula); false se fora da vista
@@ -119,13 +132,31 @@ static void Star(u16 *d,int x,int y,u16 col){
  }
  for(int r=0;r<5;r++)for(int c=0;c<5;c++)if(S[r][c]=='g'&&y+r-2>=WG_MAP_Y)Px_PSet(d,x+c-2,y+r-2,col);
 }
+// largura do nome em caixa alta (sem espacamento) e n' de vaos entre letras,
+// por nacao e fonte (0 = Serifa 12, 1 = Serifa 8). Os nomes nao mudam na
+// partida; antes eram ate' 3 medicoes (UTF-8 + busca de glifo por letra) por
+// candidato a rotulo, a CADA quadro do pan. Largura com vao sp = w + vaos*sp.
+enum { LW_MAX=512 };
+static u16 LWc[2][LW_MAX];static u8 LGc[2][LW_MAX];   // LWc = largura+1 (0 = nao medido)
+static int NameW(int nat,const char *nm,int fi,int *gaps){
+ const Font *f=fi?&F_SERIF8:&F_SERIF12;
+ if(nat<0||nat>=LW_MAX){int w=Px_Width2Ex(nm,f,0,1,TX_UPPER);*gaps=Px_Width2Ex(nm,f,1,1,TX_UPPER)-w;return w;}
+ if(!LWc[fi][nat]){int w=Px_Width2Ex(nm,f,0,1,TX_UPPER);LGc[fi][nat]=(u8)(Px_Width2Ex(nm,f,1,1,TX_UPPER)-w);LWc[fi][nat]=(u16)(w+1);}
+ *gaps=LGc[fi][nat];return LWc[fi][nat]-1;
+}
 // rotulos: maiores paises primeiro; sem sobreposicao; so' se couber
 typedef struct { s16 x0,y0,x1,y1; } Rect;
 static void Labels(u16 *d,const World *w,const WGame *s){
- static u8 ord[W_MAXC];int n=0;
- for(u8 ci=1;ci<w->nC;ci++)if(w->c[ci].alive&&ST[ci].n)ord[n++]=ci;
- // ordena por tamanho (insercao; n<=250 e so' 1x por render)
- for(int i=1;i<n;i++){u8 v=ord[i];int j=i-1;while(j>=0&&ST[ord[j]].n<ST[v].n){ord[j+1]=ord[j];j--;}ord[j+1]=v;}
+ // ordem por tamanho: so' muda quando ST e' publicado (~4x/s), entao fica em
+ // cache (antes: insercao de ~250 paises a CADA quadro do pan). Quem morreu
+ // depois da ultima publicacao e' pulado no laco.
+ static u8 ord[W_MAXC];static int nOrd;static u32 ordVer=~0u;
+ if(ordVer!=statVer){
+  nOrd=0;for(u8 ci=1;ci<w->nC;ci++)if(ST[ci].n)ord[nOrd++]=ci;
+  for(int i=1;i<nOrd;i++){u8 v=ord[i];int j=i-1;while(j>=0&&ST[ord[j]].n<ST[v].n){ord[j+1]=ord[j];j--;}ord[j+1]=v;}
+  ordVer=statVer;
+ }
+ int n=nOrd;
  static Rect used[48];static u8 labd[48];int nu=0;
  // areas reservadas: chip de velocidade, minimapa e faixa de evento
  used[nu]=(Rect){220,WG_MAP_Y,256,WG_MAP_Y+19};labd[nu++]=0;
@@ -134,7 +165,8 @@ static void Labels(u16 *d,const World *w,const WGame *s){
  int ppc2=s->zoom==0?1:(2<<(s->zoom-1));   // px por celula x2 (Z0 = 0,5 px)
  bool ter=(s->mapMode!=WMAP_POL);
  for(int k=0;k<n&&k<80&&nu<48;k++){
-  u8 ci=ord[k];const CStat *st=&ST[ci];
+  u8 ci=ord[k];if(!w->c[ci].alive)continue;
+  const CStat *st=&ST[ci];
   int cx=(int)(st->sx/st->n),cy=(int)(st->sy/st->n);
   int px,py;
   if(!ToScreen(w,s,cx,cy,&px,&py))continue;
@@ -142,15 +174,15 @@ static void Labels(u16 *d,const World *w,const WGame *s){
   int availW=spanW*ppc2/2*3/4, availH=(st->y1-st->y0+1)*ppc2/2;
   if(availW>220)availW=220;
   const char *nm=NATIONS[w->c[ci].nat].name;
-  const Font *f=&F_SERIF12;int maxsp=6;
-  int w0=Px_Width2Ex(nm,f,0,1,TX_UPPER);
-  if(w0>availW||availH<18){f=&F_SERIF8;maxsp=3;w0=Px_Width2Ex(nm,f,0,1,TX_UPPER);}
+  const Font *f=&F_SERIF12;int maxsp=6,gaps,nat=w->c[ci].nat;
+  int w0=NameW(nat,nm,0,&gaps);
+  if(w0>availW||availH<18){f=&F_SERIF8;maxsp=3;w0=NameW(nat,nm,1,&gaps);}
   if(w0>availW||availH<11)continue;
   int letters=Txt_Len(nm);
   int sp=letters>1?(availW-w0)/(letters-1):0;
   if(sp>maxsp)sp=maxsp;
   if(sp<0)sp=0;
-  int tw=Px_Width2Ex(nm,f,sp,1,TX_UPPER);
+  int tw=w0+gaps*sp;
   bool troops=(s->zoom>=1&&availH>=f->caph+16);
   if(tw>250)continue;
   int lx=px-tw/2;          // rotulo inteiro dentro da tela
@@ -211,6 +243,15 @@ static void CellPx(const World *w,const WGame *s,int cx,int cy,int *px,int *py){
  *py+=WG_MAP_Y;
 }
 static inline void MPut(u16 *d,int x,int y,u16 c){if(x>=0&&x<256&&y>WG_MAP_Y&&y<192)d[y*256+x]=c;}
+// passos k (0..l) de um eixo do DDA em que p0+sgn*floor(k*A/l) cai em
+// [lo,hi], com 1 de folga (f e' monotona em k). Vazio = *ka>*kb.
+static void KRange(int p0,int sgn,int A,int l,int lo,int hi,int *ka,int *kb){
+ int flo=sgn>0?lo-p0:p0-hi,fhi=sgn>0?hi-p0:p0-lo;   // f(k) tem que ficar em [flo,fhi]
+ if(fhi<0||flo>A){*ka=1;*kb=0;return;}
+ if(!A){*ka=0;*kb=l;return;}                       // eixo parado, e dentro
+ int a=flo<=0?0:flo*l/A-1,b=(fhi+1)*l/A+1;
+ *ka=a<0?0:a;*kb=b>l?l:b;
+}
 // rota pelo mar: polilinha tracejada que corre pelos nos de mar (px_sea.c)
 // + navio mercante andando por ela. Segmento que cruza a volta do mundo
 // (salto > 200 px) nao e' desenhado.
@@ -226,7 +267,19 @@ static void SeaLine(u16 *d,const World *w,const WGame *s,const u16 *p,int n,u16 
   int l=L[i];if(!l){continue;}
   int x0=X[i-1],y0=Y[i-1],ddx=X[i]-x0,ddy=Y[i]-y0;
   if((x0<-40&&X[i]<-40)||(x0>296&&X[i]>296)||(y0<0&&Y[i]<0)||(y0>232&&Y[i]>232)){acc+=l;continue;}
-  for(int k=0;k<=l;k++){if((((acc+k)+phase/2)&7)<4)MPut(d,x0+ddx*k/l,y0+ddy*k/l,col);}
+  // DDA em 16.16: 2 divisoes por segmento em vez de 2 por pixel (Thumb chama
+  // __aeabi_idiv). Reciproco com teto: (q*k)>>16 == |d|*k/l EXATO p/ l<=200,
+  // e o sinal fora reproduz o truncamento p/ zero de antes (ADR-36).
+  int sxn=ddx<0?-1:1,syn=ddy<0?-1:1,ph=phase/2;
+  u32 qx=(((u32)(ddx*sxn)<<16)+(u32)l-1)/(u32)l,qy=(((u32)(ddy*syn)<<16)+(u32)l-1)/(u32)l;
+  // so' os passos que caem na tela (z4: a rota e' quase toda fora): faixa de
+  // k por eixo com 1 de folga; o MPut ainda confere, o tracejado segue k
+  int ka,kb,a2,b2;
+  KRange(x0,sxn,ddx*sxn,l,0,255,&ka,&kb);KRange(y0,syn,ddy*syn,l,WG_MAP_Y+1,191,&a2,&b2);
+  if(a2>ka)ka=a2;
+  if(b2<kb)kb=b2;
+  u32 ax=qx*(u32)(ka>0?ka:0),ay=qy*(u32)(ka>0?ka:0);
+  for(int k=ka;k<=kb;k++,ax+=qx,ay+=qy){if(((acc+k+ph)&7)<4)MPut(d,x0+sxn*(int)(ax>>16),y0+syn*(int)(ay>>16),col);}
   acc+=l;
  }
  if(!ship||tot<4)return;
@@ -392,18 +445,20 @@ void PxW_Map(u16 *d){
  World *w=WG_World();WGame *s=WG_Ptr();
  if(s->stale){PxW_Stats();s->stale=false;}
  int phase=(int)((s->tick/15)&1);
- PxM_Update(WG_World(),s);   // cache: so' repinta o que mudou (px_mapr.c)
- PxM_Blit(d);
- PxM_Overlay(d,w,s,phase);
- PxC_MapCities(d,w,s);
- Routes(d,w,s);
- Fleets(d,w,s);
- Labels(d,w,s);
- Cursor(d,w,s);
- Minimap(d,w,s);
- SpeedChip(d,s);
- if(s->bannerT&&w->msg[0])Banner(d,w);
- Bar(d,w,s);
+ PROF(PF_MAPU,PxM_Update(WG_World(),s));   // cache: so' repinta o que mudou (px_mapr.c)
+ PROF(PF_BLIT,PxM_Blit(d));
+ PROF(PF_OVL,PxM_Overlay(d,w,s,phase));
+ PROF(PF_CITY,PxC_MapCities(d,w,s));
+ PROF(PF_DECO,Routes(d,w,s);Fleets(d,w,s));
+ PROF(PF_LBL,Labels(d,w,s));
+ PROF(PF_DECO,{
+  Cursor(d,w,s);
+  Minimap(d,w,s);
+  SpeedChip(d,s);
+  if(s->bannerT&&w->msg[0])Banner(d,w);
+  Bar(d,w,s);
+ });
+ Prof_Draw(d);
 }
 
 // ---- painel ----

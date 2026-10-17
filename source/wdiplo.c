@@ -1,4 +1,5 @@
 #include "wdiplo.h"
+#include "hot.h"
 #include "wecon.h"
 #include "city.h"
 #include "str.h"
@@ -575,7 +576,7 @@ void WDip_Init(World *w){
  for(int k=0;k<3;k++)w->obj[k]=0xFF;
  w->objMask=0;w->objDone=0;w->nRevol=w->nAlliances=w->nNaval=0;
 }
-void WDip_Day(World *w){
+HOT_ARM void WDip_Day(World *w){
  u8 me=PlayerC(w);
  // proposta sem resposta em 30 dias = recusa
  if(w->prop.kind&&w->day>w->prop.day+30){

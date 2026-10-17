@@ -306,7 +306,8 @@ static void MiniTown(u16 *d,int cx,int cy,int size,const WCity *c,u8 st,u16 year
  if(k&&c->tier>=CT_CIDADE)PxC_Building(d,cx-size/3,cy+size/4+1,size*2/3,k,st,year,seed,-1,nat);
 }
 static inline bool ScreenOf(const World *w,const WGame *s,int cx,int cy,int *px,int *py){
- int rx=cx-s->camX;if(w->wrap){rx%=w->w;if(rx<0)rx+=w->w;}
+ // cx e camX em [0,w): |rx|<w, sem o % (divisao em software) p/ cada cidade a cada quadro
+ int rx=cx-s->camX;if(w->wrap){if(rx<=-w->w||rx>=w->w)rx%=w->w;if(rx<0)rx+=w->w;}
  int ry=cy-s->camY;
  if(s->zoom==0){*px=rx/2;*py=ry/2;}
  else{int ppc=1<<(s->zoom-1);*px=rx*ppc+ppc/2-s->subX;*py=ry*ppc+ppc/2-s->subY;}
@@ -339,14 +340,13 @@ void PxC_MapCities(u16 *d,const World *w,const WGame *s){
   // cache) — a cidade "espalha" com o nivel — e a vila no centro
   if(c->tier>=CT_VILAREJO){
    int R=(c->tier+1)*ppc/2;
-   const u8 *K=PxM_Key();
    for(int k=0;k<3+c->tier*4;k++){
     u32 h=Hh(seed,k+99);
     int dx=(int)(h%(u32)(2*R+1))-R,dy=(int)((h>>10)%(u32)(2*R+1))-R;
     if(dx*dx+dy*dy>R*R)continue;
     int x=px+dx,y=py+dy;
     if(y<WG_MAP_Y||y>=191||x<0||x>=255)continue;
-    if(K[(y-WG_MAP_Y)*256+x]>=0xFE)continue;          // mar ou fora do mapa
+    if(PxM_KeyAt(x,y-WG_MAP_Y)>=0xFE)continue;          // mar ou fora do mapa
     u16 roof=(h>>24)&1?C3(19,9,7):C3(14,13,14);
     Put(x,y,roof);Put(x+1,y,roof);Put(x,y+1,Dk(roof,5,8));Put(x+1,y+1,C3(25,23,18));
    }
@@ -668,7 +668,7 @@ void PxC_Scene(u16 *d,int ci){
  u16 *L=PxM_Scratch();
  u32 sig=SceneSig(w,ci);
  if(sceneCity!=ci||sceneSig!=sig){CityBg(L,w,ci);sceneCity=ci;sceneSig=sig;}
- memcpy(d+WG_MAP_Y*256,L,WG_MAP_H*256*2);
+ Px_Copy16(d+WG_MAP_Y*256,L,WG_MAP_H*256);   // VRAM: so' 16/32 bits
  Quarters(w,ci);      // DEN/avenidas da cidade aberta (baratinho: 160 lotes)
  CityLive(d,w,ci,(int)WG_Ptr()->tick,WG_Ptr()->cityLot);
  // faixa do titulo: nome + nivel + bandeira

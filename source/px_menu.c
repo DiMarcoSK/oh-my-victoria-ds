@@ -366,4 +366,5 @@ void Menu_DrawLoading(GameState *g){
  Ui_Parch(b,8,8,240,176);
  Compass(b,128,96,40);
  Px_FlipTop();Px_FlipBot();
+ Px_Present();     // aparece ANTES de gerar o mundo (o laco fica travado ~1-3 s)
 }
