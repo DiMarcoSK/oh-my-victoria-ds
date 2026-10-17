@@ -17,7 +17,8 @@
 #define W_HWMAX 32         // guerras historicas simultaneas (lista, nao matriz: 64B)
 #define W_MAXC 250          // paises simultaneos (dono 1..250; 0 = sem dono)
 #define W_MAXCITY 512       // cidades no mundo (24B cada: 12KB)
-#define CITY_SLOTS 12       // slots de obra (liberados por nivel: 3/5/8/12)
+#define CITY_SLOTS 16       // slots de obra (liberados por nivel: 3/6/10/16)
+#define W_MAXFORT 255       // fortificacoes no mundo (forte, trincheira, bateria; ADR-38)
 #define W_BLK_W (W_MAXW/8)  // blocos 8x8 celulas p/ redesenho incremental do mapa
 #define W_BLK_H (W_MAXH/8)
 
@@ -36,10 +37,23 @@ typedef enum {
 
 // Bens do mercado mundial (DESIGN 4.8). IDs gravados: so' ADICIONE antes de GD_COUNT.
 enum { GD_GRAOS=0, GD_MADEIRA, GD_FIBRA, GD_MINERIO, GD_LUXO, GD_TEXTEIS,
- GD_FERRAMENTAS, GD_ARMAS, GD_PETROLEO, GD_COUNT };
+ GD_FERRAMENTAS, GD_ARMAS, GD_PETROLEO,
+ GD_ACO, GD_BENS, GD_MAQUINAS, GD_ELETRONICOS,   // ADR-37: cadeia longa (aco 1850, maquinas 1870, eletronicos 1950)
+ GD_COUNT };
 // Ideologias (DESIGN 6.5): mudam bandeira, governo e modificadores. IDs gravados.
 enum { ID_TRADICIONAL=0, ID_LIBERAL, ID_CONSERVADOR, ID_COMUNISTA, ID_AUTORITARIO,
  ID_TEOCRATICO, ID_COUNT };
+// Leis (wlaw.c, ADR-40): 9 grandes assuntos x 5 leis. O efeito somado das
+// leis em vigor (LawFx) fica em WEco.fx e e' lido pela economia, pelo
+// exercito e pela felicidade. IDs de assunto/lei: nao reordene (IA e testes).
+enum { LW_IMPOSTO=0, LW_COMERCIO, LW_EDUCACAO, LW_EXERCITO, LW_TRABALHO, LW_MODELO,
+ LW_SAUDE, LW_MOEDA, LW_IMIGRACAO, LW_COUNT };
+enum { LW_OPTS=5 };
+// Campos do efeito (somados): ver tabela LAW em wlaw.c e LFX_* em wlaw.h
+enum { LFX_REV=0, LFX_PROD, LFX_INV, LFX_HAPPY, LFX_MILIT, LFX_GROW, LFX_LIT, LFX_TRADE,
+ LFX_TARIFF, LFX_CAP, LFX_REGEN, LFX_ARMYX, LFX_ATK, LFX_EDU, LFX_SOC, LFX_INFL, LFX_DEBT,
+ LFX_RATE, LFX_EXPORT, LFX_STATE, LFX_COL, LFX_COUNT };
+typedef struct { s16 v[LFX_COUNT]; } LawFx;
 // Economia de um pais (wecon.c), fechada 1x por semana. Unidades = cargas/semana.
 typedef struct {
  s32 sup[GD_COUNT], dem[GD_COUNT]; // oferta e demanda da semana
@@ -49,18 +63,28 @@ typedef struct {
  u8 life;                 // nivel de vida 0..100 (media ponderada das necessidades)
  u8 ind, lack;            // industria rodando a ind% (insumo que falta: lack = bem)
  s16 hub;                 // cidade-porto principal (rotas no mapa), -1 = nenhuma
- u8 tax;                  // 0 baixo, 1 medio, 2 alto
+ u8 law[LW_COUNT];         // lei em vigor por assunto (0..4, ADR-40)
+ u8 lawCat, lawTo;         // debate em curso: assunto e lei proposta (lawCat 0xFF = nenhum)
+ u16 lawDays;              // dias ate' a votacao
+ LawFx fx;                 // efeito somado das leis em vigor (Law_Apply)
+ u32 cpi;                  // indice de precos (1000 = 1800): custos e receitas nominais
+ s16 infl;                 // inflacao corrente (por mil ao ano)
+ s32 printed;              // dinheiro emitido na semana (Emissao livre cobre o deficit)
+ s32 xSoc;                 // despesa social da semana (saude e trabalho)
  s32 inc, exp;            // receita interna e despesa total da semana (ouro)
  s32 trade;               // alfandega da semana (ouro)
  // balanco fiscal (ADR-32): linhas de receita e despesa da semana
  s32 rProd, rPop, rCity, rLand, rTariff;         // receita (rPop = imposto per capita)
+ s32 rExport, rArms;      // lucro das casas exportadoras (tributado) e contratos de armas (ADR-37)
+ s32 expVal, impVal;      // valor exportado/importado na semana (balanca comercial)
+ s32 invest;              // fundo do investimento privado (vira obra nas cidades; ADR-37)
+ u8 jobs;                 // % das vagas da industria preenchidas (cidades sem gente produzem menos)
+ u8 reqG, reqT;           // pedido do povo: bem exigido (0xFF = nenhum) e semanas restantes
+ s8 reqMood;              // humor do ultimo pedido (+ atendido / - ignorado), volta a 0 devagar
  s32 xArmy, xNavy, xAdmin, xEdu, xUpkeep, xDebt, xCorrupt; // despesa (corrupcao: cofre parado)
  s32 debt;                // divida publica (ouro)
  s32 gdp;                 // valor produzido na semana (PIB semanal)
  u8 rate;                 // juros da divida (% ao ano)
- u8 tariff;               // 0 livre comercio, 1 moderada, 2 protecionista
- u8 edu;                  // gasto em educacao 0 nenhum, 1 basico, 2 amplo
- u8 mil;                  // gasto militar 0 reduzido, 1 normal, 2 mobilizado
  u8 defaults;             // calotes ja dados (sobe os juros para sempre)
  u16 cap, used;           // capacidade maritima de comercio (cargas/semana) e uso
  u8 ports, yards;         // cidades com porto / estaleiro
@@ -97,6 +121,11 @@ typedef struct {
  u8 alert;               // dias de alerta: atacado/declarado -> a IA pensa todo dia e contra-ataca
  u32 popK;               // populacao real em milhares (estoque: cresce e muda de dono com as celulas)
  u16 lit;                // alfabetizacao 0..1000 (decimos de %)
+ u16 focX, focY;         // foco da frente (celula; 0xFFFF = frente inteira): o avanco puxa p/ la' (ADR-38)
+ u8 armsTo;              // contrato de armas: pais que recebe nossas armas (0 = nenhum)
+ u16 armsV;              // cargas de armas enviadas na ultima semana
+ u16 armsTot;            // cargas de armas ja' vendidas (ambicao/ranking)
+ u8 instCd;              // dias ate' poder instigar outra guerra
 } WCountry;
 // Proposta/decisao pendente para o jogador (modal no painel).
 enum { PR_NONE=0, PR_ALIANCA, PR_BLOCO, PR_AJUDA, PR_TRIBUTO, PR_PAZ, PR_DECISAO, PR_COUNT };
@@ -109,7 +138,9 @@ enum { CT_POVOADO=0, CT_VILAREJO, CT_CIDADE, CT_METROPOLE, CT_COUNT };
 enum { BK_NONE=0, BK_FAZENDA, BK_MERCADO, BK_OFICINA, BK_QUARTEL, BK_PORTO,
  BK_TEMPLO, BK_MURALHA, BK_UNIVERSIDADE, BK_FABRICA, BK_FERROVIA, BK_PALACIO,
  BK_SERRARIA, BK_MINA, BK_ARSENAL, BK_ESTALEIRO, BK_POCO,
- BK_ESCOLA, BK_HOSPITAL, BK_BANCO, BK_TEATRO, BK_PARQUE, BK_USINA, BK_COUNT };
+ BK_ESCOLA, BK_HOSPITAL, BK_BANCO, BK_TEATRO, BK_PARQUE, BK_USINA,
+ BK_SIDERURGICA, BK_MANUFATURA, BK_MAQUINARIA, BK_ELETRONICA, BK_ARMAMENTOS, BK_BOLSA, // ADR-37
+ BK_COUNT };
 enum { CF_COASTAL=1, CF_HIST=2, CF_FOUNDED=4 };
 typedef struct {
  u16 x, y;               // celula
@@ -128,6 +159,17 @@ typedef struct {
  u8 bqLot;               // lote da obra em construcao
 } WCity;
 enum { RS_TROPICAL=1, RS_OLEO=2 };
+// Series historicas (ADR-41): o jogador e o lider do ranking, ate' ST_N pontos.
+// Encheu = media dos pares e o passo dobra: a serie cobre a partida inteira.
+enum { SR_PIB=0, SR_POP, SR_CAIXA, SR_EXERC, SR_DIVIDA, SR_ALFAB, SR_VIDA, SR_PREST, SR_COUNT };
+enum { ST_N=96 };
+typedef struct { s32 v[SR_COUNT][2][ST_N]; u16 n, step, acc; u32 day0; u8 top; } WStats;
+// Fortificacao no mapa (ADR-38): o dono ergue na propria terra; a defesa vale
+// para as celulas dele no raio (W_FORTD guarda qual forte cobre cada celula).
+// Quem toma a celula do forte fica com ele. Tipos: IDs nao gravados (save so'
+// do GameState), mas mantenha a ordem p/ a IA e a arte.
+enum { FT_FORTE=0, FT_TRINCHEIRA, FT_BATERIA, FT_COUNT };
+typedef struct { u16 x, y; u8 owner, kind; u8 days; u8 lvl; } WFort;
 typedef struct {
  u16 w, h; u8 mode, hist, diff; bool wrap;
  u32 seed, rng;
@@ -150,6 +192,12 @@ typedef struct {
  u8 obj[3]; u8 objDone;    // ambicoes do jogador (wdiplo.c) e quantas cumpriu
  u16 objMask;              // ambicoes ja cumpridas (bit por OB_*)
  u32 nRevol, nAlliances, nNaval; // contadores (testes/Gazeta)
+ u16 nFort;                // fortificacoes em fort[0..nFort)
+ WFort fort[W_MAXFORT];
+ u32 nInvest, nArms, nInstig; // contadores: obras do investimento privado, cargas de armas vendidas, guerras instigadas
+ WStats st;                // series p/ a aba Graficos (wstat.c, ADR-41)
+ u8 rankBest, rankGreat;   // melhor posicao ja' avisada (1-based, 0 = nada) e se esta' entre as 8 grandes
+ s32 gdpMark; u32 popMark; // marcos: PIB dobrou / populacao dobrou desde o ultimo aviso
  u8 dirtyBlk[(W_BLK_W*W_BLK_H+7)/8]; // bloco 8x8 mudou de dono (px_world limpa)
 } World;
 
@@ -161,6 +209,7 @@ extern u8 W_CORE[W_CELLS]; // nucleo: nacao+1 dona "de direito" (0 = nenhuma)
 // suavizado; agua = distancia da costa 1..31. A simulacao nao le.
 extern u8 W_LIM[W_CELLS];
 extern u8 W_CITYB[W_CELLS/8];  // bit: ha cidade nesta celula (busca rapida)
+extern u8 W_FORTD[W_CELLS];    // forte que cobre a celula: indice+1 em World.fort (0 = nenhum)
 
 static inline u32 World_Idx(const World *w,int x,int y){return (u32)y*w->w+(u32)x;}
 
@@ -181,6 +230,7 @@ void World_Continue(World *w);              // depois de 31/12/2025: Modo Eterno
 // sem dono). Exige guerra se `to` for um pais. Repetir reforca a frente.
 bool World_Attack(World *w,u8 from,u8 to,u8 pct);
 void World_Recall(World *w,u8 ci);           // recolhe a frente aberta
+void World_SetFocus(World *w,u8 ci,int x,int y); // foco da frente (x<0 = frente inteira; ADR-38)
 s32 World_RecruitCost(const World *w,u8 ci);
 bool World_Recruit(World *w,u8 ci);          // ouro -> regimentos
 bool World_ProposePeace(World *w,u8 a,u8 b); // b aceita ou recusa

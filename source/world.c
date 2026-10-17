@@ -5,6 +5,9 @@
 #include "history.h"
 #include "wecon.h"
 #include "wdiplo.h"
+#include "wfort.h"
+#include "wlaw.h"
+#include "wstat.h"
 // world.c — mundo celular M1 (DESIGN.md sec 4.1, 4.5, 4.6).
 // Custos e taxas sao proposta de design: balancear aqui.
 
@@ -161,8 +164,11 @@ static void InitCountry(World *w,u8 ci,int nat,int cx,int cy){
  c->nat=(u8)nat;c->alive=true;c->kind=d->kind;c->gov=d->gov;
  c->ideo=c->ideo0=WDip_IdeoOfGov(d->gov);c->mood=(u8)(((u32)nat*2654435761u^w->seed)%101u);
  {WEco *e=&w->eco[ci];u8 *q=(u8*)e;for(unsigned i=0;i<sizeof(*e);i++)q[i]=0;
-  e->tax=1;e->life=70;e->ind=100;e->hub=-1;e->tariff=1;e->edu=1;e->mil=1;e->rate=4;
+  e->life=70;e->ind=100;e->hub=-1;e->rate=4;e->reqG=0xFF;e->jobs=100;
+  // pais que nasce no meio da partida herda o nivel de precos medio do mundo
+  {u64 sc=0;int n=0;for(u8 j=1;j<w->nC;j++)if(j!=ci&&w->c[j].alive&&w->eco[j].cpi){sc+=w->eco[j].cpi;n++;}e->cpi=n?(u32)(sc/n):CPI1;}
   for(int g=0;g<GD_COUNT;g++){e->price[g]=GD_BASE[g];e->sat[g]=100;}}
+ c->focX=c->focY=0xFFFF;
  for(int i=0;i<NAT_TRAITS;i++)c->traits[i]=d->traits[i];
  World_SetTraits(w,ci);
  c->capX=(u16)cx;c->capY=(u16)cy;c->bx0=c->bx1=(u16)cx;c->by0=c->by1=(u16)cy;
@@ -177,6 +183,7 @@ static void InitCountry(World *w,u8 ci,int nat,int cx,int cy){
  for(unsigned k=0;k<sizeof PR/sizeof PR[0];k++){const char *t=PR[k].tag;
   if(t[0]==d->tag[0]&&t[1]==d->tag[1]&&t[2]==d->tag[2]){c->prestige=PR[k].p;break;}}
  w->natToC[nat]=ci;
+ Law_Init(w,ci);
 }
 static u8 NewSlot(World *w,int nat){
  u8 old=w->natToC[nat>=0&&nat<256?nat:0];
@@ -202,6 +209,7 @@ static void SetOwner(World *w,u32 i,u8 to){
  // render incremental: so' o bloco 8x8 desta celula sera redesenhado
  {u32 b=(i/w->w/8)*W_BLK_W+(i%w->w)/8;w->dirtyBlk[b>>3]|=(u8)(1u<<(b&7));}
  if((W_CITYB[i>>3]>>(i&7))&1)City_OnOwner(w,i,to);
+ if(W_FORTD[i])Fort_OnOwner(w,i,to);
  if(to){w->c[to].cells++;w->c[to].pop+=CellW(w,i,to);w->c[to].terr[t]++;w->c[to].popK+=moved;Grow(&w->c[to],(int)(i%w->w),(int)(i/w->w));}
 }
 static void RecalcAllPop(World *w){
@@ -342,6 +350,7 @@ static void Reset(World *w,u32 seed,u8 mode,u16 W,u16 H,u8 diff){
  w->date.y=CAL_START_YEAR;w->date.m=1;w->date.d=1;w->endDay=Cal_EndDay();
  w->hist=WH_DESLIGADA;
  for(u32 i=0;i<(u32)W*H;i++){W_OWNER[i]=0;W_TERR[i]=WT_WATER;W_AUX[i]=255;W_LIM[i]=0;W_CORE[i]=0;}
+ Fort_Reset(w);
 }
 // t = 0 (equador) .. 100 (polo); e = percentil de elevacao da terra (0..100)
 static u8 TerrAt(int t,int e,int m){
@@ -571,7 +580,7 @@ static s32 CellCost(const World *w,u32 i,u8 att,u8 def){
  const WCountry *a=&w->c[att];
  s32 cost;
  if(!def){
-  int col=a->m.colonizePct;if(col>80)col=80;
+  int col=a->m.colonizePct+w->eco[att].fx.v[LFX_COL];if(col>80)col=80;
   cost=base*(100-col)/200;
  }else{
   const WCountry *d=&w->c[def];
@@ -589,6 +598,8 @@ static s32 CellCost(const World *w,u32 i,u8 att,u8 def){
    if(ci2>=0)for(int s=0;s<CITY_SLOTS;s++)def+=BLD[w->city[ci2].bld[s]].def;
    cost=cost*2*def/100;
   }
+  // fortificacao do defensor cobrindo a celula (ADR-38)
+  if(W_FORTD[i]){int fp=Fort_DefPct(w,i,def);if(fp)cost=cost*(100+fp)/100;}
  }
  // linha de suprimento: longe da capital custa mais (Mares/Colonial reduzem)
  int dx=Iabs((int)(i%w->w)-a->capX),dy=Iabs((int)(i/w->w)-a->capY);
@@ -596,7 +607,7 @@ static s32 CellCost(const World *w,u32 i,u8 att,u8 def){
  s32 sup=(s32)(dx+dy)*(100+a->m.supplyPct)/100;
  if(sup>300)sup=300;
  if(sup>0)cost=cost*(100+sup)/100;
- s32 am=100+a->m.atkPct+(a->player?0:DIFF_ATK[w->diff]);
+ s32 am=100+a->m.atkPct+w->eco[att].fx.v[LFX_ATK]+(a->player?0:DIFF_ATK[w->diff]);
  if(am<40)am=40;
  cost=cost*100/am;
  if(t==WT_PLAINS||t==WT_STEPPE||t==WT_DESERT)cost=cost*100/(100+a->m.plainsSpeedPct);
@@ -627,7 +638,7 @@ void World_Recall(World *w,u8 ci){
 s32 World_RecruitCost(const World *w,u8 ci){
  // armas caras (falta no mercado) encarecem o recrutamento
  s32 p=w->eco[ci].price[GD_ARMAS],b=GD_BASE[GD_ARMAS];
- return (w->c[ci].cap/2+20)*(100+(p-b)*50/b)/100;
+ return WEco_Nom(w,ci,(w->c[ci].cap/2+20)*(100+(p-b)*50/b)/100);
 }
 bool World_Recruit(World *w,u8 ci){
  WCountry *c=&w->c[ci];
@@ -685,14 +696,23 @@ bool World_Landing(World *w,u8 a,u8 b,s32 *cost){
   if(coast){bd=dx+dy;best=(int)i;}
  }
  if(best<0)return false;
+ bool bat=b&&Fort_Battery(w,(u32)best,b);    // bateria costeira na praia (ADR-38)
  SetOwner(w,(u32)best,a);w->nConquests++;
  // a frota escolta: sem navios custa o dobro; frota inimiga maior afunda transportes
  s32 k=w->c[a].troops/10;
  if(w->c[a].ships<=0)k*=2;
+ if(bat)k*=3;
  if(b&&w->c[b].ships>w->c[a].ships)k+=w->c[a].troops/8;
  if(cost){*cost=k;}
  w->c[a].troops-=k;if(w->c[a].troops<0)w->c[a].troops=0;
  return true;
+}
+// Foco da frente (ADR-38): o avanco do dia puxa para perto da celula (x,y).
+// x<0 = frente inteira (sem foco). Vale ate' a proxima ordem.
+void World_SetFocus(World *w,u8 ci,int x,int y){
+ WCountry *c=&w->c[ci];
+ if(x<0||y<0||x>=w->w||y>=w->h){c->focX=c->focY=0xFFFF;return;}
+ c->focX=(u16)x;c->focY=(u16)y;
 }
 // Troca o pais do jogador (governo no exilio / "jogar como outro", DESIGN 2.1.7).
 void World_SetPlayer(World *w,u8 ci){
@@ -700,13 +720,31 @@ void World_SetPlayer(World *w,u8 ci){
  if(ci&&ci<w->nC)w->c[ci].player=true;
 }
 
+// Frente em 2 passos (ADR-38). Antes, um exercito grande tomava a fronteira
+// INTEIRA num dia (toda celula que ele podia pagar). Agora:
+//  1) varre a fronteira e lista as celulas atacaveis (custo e quem ataca);
+//     soma o custo de cada frente pesado pelo FOCO (perto do foco pesa mais).
+//  2) cada frente tem um ORCAMENTO do dia (1/5 das tropas da frente + 12):
+//     a chance de tomar cada celula = orcamento / custo da frente, com teto
+//     (no maximo ~60% da linha anda num dia), multiplicada pelo peso do foco.
+//     O avanco sai gradual, espalhado pela linha e puxado para o foco.
+// Quem ataca perde 1% por dia (suprimento) e mais 1% se o defensor tem gente.
+// Celula tomada hoje nao vira base no mesmo dia (a lista e' do comeco do dia).
+enum { FR_MAX=4096 };
+typedef struct { u32 i; u8 q, o; s16 cost; } FCand;
+static FCand FC[FR_MAX];
+static int FocW(const World *w,const WCountry *a,int x,int y){
+ if(a->focX==0xFFFF)return 256;
+ int dx=Iabs(x-(int)a->focX);if(w->wrap&&dx>w->w/2)dx=w->w-dx;
+ int dy=Iabs(y-(int)a->focY),d=dx>dy?dx:dy;
+ return d<=4?640:(d<=12?320:(d<=24?128:40));
+}
 HOT_ARM static void Fronts(World *w){
  // carimbo 1..255; no inicio de cada ciclo de 255 dias os carimbos sao
  // limpos, entao "W_AUX == stamp" significa "conquistada hoje"
  u8 stamp=(u8)(w->day%255u+1u);
  if(stamp==1){u32 n=(u32)w->w*w->h;for(u32 i=0;i<n;i++)W_AUX[i]=0;}
- // caixa de varredura: uniao das caixas de quem ataca (+1)
- int x0=w->w,y0=w->h,x1=-1,y1=-1;bool any=false;
+ bool any=false;
  for(u8 ci=1;ci<w->nC;ci++){
   WCountry *c=&w->c[ci];
   if(!c->alive||!c->atkOn)continue;
@@ -715,64 +753,90 @@ HOT_ARM static void Fronts(World *w){
    WCountry *d=&w->c[c->atkTo];
    if(d->m.winterAttrition&&Winter(w,d->capY))c->atkTroops-=c->atkTroops*d->m.winterAttrition/100;
    if(d->m.roughAttrition)c->atkTroops-=c->atkTroops*d->m.roughAttrition/100;
+   // suprimento + combate: a frente sangra todo dia (empate parado custa caro)
+   c->atkTroops-=c->atkTroops/100+(d->troops>0?c->atkTroops/100:0);
   }
   any=true;
-  int ax0=c->bx0-1,ay0=c->by0-1,ax1=c->bx1+1,ay1=c->by1+1;
-  if(ax0<x0)x0=ax0;
-  if(ay0<y0)y0=ay0;
-  if(ax1>x1)x1=ax1;
-  if(ay1>y1)y1=ay1;
  }
  if(!any)return;
- if(x0<0)x0=0;
- if(y0<0)y0=0;
- if(x1>=w->w)x1=w->w-1;
- if(y1>=w->h)y1=w->h-1;
- if(w->wrap){x0=0;x1=w->w-1;}
- static u16 took[W_MAXC+1];
- for(u8 ci=0;ci<=W_MAXC&&ci<w->nC;ci++)took[ci]=0;
- // varre a partir de uma linha aleatoria, alternando o sentido por dia
- int hgt=y1-y0+1,off=World_RngRange(w,hgt);
- bool rev=(w->day&1);
- for(int k=0;k<hgt;k++){
-  int y=y0+(off+k)%hgt;
-  for(int kx=x0;kx<=x1;kx++){
-   int x=rev?(x1-(kx-x0)):kx;
-   u32 i=World_Idx(w,x,y);
-   if(W_TERR[i]==WT_WATER)continue;
-   u8 o=W_OWNER[i];
-   if(W_AUX[i]==stamp)continue;      // conquistada hoje: nao vira base
-   for(int n=0;n<4;n++){
-    int j=Nb(w,x,y,n);
-    if(j<0)continue;
-    u8 q=W_OWNER[j];
-    if(!q||q==o||W_AUX[j]==stamp)continue;
-    WCountry *a=&w->c[q];
-    if(!a->atkOn||a->atkTo!=o)continue;
-    s32 cost=CellCost(w,i,q,o);
-    if(a->atkTroops<cost)continue;
-    a->atkTroops-=cost;
-    if(o){
-     WCountry *d=&w->c[o];
-     d->troops-=cost/2;if(d->troops<0)d->troops=0;
-     if(d->capX==x&&d->capY==y){
-      if(!d->m.capitalNotFatal){d->troops-=d->troops/4;}
-      s32 pr=d->prestige/10;d->prestige-=pr;a->prestige+=pr;
-      d->capLost=true;
-     }
-    }
-    SetOwner(w,i,q);W_AUX[i]=stamp;took[q]++;w->nConquests++;
-    break;
-   }
+ static u16 took[W_MAXC+1],cnt[W_MAXC+1];
+ static s32 want[W_MAXC+1],minc[W_MAXC+1],pb[W_MAXC+1];
+ for(u8 ci=0;ci<=W_MAXC&&ci<w->nC;ci++){took[ci]=0;cnt[ci]=0;want[ci]=0;minc[ci]=0x7FFFFFFF;}
+ // passo 1: cada atacante varre so' a PROPRIA caixa (+1). Antes era a uniao
+ // das caixas e, no mapa-mundi (volta do mundo), a largura inteira: ~27 mil
+ // celulas por dia com frente aberta. Celula ja' listada hoje (W_AUX ==
+ // stamp) nao entra de novo (fica com o 1o atacante, como antes).
+ int nf=0;
+ u32 scan=0;
+ for(u8 q=1;q<w->nC&&nf<FR_MAX;q++){
+  WCountry *a=&w->c[q];
+  if(!a->alive||!a->atkOn)continue;
+  u8 o=a->atkTo;
+  int ya=a->by0-1,yb=a->by1+1,xa=a->bx0-1,xb=a->bx1+1;
+  if(ya<0)ya=0;
+  if(yb>=w->h)yb=w->h-1;
+  if(!w->wrap){if(xa<0)xa=0;if(xb>=w->w)xb=w->w-1;}
+  else if(xb-xa+1>=w->w){xa=0;xb=w->w-1;}
+  for(int y=ya;y<=yb&&nf<FR_MAX;y++)for(int xx=xa;xx<=xb&&nf<FR_MAX;xx++){
+   int x=xx;if(x<0)x+=w->w;else if(x>=w->w)x-=w->w;
+   u32 i=World_Idx(w,x,y);scan++;
+   if(W_OWNER[i]!=o||W_TERR[i]==WT_WATER||W_AUX[i]==stamp)continue;
+   bool adj=false;
+   for(int n=0;n<4&&!adj;n++){int j=Nb(w,x,y,n);if(j>=0&&W_OWNER[j]==q)adj=true;}
+   if(!adj)continue;
+   s32 cost=CellCost(w,i,q,o);
+   if(cost>32000)cost=32000;
+   W_AUX[i]=stamp;
+   FC[nf].i=i;FC[nf].q=q;FC[nf].o=o;FC[nf].cost=(s16)cost;nf++;
+   cnt[q]++;if(cost<minc[q])minc[q]=cost;
+   want[q]+=cost*FocW(w,a,x,y)/256;
   }
  }
- // fecha frentes sem tropas ou sem fronteira; mata quem ficou sem celulas
+ #ifdef PROF_DAY
+ {extern double PROF_N[4];PROF_N[0]+=nf;PROF_N[2]+=scan;for(u8 ci=1;ci<w->nC;ci++)if(w->c[ci].atkOn)PROF_N[1]++;}
+ #else
+ (void)scan;
+ #endif
+ // orcamento -> chance base (Q8) por frente
+ for(u8 ci=1;ci<w->nC;ci++){
+  WCountry *c=&w->c[ci];pb[ci]=0;
+  if(!c->atkOn||!want[ci])continue;
+  s32 B=c->atkTroops/5+12;
+  s32 p=(s32)((s64)B*256/want[ci]);
+  pb[ci]=p>160?160:p;
+ }
+ // passo 2: cada candidata e' tomada com a chance da frente x peso do foco
+ for(int k=0;k<nf;k++){
+  const FCand *f=&FC[k];
+  WCountry *a=&w->c[f->q];
+  if(!a->atkOn||a->atkTo!=f->o||W_OWNER[f->i]!=f->o)continue;
+  s32 cost=f->cost;
+  if(a->atkTroops<cost)continue;
+  int x=(int)(f->i%w->w),y=(int)(f->i/w->w);
+  s32 p=pb[f->q]*FocW(w,a,x,y)/256;if(p>230)p=230;
+  if((s32)(World_Rng(w)&255)>=p)continue;
+  a->atkTroops-=cost;
+  u8 o=f->o;
+  if(o){
+   WCountry *d=&w->c[o];
+   d->troops-=cost/2;if(d->troops<0)d->troops=0;
+   if(d->capX==x&&d->capY==y){
+    if(!d->m.capitalNotFatal){d->troops-=d->troops/4;}
+    s32 pr=d->prestige/10;d->prestige-=pr;a->prestige+=pr;
+    d->capLost=true;
+   }
+  }
+  SetOwner(w,f->i,f->q);W_AUX[f->i]=stamp;took[f->q]++;w->nConquests++;
+ }
+ // fecha frentes sem tropas, sem fronteira ou travadas (nem a celula mais
+ // barata cabe); mata quem ficou sem celulas
  for(u8 ci=1;ci<w->nC;ci++){
   WCountry *c=&w->c[ci];
   if(!c->alive)continue;
   if(c->warGoal&&c->atkOn&&c->atkTo==c->warTarget)c->warGain=(u16)(c->warGain+took[ci]);
   if(c->cells>c->peak)c->peak=(u16)(c->cells>65535?65535:c->cells);
-  if(c->atkOn&&(c->atkTroops<8||!took[ci]||(!c->player&&AtFloor(w,c->atkTo)))){
+  bool stuck=!took[ci]&&(!cnt[ci]||c->atkTroops<minc[ci]);
+  if(c->atkOn&&(c->atkTroops<8||stuck||(!c->player&&AtFloor(w,c->atkTo)))){
    c->troops+=c->atkTroops>0?c->atkTroops:0;c->atkTroops=0;c->atkOn=false;
   }
  }
@@ -810,7 +874,7 @@ HOT_ARM static void AI(World *w,u8 ci,bool declare){
    if(!e->alive||!World_AtWar(w,ci,j))continue;
    if(!(e->atkOn&&e->atkTo==ci)&&!WDip_Allied(w,ci,e->atkTo))continue;
    if(!World_Borders(w,ci,j))continue;
-   World_Attack(w,ci,j,c->troops*100>=c->cap*60?60:40);
+   if(World_Attack(w,ci,j,c->troops*100>=c->cap*60?60:40))World_SetFocus(w,ci,e->capX,e->capY);
    return;
   }
  }
@@ -866,7 +930,9 @@ HOT_ARM static void AI(World *w,u8 ci,bool declare){
   c->warTarget=(u8)best;c->warGain=0;
   c->warGoal=(u16)(w->c[best].cells/3+4); // guerra limitada, nao aniquilacao
  }
- World_Attack(w,ci,(u8)best,ARCH_PCT[c->archetype]);
+ // a IA empurra rumo a' capital do alvo (terra livre: frente inteira)
+ if(World_Attack(w,ci,(u8)best,ARCH_PCT[c->archetype]))
+  World_SetFocus(w,ci,best?w->c[best].capX:-1,best?w->c[best].capY:-1);
 }
 
 // ===================== dia =====================
@@ -889,19 +955,20 @@ HOT_ARM static void DayBegin(World *w){
  for(u8 ci=1;ci<w->nC;ci++){
   WCountry *c=&w->c[ci];
   if(!c->alive)continue;
-  Recap(c);
+  Recap(c);c->cap=c->cap*Max32(20,100+w->eco[ci].fx.v[LFX_CAP])/100;   // lei do servico militar
   if(c->warN){if(c->warDays<3000)c->warDays++;}
   else if(c->warDays)c->warDays=c->warDays>2?c->warDays-2:0;
   s32 tired=c->warDays/20;
   if(tired>50)tired=50;
-  static const u8 MILR[3]={60,100,140};   // gasto militar (balanco fiscal) acelera o recrutamento
-  s32 regen=(c->cap/60+1)*(100+c->m.regenPct)/100*(100-tired)/100*WEco_ArmsPct(w,ci)/100*MILR[w->eco[ci].mil%3]/100;
+  s32 regen=(c->cap/60+1)*(100+c->m.regenPct)/100*(100-tired)/100*WEco_ArmsPct(w,ci)/100*Max32(10,100+w->eco[ci].fx.v[LFX_REGEN])/100;   // lei do servico militar (ADR-40)
   if(c->troops<c->cap){s32 g=regen*(c->cap-c->troops)/Max32(1,c->cap);c->troops+=g>0?g:1;}
   else c->troops-=(c->troops-c->cap)/50+1;
   if(newYear)c->prestige+=c->m.prestigeYear+(s32)c->cells/200+(c->kind==NK_ESTADO?1:0);
   if(c->rndCd)c->rndCd--;
+  if(c->instCd)c->instCd--;
  }
  PT(0,City_Day(w));
+ Fort_Day(w);
 }
 HOT_ARM void World_DayPhase(World *w,int ph){
  switch(ph){
@@ -909,6 +976,7 @@ HOT_ARM void World_DayPhase(World *w,int ph){
   case 1:if((w->day%7)==0)PT(1,WEco_Week(w));break;
   case 2:
    PT(2,WDip_Day(w));
+   Law_Day(w);Stat_Day(w);      // debates de lei do jogador; series dos graficos + marcos (ADR-40/41)
    // IA: cada pais pensa a cada 4 dias (escalonado); em alerta, todo dia
    PT(3,for(u8 ci=1;ci<w->nC;ci++){
     WCountry *c=&w->c[ci];

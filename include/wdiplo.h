@@ -39,9 +39,14 @@ u8 WDip_RandomIdeo(World *w,u8 ci);                 // sorteio por era + contagi
 // Proposta pendente ao jogador
 bool WDip_Propose(World *w,u8 kind,u8 from,u8 about,s32 gold,u16 idx);
 void WDip_Answer(World *w,bool yes);
+// Intriga (ADR-37): 1 = guerra acesa, 0 = falhou (vazou), -1 alvo invalido,
+// -2 recarga, -3 sem ouro. victim = quem foi atacado.
+s32 WDip_InstigateCost(const World *w,u8 t);
+int WDip_Instigate(World *w,u8 me,u8 t,u8 *victim);
 // Ambicoes
 enum { OB_FUNDAR=0, OB_PORTO, OB_NAVIOS, OB_FABRICA, OB_METROPOLE, OB_ALIADO, OB_BLOCO,
- OB_VIDA, OB_COMERCIO, OB_CIDADES, OB_EXERCITO, OB_MINA, OB_FERROVIA, OB_PRESTIGIO, OB_COUNT };
+ OB_VIDA, OB_COMERCIO, OB_CIDADES, OB_EXERCITO, OB_MINA, OB_FERROVIA, OB_PRESTIGIO,
+ OB_ARMAS, OB_ACO, OB_COUNT };   // objMask e' u16: no maximo 16 ambicoes
 u16 Obj_Str(u8 ob);                 // StrId do texto da ambicao
 int Obj_Pct(const World *w,u8 ci,u8 ob);   // progresso 0..100
 s32 Obj_Reward(u8 ob);             // ouro (positivo) ou prestigio (negativo)

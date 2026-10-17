@@ -5,7 +5,7 @@
 set -e
 HERE=$(cd "$(dirname "$0")" && pwd); R=$(cd "$HERE/../.." && pwd)
 OUT=${TMPDIR:-/tmp}/omv_simhash; mkdir -p "$OUT/o"
-CORE="calendar txt traits nations px_flag earth_mask world history city str settings wecon wdiplo hflags"
+CORE="calendar txt traits nations px_flag earth_mask world history city str settings wecon wdiplo wfort wlaw wstat wrank hflags"
 gcc -std=gnu11 -O2 -w -I$R/host -I$R/include $(for c in $CORE; do echo $R/source/$c.c; done) $R/host/stub_px.c "$HERE/simhash.c" -o "$OUT/host"
 "$OUT/host" > "$OUT/host.txt"
 [ -n "$DEVKITARM" ] || . ~/devkitpro/env.sh

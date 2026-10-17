@@ -272,6 +272,39 @@ void PxC_Building(u16 *d,int x,int yb,int w,u8 k,u8 st,u16 year,u32 seed,int tic
    D=d;Tree(SX(23),SY(0),3,0,seed);Tree(SX(30),SY(0),2,0,seed>>4);Tree(SX(3),SY(0),2,3,seed>>8);
    Box(17,0,6,2,WOOD);
   }break;
+  case BK_SIDERURGICA:{ // alto-forno com boca acesa, galpao e chamine
+   Box(0,0,18,14,C3(16,9,7));Tri(0,18,14,5,C3(10,10,12));Box(3,0,5,7,C3(29,16,4));
+   Box(19,0,10,24,C3(12,11,12));Box(20,24,8,3,C3(10,9,10));Box(21,3,6,5,C3(31,20,5));Put(SX(24),SY(5),C3(31,29,16));
+   Box(29,0,3,30,C3(18,9,6));
+   if(tick>=0){Smoke(30,30,tick,seed);Smoke(24,27,tick,seed+3);}
+  }break;
+  case BK_MANUFATURA:{ // oficina comprida com telhado serrilhado e caixotes
+   Box(1,0,28,13,p.wall);for(int i=0;i<3;i++)Tri(1+i*9,10+i*9+1,13,5,p.roof);
+   Wins(1,3,28,7,4,1,GLASS_LIT);Box(12,0,5,6,Dk(p.wall,1,2));
+   Box(26,0,5,4,WOOD);Box(27,4,3,2,WOOD);
+  }break;
+  case BK_MAQUINARIA:{ // pavilhao de ferro e vidro com engrenagem e chamine
+   Box(0,0,30,15,C3(14,16,18));Tri(0,30,15,6,C3(10,10,12));Wins(0,2,30,10,5,2,C3(22,24,26));
+   Dome(16,17,4,C3(22,22,24));for(int a=0;a<4;a++)Put(SX(16)+(a<2?a*4-2:0),SY(17)-(a>=2?(a-2)*4+1:0)-2,C3(10,10,11));
+   Box(4,15,3,16,C3(18,9,6));
+   if(tick>=0)Smoke(5,31,tick,seed);
+  }break;
+  case BK_ELETRONICA:{ // bloco moderno de vidro com antena
+   Box(2,0,28,22,C3(20,24,26));Wins(2,2,28,18,6,4,(seed&1)?GLASS_LIT:C3(10,18,26));
+   Box(2,22,28,2,C3(12,14,16));Pole(25,24,10,C3(10,10,11));Put(SX(25),SY(34),C3(31,6,4));
+  }break;
+  case BK_ARMAMENTOS:{ // fabrica escura, chamine, canhoes e (1914+) um tanque no patio
+   Box(0,0,24,14,C3(13,12,12));for(int i=0;i<3;i++)Tri(i*8,i*8+8,14,5,C3(9,9,10));
+   Wins(0,3,24,7,4,1,C3(28,16,6));Box(26,0,5,28,C3(16,8,6));
+   if(year>=1914){Box(1,0,11,4,C3(10,12,8));Box(4,4,5,2,C3(10,12,8));Box(9,5,7,1,C3(8,9,7));}
+   else{Box(0,1,10,2,C3(6,6,7));Dome(2,2,3,C3(10,7,4));}
+   if(tick>=0)Smoke(28,28,tick,seed);
+  }break;
+  case BK_BOLSA:{ // templo do capital: colunata, frontao e cupula dourada
+   Box(1,0,30,3,STONE);Box(2,3,28,15,C3(27,26,23));
+   for(int i=0;i<6;i++)Box(4+i*4,3,2,13,WHITE);
+   Tri(1,31,18,7,C3(27,26,23));Dome(16,25,5,C3(27,22,8));Pole(16,30,3,C3(10,10,10));
+  }break;
   case BK_USINA:{ // galpao de tijolo, chamine alta e torre de transmissao
    Box(0,0,22,14,C3(21,10,7));Tri(0,22,14,5,C3(12,12,14));Wins(0,3,22,8,4,1,GLASS_LIT);
    Box(24,0,5,38,C3(18,9,6));Box(23,38,7,2,C3(14,7,5));
@@ -292,18 +325,90 @@ static void Scaffold(u16 *d,int x,int yb,int w,int pct){
 }
 
 // ======================= cidades no mapa =======================
-static void MiniTown(u16 *d,int cx,int cy,int size,const WCity *c,u8 st,u16 year,u32 seed,u8 nat){
- int n=1+c->tier*2;if(size<14)n=1+c->tier;
- for(int i=0;i<n;i++){
-  u32 h=Hh(seed,i);
-  int dx=(int)(h%(u32)size)-size/2,dy=(int)((h>>8)%(u32)(size/2+1))-size/4;
-  int hw=size/2+(int)(h>>20)%3;
-  D=d;OX=cx+dx-hw/2;OY=cy+dy+size/4;UW=hw;
-  House(st,year,c->tier,h);
+// ---- cidade organica no mapa (Z3+, ADR-39) ----
+// A cidade cresce como cidade de verdade: cada casa nova nasce GRUDADA numa
+// casa que ja' existe (pai sorteado por hash), de preferencia ao longo das
+// duas ruas principais; nada nasce no mar (KEY do cache do mapa). Quanto
+// mais gente, mais casas e mais longe a mancha vai: o contorno sai
+// irregular. Desenho de tras p/ frente (ordem de y) p/ os telhados
+// sobreporem direito. Hash fixo da posicao: a mesma cidade tem sempre o
+// mesmo desenho, e o bairro novo aparece colado no velho quando ela cresce.
+enum { TG=25, TG2=TG/2, TMAX=96 };
+static u8 TOCC[TG*TG];
+static s8 THX[TMAX],THY[TMAX];
+static bool TownLand(int x,int y){return y>WG_MAP_Y&&y<191&&x>=0&&x<256&&PxM_KeyAt(x,y-WG_MAP_Y)<0xFE;}
+static int townBud;   // casas por quadro (todas as cidades): o pan no Z4 nao pesa (ADR-36)
+static void Town(u16 *d,int cx,int cy,int zoom,const WCity *c,u8 st,u16 year,u32 seed,u8 nat){
+ // tamanho da casa e passo da grade por zoom (Z3 4px/celula .. Z5 16px)
+ D=d;
+ // casas coladas: passo menor que a largura (telhado encosta no vizinho)
+ int hw=zoom==3?5:(zoom==4?9:14),sx=hw*4/5,sy=hw*3/5;
+ int n=3+c->tier*4+(c->pop>1500?30:c->pop/50);
+ if(zoom==3)n=n/3+1;
+ {static const u8 CAP[WZ_COUNT]={0,0,0,10,28,70};if(n>CAP[zoom])n=CAP[zoom];}
+ if(n>townBud)n=townBud;
+ if(n<1)n=1;
+ townBud-=n;
+ for(int i=0;i<TG*TG;i++)TOCC[i]=0;
+ // ruas principais: eixo x sempre; eixo y no sentido sorteado
+ int ry=(seed>>5)&1?1:-1;
+ int m=0;THX[0]=0;THY[0]=0;TOCC[TG2*TG+TG2]=1;m=1;
+ for(int k=1;k<n*3&&m<n;k++){
+  u32 h=Hh(seed,(u32)k*7919u);
+  int p=(int)(h%(u32)m);                       // pai: qualquer casa ja' de pe'
+  // novas casas preferem as ruas (vizinho no eixo); depois as quadras
+  int r=(int)((h>>8)&15),dx,dy;
+  if(r<6){dx=(h>>12)&1?1:-1;dy=0;}
+  else if(r<9){dx=0;dy=(h>>12)&1?1:-1;if(THX[p]==0)dy=ry*((h>>13)&1?1:-1);}
+  else if(r<13){dx=(h>>12)&1?1:-1;dy=(h>>13)&1?1:-1;}
+  else{dx=0;dy=(h>>12)&1?1:-1;}
+  int gx=THX[p]+dx,gy=THY[p]+dy;
+  if(gx<-TG2||gx>TG2||gy<-TG2||gy>TG2)continue;
+  u8 *o=&TOCC[(gy+TG2)*TG+gx+TG2];
+  if(*o)continue;
+  // ilha de 1 casa nao: precisa de 2 vizinhos depois que a vila cresceu (compacta)
+  if(m>8){int nb=0;for(int a=-1;a<=1;a++)for(int b=-1;b<=1;b++){int qx=gx+a+TG2,qy=gy+b+TG2;if(qx>=0&&qy>=0&&qx<TG&&qy<TG&&TOCC[qy*TG+qx])nb++;}
+   if(nb<2&&((h>>20)&3))continue;}
+  int x=cx+gx*sx,y=cy+gy*sy;
+  if(!TownLand(x,y))continue;
+  *o=1;THX[m]=(s8)gx;THY[m]=(s8)gy;m++;
  }
- // edificio-simbolo no centro (templo/palacio) a partir de cidade
- u8 k=0;for(int s=0;s<CITY_SLOTS;s++)if(c->bld[s]==BK_PALACIO||(c->bld[s]==BK_TEMPLO&&!k))k=c->bld[s];
- if(k&&c->tier>=CT_CIDADE)PxC_Building(d,cx-size/3,cy+size/4+1,size*2/3,k,st,year,seed,-1,nat);
+ // ruas de terra (Z4+): so' onde ha' casa na linha/coluna central
+ if(zoom>=4){
+  u16 road=C3(21,18,12);
+  int x0=0,x1=0,y0=0,y1=0;
+  for(int i=0;i<m;i++){if(THY[i]==0){if(THX[i]<x0)x0=THX[i];if(THX[i]>x1)x1=THX[i];}if(THX[i]==0){if(THY[i]<y0)y0=THY[i];if(THY[i]>y1)y1=THY[i];}}
+  for(int x=cx+x0*sx-sx;x<=cx+x1*sx+sx;x++)if(TownLand(x,cy+sy/2+1))Put(x,cy+sy/2+1,road);
+  for(int y=cy+y0*sy-sy;y<=cy+y1*sy+sy;y++)if(TownLand(cx+sx/2,y))Put(cx+sx/2,y,road);
+  // hortas e campos na borda (fora da mancha), listrados
+  for(int k=0;k<2+c->tier;k++){
+   u32 h=Hh(seed,(u32)k+501u);int a=(int)(h%(u32)m);
+   int fx=cx+THX[a]*sx+((h>>8)&1?sx+2:-sx-hw),fy=cy+THY[a]*sy+((h>>9)&1?2:-hw/2);
+   for(int j=0;j<hw/2+1;j++)for(int i=0;i<hw;i++)if(TownLand(fx+i,fy+j))Put(fx+i,fy+j,(j&1)?C3(19,20,7):C3(12,18,6));
+  }
+ }
+ // ordena por y (tras p/ frente)
+ for(int i=1;i<m;i++){s8 x=THX[i],y=THY[i];int j=i-1;while(j>=0&&THY[j]>y){THX[j+1]=THX[j];THY[j+1]=THY[j];j--;}THX[j+1]=x;THY[j+1]=y;}
+ // centro: obra-simbolo (palacio/templo) no lugar da casa (0,0); industria
+ // (fabrica/siderurgica/arsenal) na periferia, com fumaca
+ u8 sym=0,indk=0;
+ for(int s=0;s<CITY_SLOTS;s++){u8 b=c->bld[s];
+  if(b==BK_PALACIO||(b==BK_TEMPLO&&!sym))sym=b;
+  if(b==BK_FABRICA||b==BK_SIDERURGICA||b==BK_ARMAMENTOS||b==BK_MAQUINARIA||(b==BK_OFICINA&&!indk))indk=b;}
+ int far=-1,fd=-1;
+ for(int i=0;i<m;i++){int dd=THX[i]*THX[i]+THY[i]*THY[i];if(dd>fd&&THY[i]>=0){fd=dd;far=i;}}
+ for(int i=0;i<m;i++){
+  u32 h=Hh(seed,(u32)(THX[i]*31+THY[i])+977u);
+  int x=cx+THX[i]*sx+(int)(h&1),y=cy+THY[i]*sy+(int)((h>>1)&1);
+  int w=hw+(int)((h>>3)%3)-1;
+  // telhado mais alto/denso perto do centro (cidade grande: predios no miolo)
+  int dd=THX[i]*THX[i]+THY[i]*THY[i];
+  u8 t=(u8)(dd<=2?c->tier:(dd<=8&&c->tier>0?c->tier-1:0));
+  if(THX[i]==0&&THY[i]==0&&sym&&c->tier>=CT_CIDADE&&zoom>=4){PxC_Building(d,x-w*3/4,y+sy/2,w*3/2,sym,st,year,seed,-1,nat);D=d;continue;}
+  if(i==far&&indk&&zoom>=4&&m>6){PxC_Building(d,x-w/2,y+sy/2,w+2,indk,st,year,seed,zoom==5?(int)(WG_Ptr()->tick):-1,nat);D=d;continue;}
+  D=d;OX=x-w/2;OY=y+sy/2;UW=w;House(st,year,t,h);
+ }
+ if(sym&&c->tier>=CT_CIDADE&&zoom==3)PxC_Building(d,cx-4,cy+3,8,sym,st,year,seed,-1,nat);
 }
 static inline bool ScreenOf(const World *w,const WGame *s,int cx,int cy,int *px,int *py){
  // cx e camX em [0,w): |rx|<w, sem o % (divisao em software) p/ cada cidade a cada quadro
@@ -317,6 +422,7 @@ static inline bool ScreenOf(const World *w,const WGame *s,int cx,int cy,int *px,
 void PxC_MapCities(u16 *d,const World *w,const WGame *s){
  D=d;YOFF=0;CY0=WG_MAP_Y;CY1=192;
  int ppc=s->zoom?1<<(s->zoom-1):0;
+ townBud=s->zoom==3?120:(s->zoom==4?240:200);
  for(int i=0;i<w->nCity;i++){
   const WCity *c=&w->city[i];
   int px,py;
@@ -336,24 +442,10 @@ void PxC_MapCities(u16 *d,const World *w,const WGame *s){
    D=d;OX=px-3;OY=py+2;UW=c->tier==CT_METROPOLE?8:6;House(st,year,0,seed);
    continue;
   }
-  // Z3/Z4: arredores com telhadinhos esparsos (so' em terra, pelo KEY do
-  // cache) — a cidade "espalha" com o nivel — e a vila no centro
-  if(c->tier>=CT_VILAREJO){
-   int R=(c->tier+1)*ppc/2;
-   for(int k=0;k<3+c->tier*4;k++){
-    u32 h=Hh(seed,k+99);
-    int dx=(int)(h%(u32)(2*R+1))-R,dy=(int)((h>>10)%(u32)(2*R+1))-R;
-    if(dx*dx+dy*dy>R*R)continue;
-    int x=px+dx,y=py+dy;
-    if(y<WG_MAP_Y||y>=191||x<0||x>=255)continue;
-    if(PxM_KeyAt(x,y-WG_MAP_Y)>=0xFE)continue;          // mar ou fora do mapa
-    u16 roof=(h>>24)&1?C3(19,9,7):C3(14,13,14);
-    Put(x,y,roof);Put(x+1,y,roof);Put(x,y+1,Dk(roof,5,8));Put(x+1,y+1,C3(25,23,18));
-   }
-  }
-  int size=s->zoom==3?(c->tier>=CT_CIDADE?12:8):(c->tier>=CT_CIDADE?24:16);
+  // Z3+: a cidade cresce organica, casa colada em casa (ADR-39)
   if(c->tier==CT_POVOADO&&s->zoom==3){D=d;OX=px-3;OY=py+2;UW=7;House(st,year,0,seed);continue;}
-  MiniTown(d,px,py,size,c,st,year,seed,nat);
+  (void)ppc;
+  Town(d,px,py,s->zoom,c,st,year,seed,nat);
  }
  CY0=0;CY1=192;
 }
@@ -697,7 +789,7 @@ static void FmtPop(char *o,int max,u16 pop){
 // por que a obra k nao pode ser feita no lote (StrId) ou 0
 static u16 WhyNot(const World *w,int ci,int lot,u8 k,u16 *year){
  const WCity *c=&w->city[ci];const BldDef *b=&BLD[k];
- for(int s=0;s<CITY_SLOTS;s++)if(c->bld[s]==k)return STR_JA_TEM;
+ if(City_Count(c,k)>=City_MaxOf(k))return City_MaxOf(k)>1?STR_LIMITE_OBRA:STR_JA_TEM;
  if(c->tier<b->minTier)return STR_REQ_NIVEL;
  if(w->date.y<b->minYear){*year=b->minYear;return STR_REQ_ANO;}
  if(b->need){bool h=false;for(int s=0;s<CITY_SLOTS;s++)if(c->bld[s]==b->need)h=true;if(!h)return STR_REQ_OBRA;}

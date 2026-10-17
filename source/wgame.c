@@ -10,6 +10,8 @@
 #include "history.h"
 #include "wrank.h"
 #include "prof.h"
+#include "wfort.h"
+#include "wlaw.h"
 // wgame.c — partida no mundo celular (SCR_WORLD). Ver wgame.h.
 // O World e as grades W_* sao estaticos (.bss); nada aqui conta nos 14KB do
 // GameState. Toda regra de jogo esta em world.c/history.c; este arquivo so'
@@ -113,7 +115,7 @@ void WG_New(u8 mode,u8 hist,u8 size,u8 nNat,u8 diff,u32 seed,int nat){
  else if(mode==WM_BLITZ)World_GenBlitz(&W,seed,diff,nat);
  else World_GenRandom(&W,seed,size,nNat,diff,nat);
  u8 *p=(u8*)&S;for(unsigned i=0;i<sizeof S;i++)p[i]=0;
- S.hcity=-1;S.cityIdx=-1;PxM_Invalidate();PxC_SceneReset();PxS_Reset();
+ S.hcity=-1;S.cityIdx=-1;S.lawCat=0xFF;PxM_Invalidate();PxC_SceneReset();PxS_Reset();
  S.me=World_CountryOfNat(&W,nat);
  for(u8 i=1;!S.me&&i<W.nC;i++)if(W.c[i].player)S.me=i;
  if(!S.me){S.me=1;World_SetPlayer(&W,1);} // nacao nao coube no mapa: assume o 1o
@@ -150,6 +152,11 @@ static void DoAttack(void){
  }
  if(World_Attack(&W,S.me,t,S.pct))Toast(declared?STR_T_GUERRA:STR_T_ATAQUE,t);
  else Toast(declared?STR_T_GUERRA:STR_T_SEM_TROPAS,t);
+ // foco: a mira sobre a terra do alvo puxa o avanco p/ la' (ADR-38)
+ if(me->atkOn&&me->atkTo==t){
+  bool on=t&&W_OWNER[World_Idx(&W,S.curX,S.curY)]==t;
+  World_SetFocus(&W,S.me,on?S.curX:-1,on?S.curY:-1);
+ }
 }
 // ---------------- folha de acoes (A sobre a mira / botao bandeira) ----------------
 // O alvo e' o que esta' sob a mira: sua cidade, sua terra, terra livre ou um
@@ -165,6 +172,13 @@ int WG_DipItems(u8 *o){
  int n=0;u8 t=S.dipTo,me=S.me;
  if(S.dead)return 0;
  switch(S.actKind){
+  case AK_OBRA:
+   if(S.hcity>=0&&W.city[S.hcity].owner==me)o[n++]=DM_CIDADE;
+   if(City_CanFound(&W,me,S.curX,S.curY))o[n++]=DM_FUNDAR;
+   if(Fort_CanBuild(&W,me,S.curX,S.curY,FT_FORTE))o[n++]=DM_FORTE;
+   if(Fort_CanBuild(&W,me,S.curX,S.curY,FT_TRINCHEIRA))o[n++]=DM_TRINCHEIRA;
+   if(Fort_CanBuild(&W,me,S.curX,S.curY,FT_BATERIA))o[n++]=DM_BATERIA;
+   break;
   case AK_CIDADE:o[n++]=DM_CIDADE;o[n++]=DM_RECRUTAR;break;
   case AK_TERRA:
    if(City_CanFound(&W,me,S.curX,S.curY))o[n++]=DM_FUNDAR;
@@ -181,6 +195,10 @@ int WG_DipItems(u8 *o){
     u8 L=W.c[t].bloc;
     if(L&&L<W.nC&&W.c[L].bloc==L&&W.c[me].bloc!=L&&L!=me)o[n++]=DM_ENTRAR;
     if(!W.c[t].bloc)o[n++]=DM_CONVIDAR;
+    // armas e intriga (ADR-37): vender a quem esta' em guerra; acender guerras
+    if(W.c[me].armsTo==t)o[n++]=DM_ARMAS_FIM;
+    else if(W.c[t].warN)o[n++]=DM_ARMAS;
+    if(!sub&&!W.c[t].player)o[n++]=DM_INSTIGAR;
     if(!al&&!sub)o[n++]=DM_GUERRA;
    }
   }break;
@@ -200,6 +218,18 @@ static void DipOpen(void){
  if(S.dipN<=1){Toast(STR_T_ALVO,0);return;}
  S.dipOpen=true;
 }
+// botao Construir: cidade e fortificacoes na celula sob a mira
+static void BuildOpen(void){
+ if(S.dead)return;
+ S.actKind=AK_OBRA;S.dipTo=0;S.dipSel=0;S.dipN=(u8)WG_DipItems(S.dipIt);
+ if(S.dipN<=1){Toast(STR_T_FORTE_NAO,0);return;}
+ S.dipOpen=true;
+}
+static void FortDo(u8 kind){
+ int k=Fort_Build(&W,S.me,S.curX,S.curY,kind);
+ if(k<0){Toast(Fort_CanBuild(&W,S.me,S.curX,S.curY,kind)?STR_T_SEM_OURO:STR_T_FORTE_NAO,0);return;}
+ Toast(STR_T_FORTE_OK,0);S.toastNum=FORT[kind].days;
+}
 static void DoRecruit(void);
 static void OpenCity(GameState *g,int ci);
 static void DipDo(GameState *g,u8 it){
@@ -214,6 +244,9 @@ static void DipDo(GameState *g,u8 it){
   }return;
   case DM_RECRUTAR:DoRecruit();ActBuild();S.dipOpen=true;return;   // recrutar de novo sem reabrir
   case DM_ATACAR:case DM_COLONIZAR:DoAttack();return;
+  case DM_FORTE:FortDo(FT_FORTE);return;
+  case DM_TRINCHEIRA:FortDo(FT_TRINCHEIRA);return;
+  case DM_BATERIA:FortDo(FT_BATERIA);return;
   default:break;
  }
  if(!t||!W.c[t].alive)return;
@@ -225,6 +258,20 @@ static void DipDo(GameState *g,u8 it){
    if(W.c[me].bloc&&W.c[me].bloc!=L)WDip_LeaveBloc(&W,me);
    Toast(WDip_AskBloc(&W,me,L)?STR_T_BLOCO_OK:STR_T_BLOCO_NAO,L);}break;
   case DM_CONVIDAR:Toast(WDip_InviteBloc(&W,me,t)?STR_T_BLOCO_OK:STR_T_BLOCO_NAO,t);break;
+  case DM_ARMAS:{
+   const WEco *e=&W.eco[me];
+   if(e->sup[GD_ARMAS]<=e->dem[GD_ARMAS]){Toast(STR_T_ARMAS_NAO,0);break;}
+   W.c[me].armsTo=t;Toast(STR_T_ARMAS_OK,t);
+  }break;
+  case DM_ARMAS_FIM:W.c[me].armsTo=0;Toast(STR_T_ARMAS_FIM,0);break;
+  case DM_INSTIGAR:{
+   u8 v=0;int r=WDip_Instigate(&W,me,t,&v);
+   if(r==1)Toast(STR_T_INSTIGA_OK,t);
+   else if(r==0)Toast(STR_T_INSTIGA_NAO,t);
+   else if(r==-2)Toast(STR_T_INSTIGA_CD,0);
+   else if(r==-3)Toast(STR_T_SEM_OURO,0);
+   else Toast(STR_T_ALVO,0);
+  }break;
   case DM_GUERRA:
    // declarar = chamar os aliados e ja' mandar a % da reserva (um gesto so')
    World_DeclareWarCall(&W,me,t);W.c[me].prestige-=5;
@@ -248,23 +295,10 @@ static bool PropInput(GameState *g,u32 d,bool tDown,int tx,int ty){
  }
  return true;
 }
-// Botao "Cidade": abre a sua cidade sob o cursor; senao funda uma ali
-// (2o toque confirma, mostrando o preco: DESIGN 4.7, preco claro)
+// abre o mapa de lotes da cidade (SCR_CITY)
 static void OpenCity(GameState *g,int ci){
  S.cityIdx=(s16)ci;S.citySlot=0;S.cityPick=false;S.cityLot=(u8)City_Plaza(&W,ci);S.cityHold=0;
  Menu_Go(g,SCR_CITY);
-}
-static void DoCity(GameState *g){
- if(S.dead)return;
- if(S.hcity>=0&&W.city[S.hcity].owner==S.me){OpenCity(g,S.hcity);return;}
- if(!City_CanFound(&W,S.me,S.curX,S.curY)){Toast(STR_T_NAO_FUNDA,0);return;}
- s32 cost=City_FoundCost(&W,S.me);
- if(!S.foundAsk){S.foundAsk=true;Toast(STR_T_FUNDAR_CONF,0);S.toastNum=cost;S.toastT=300;return;}
- S.foundAsk=false;
- int i=City_Found(&W,S.me,S.curX,S.curY);
- if(i<0){Toast(STR_T_SEM_OURO,0);return;}
- Toast(STR_T_FUNDOU,0);S.toastCity=(s16)i;S.hcity=(s16)i;
- g->dirty=true;
 }
 static void DoRecruit(void){
  if(S.dead)return;
@@ -286,7 +320,7 @@ static void Act(GameState *g,int id){
   case UI_W_MODE:{static const u16 MS[WMAP_COUNT]={STR_MAPA_POLITICO,STR_MAPA_TERRENO,STR_MAPA_DIPLO,STR_MAPA_COMERCIO,STR_MAPA_IDEO};
    S.mapMode=(u8)((S.mapMode+1)%WMAP_COUNT);
    Toast(MS[S.mapMode],0);g->dirty=true;}break;
-  case UI_W_CITY: DoCity(g);if(g->screen==SCR_CITY)return;break;
+  case UI_W_CITY: BuildOpen();break;   // Construir: cidade, forte, trincheira, bateria (ADR-38)
   case UI_W_PCT:  S.pct=(u8)(S.pct>=100?25:S.pct+25);break;
   case UI_W_SPEED:
    if(S.paused&&!S.dead&&!W.ended)S.paused=false;
@@ -480,34 +514,60 @@ void WG_Idle(GameState *g){
 // ---------------- Gabinete (SCR_LEDGER) ----------------
 static void LedgerAct(GameState *g){
  if(S.dead)return;
- WCountry *me=&W.c[S.me];WEco *e=&W.eco[S.me];
+ WCountry *me=&W.c[S.me];
  switch(S.ledTab){
   case LT_MERCADO:S.mapMode=WMAP_COM;Menu_Go(g,SCR_WORLD);return;
   case LT_COMERCIO:Toast(WEco_BuildShip(&W,S.me)?STR_T_NAVIO:STR_T_SEM_NAVIO,0);break;
   case LT_DIPLO:
    if(me->bloc)WDip_LeaveBloc(&W,S.me);else WDip_FoundBloc(&W,S.me);
    break;
-  case LT_POLITICA:e->tax=(u8)((e->tax+1)%3);Toast(STR_T_IMPOSTO,0);break;
-  case LT_FINANCAS:break;    // 4 botoes proprios (PolicyTap)
+  case LT_POLITICA:case LT_FINANCAS:S.ledTab=LT_LEIS;S.lawCat=0xFF;break;   // as leis moram na aba propria
   default:break;
  }
  g->dirty=true;g->dirtyBot=true;
 }
+// aba Leis (ADR-40): grade de assuntos -> 5 leis -> Propor/Retirar. So' caneta;
+// CIMA/BAIXO trocam a lei destacada como atalho. Devolve true se algo mudou.
+static bool LawTap(int tx,int ty,u32 *d){
+ WEco *e=&W.eco[S.me];
+ if(S.lawCat>=LW_COUNT){
+  if(ty>=LW_GY&&ty<LW_GY+3*LW_GH&&tx>=LW_GX&&tx<LW_GX+3*LW_GW){
+   int k=(tx-LW_GX)/LW_GW+3*((ty-LW_GY)/LW_GH);if(k>=LW_COUNT)return false;
+   S.lawCat=(u8)k;S.lawPick=e->lawCat==k?e->lawTo:e->law[k];return true;
+  }
+  if(ty>=LG_BACK_Y&&ty<LG_BACK_Y+LG_ACT_H)*d|=KEY_X;     // sai do Gabinete
+  return false;
+ }
+ u8 cat=S.lawCat;
+ if(ty>=LW_LY&&ty<LW_LY+LW_OPTS*LW_LH){S.lawPick=(u8)((ty-LW_LY)/LW_LH);return true;}
+ if(ty>=LW_BY&&ty<LW_BY+LW_BH){
+  if(tx>=4+LW_PW){S.lawCat=0xFF;return true;}             // voltar a' grade
+  if(S.dead)return false;
+  u8 pk=S.lawPick%LW_OPTS;
+  if(e->lawCat==cat&&e->lawTo==pk){Law_Cancel(&W,S.me);Toast(STR_LEI_RETIRADA,0);return true;}
+  if(Law_Propose(&W,S.me,cat,pk)){Toast(STR_LEI_PROPOSTA,0);S.toastNum=e->lawDays;return true;}
+ }
+ return false;
+}
 void WG_LedgerInput(GameState *g,u32 d,bool tDown,int tx,int ty){
  bool moved=false;
- if(d&KEY_L){S.ledTab=(u8)((S.ledTab+LT_COUNT-1)%LT_COUNT);moved=true;}
- if(d&KEY_R){S.ledTab=(u8)((S.ledTab+1)%LT_COUNT);moved=true;}
+ if(d&KEY_L){S.ledTab=(u8)((S.ledTab+LT_COUNT-1)%LT_COUNT);S.lawCat=0xFF;moved=true;}
+ if(d&KEY_R){S.ledTab=(u8)((S.ledTab+1)%LT_COUNT);S.lawCat=0xFF;moved=true;}
+ if(S.ledTab==LT_LEIS&&S.lawCat<LW_COUNT){
+  if(d&KEY_UP){S.lawPick=(u8)((S.lawPick+LW_OPTS-1)%LW_OPTS);moved=true;}
+  if(d&KEY_DOWN){S.lawPick=(u8)((S.lawPick+1)%LW_OPTS);moved=true;}
+  if(d&KEY_B){S.lawCat=0xFF;d&=~(u32)KEY_B;moved=true;}   // B volta a' grade de assuntos
+ }
  // abas e acao na tela de baixo: so' caneta (L/R trocam a aba como atalho)
  bool act=false;
- if(tDown&&S.ledTab==LT_FINANCAS&&ty>=LG_POL_Y&&ty<LG_POL_Y+2*LG_POL_H+4&&!S.dead){
-  // politicas: imposto, tarifa (linha 1) / educacao, militar (linha 2)
-  int col=tx>=LG_POL_X1?1:0,row=ty>=LG_POL_Y+LG_POL_H+4?1:0;
-  WEco *e=&W.eco[S.me];u8 *p[4]={&e->tax,&e->tariff,&e->edu,&e->mil};
-  u8 *q=p[row*2+col];*q=(u8)((*q+1)%3);
-  Toast(STR_T_POLITICA,0);g->dirty=true;g->dirtyBot=true;return;
- }
  if(tDown){
-  if(ty>=LG_TAB_Y&&ty<LG_TAB_Y+LG_TAB_H){S.ledTab=(u8)(tx*LT_COUNT/256);moved=true;}
+  int tb=Lg_TabAt(tx,ty);
+  if(tb>=0){S.ledTab=(u8)tb;S.lawCat=0xFF;moved=true;}
+  else if(S.ledTab==LT_LEIS){if(LawTap(tx,ty,&d))moved=true;}
+  else if(S.ledTab==LT_GRAF){
+   if(ty>=GR_BY&&ty<GR_BY+2*(GR_BH+4)&&tx>=GR_BX&&tx<GR_BX+4*GR_BW){S.statSel=(u8)((tx-GR_BX)/GR_BW+4*((ty-GR_BY)/(GR_BH+4)));moved=true;}
+   else if(ty>=LG_BACK_Y&&ty<LG_BACK_Y+LG_ACT_H)d|=KEY_B;
+  }
   else if(ty>=LG_ACT_Y&&ty<LG_ACT_Y+LG_ACT_H&&tx>=LG_ACT_X&&tx<LG_ACT_X+LG_ACT_W)act=true;
   else if(ty>=LG_BACK_Y&&ty<LG_BACK_Y+LG_ACT_H)d|=KEY_B;
  }

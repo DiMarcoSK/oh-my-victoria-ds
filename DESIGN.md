@@ -66,6 +66,7 @@ Recursos que alimentam esses laços (todos fazem parte do design, não são opci
 9. **Conquistas com nome histórico.** "Adwa" (vença uma grande potência como Etiópia), "Zollverein" (união aduaneira com 5 países), "Waitangi honrado" (chegue a 2025 com os iwi māori soberanos), "Sol que nunca se põe" (território em todos os continentes).
 10. **Blitz.** Mapa aleatório pequeno, 8 países, ~15 minutos, só frentes e ouro: a experiência frontwars pura, para uma partida rápida no ônibus.
 11. **Modo Eterno.** Depois de 2025, o mundo continua: eventos aleatórios e as corridas do futuro (sec 7.6).
+12. **Pequeno país, grande potência (Victoria 3).** O mapa não é tudo: um país pequeno pode virar potência **pela economia**. Especialize cidades (até 3 obras de produção iguais por cidade), monte a cadeia longa (minério → aço → máquinas/armamentos/eletrônicos), exporte (o lucro das casas exportadoras é tributado) e deixe o **investimento privado** erguer fábricas sozinho. Exemplo de estratégia: o **mercador de armas** — arsenais e fábricas de armamentos, **contratos de armas** com quem está em guerra (pagam no preço mundial, que dispara nas guerras) e, se faltar freguês, **instigar uma guerra** entre vizinhos (sec 4.5 e 4.8).
 
 ---
 
@@ -141,7 +142,12 @@ O DS tem duas telas com papéis diferentes, e os controles seguem isso:
 - **outro país:** em paz — propor aliança, romper, pedir entrada / convidar ao mercado comum, *declarar guerra e atacar*; em guerra — enviar tropas (% da reserva), propor paz;
 - **seu território:** fundar cidade aqui (preço), recrutar tropas (preço);
 - **sua cidade:** abrir a cidade, recrutar;
-- **terra livre:** ocupar (% da reserva), recrutar.
+- **terra livre:** ocupar (% da reserva), recrutar;
+- **outro país (em paz), intriga e armas:** **vender armas a eles** (contrato, só se estão em guerra), **encerrar o contrato**, **instigar uma guerra** (preço no rótulo; recarga de 180 dias).
+
+**Botão Construir** (casinha no painel; antes era só "cidade"): abre a folha de obras da célula sob a mira — **abrir a cidade** (se for sua), **fundar cidade aqui**, **erguer forte**, **cavar trincheiras** (1860+) e **bateria costeira** (só na costa), cada uma com o preço. Só aparece o que dá para construir ali.
+
+**Atacar com foco:** "Atacar com foco na mira" manda a % da reserva e faz o avanço **puxar para a célula sob a mira** (sec 4.5). Mire na capital, numa cidade ou num passo de montanha antes de mandar.
 
 **Barra de estatísticas** (topo do mapa): caixa (com seta verde/vermelha do saldo fiscal da semana), população, exército, alfabetização, prestígio e data.
 
@@ -184,7 +190,8 @@ O mapa é o jogo. Ele combina duas coisas:
 | **Z1 — Continente** | 1 pixel = 1 célula | papel + cor de país + **fronteiras grossas** | nomes de todos os países que couberem, tropas em número |
 | **Z2 — Países** (no código) | 1 célula = 2px | papel + cor de país, cantos suavizados, relevo só nas montanhas | nomes de países médios, tropas, capitais |
 | **Z2 — Região** | 1 célula = 4px | **terreno pintado** (floresta, montanha, deserto, estepe, selva, tundra) com a cor do país por cima a ~30% | nomes de regiões, cidades, capitais, exércitos como figurinhas |
-| **Z3 — Detalhe** | 1 célula = 8px | terreno detalhado no estilo da concept: castelos nas capitais com a bandeira tremulando, casinhas nas cidades, navios nos portos, pinheiros densos | prédios da região, frente célula a célula |
+| **Z3 — Detalhe** | 1 célula = 8px | terreno detalhado no estilo da concept: castelos nas capitais com a bandeira tremulando, casinhas nas cidades, navios nos portos, pinheiros densos | prédios da região, frente célula a célula, **soldados na frente** |
+| **Batalha** (Z5 no código) | 1 célula = 16px | o zoom mais perto: cidades com ruas, hortas e a fábrica soltando fumaça; fortes em estrela com o raio defendido tracejado | **soldados dos dois lados de cada aresta da frente** (cor da nação; cáqui depois de 1900), tiros piscando, fumaça de pólvora e explosões de artilharia |
 
 Afastado parece um mapa de chancelaria; aproximado parece o painel "JOGO EM ANDAMENTO" da concept. **É a mesma transição papel -> terreno do Victoria 3.** O minimapa (SDD sec 14.4) sempre mostra Z0.
 
@@ -216,8 +223,10 @@ Afastado parece um mapa de chancelaria; aproximado parece o painel "JOGO EM ANDA
 1. **Declarar guerra** é diplomacia: custa prestígio, gera **infâmia** (Victoria) proporcional ao tamanho do alvo, e chama os aliados dos dois lados.
 2. **Exército = reserva** por país (não mais tropas por tile). Regenera por dia conforme população, moral, quartéis e traits; tem teto conforme população e regiões. Mostrada como número grande sobre o país (frontwars).
 3. **Atacar:** botão Marchar -> toca/seleciona o país alvo no mapa -> escolhe **25/50/75/100%** da reserva (ESQ/DIR ou slider tocável). Abre-se uma **frente** em toda a fronteira comum. Sem fronteira terrestre, as tropas **desembarcam** na praia do alvo mais próxima da sua capital (até ~96 células de mar, custa 1/10 da reserva) — é assim que ilhas jogam (no código: `World_Landing`, ADR-23 do SDD).
-4. **A frente avança célula a célula.** A cada tick, as células da fronteira comparam força de ataque (tropas na frente x moral x armas x traits) com defesa (densidade defensiva x terreno x fortes x traits). Vence -> célula muda de dono e a frente anda. As tropas da frente se gastam ao avançar; frente sem tropas para.
+4. **A frente avança célula a célula, de forma gradual (ADR-38).** Cada célula da fronteira tem um custo (terreno, densidade do defensor, cidade, forte, distância da capital, traits). Por dia, só **1/5 das tropas da frente (+12) entra em combate**: esse orçamento vira a chance de tomar cada célula (no máximo ~60% da linha anda num dia). O avanço sai espalhado e contínuo, não um salto de toda a fronteira. A frente **sangra** 1% ao dia (suprimento) e mais 1% se o defensor tem exército: empate parado custa caro. Frente sem tropas, sem fronteira ou travada (nem a célula mais barata cabe) fecha e as tropas voltam.
+4b. **Foco:** a ordem de ataque leva um foco (a célula sob a mira). Células a até 4 do foco pesam 2,5x, até 12 pesam 1,25x, longe pesam 0,15x: o avanço **puxa para lá** sem abandonar o resto da linha. A IA foca a capital do alvo.
 5. **Terreno importa como no Victoria:** montanha, floresta, pântano, deserto, rio cortam o avanço; fortes seguram regiões.
+5b. **Fortificações (botão Construir, ADR-38):** **Forte** (raio 3, +80% no custo de tomar as células do dono no raio; a própria célula do forte vale o dobro + 100%), **Trincheira** (1860+, raio 2, +120%, barata e rápida), **Bateria costeira** (só na costa, raio 4, +40%; desembarque no raio custa o triplo). Preço sobe com quantas o país já tem; 3 células de distância mínima entre obras. Quem toma a célula do forte **fica com ele** (canteiro inacabado se perde). A IA fortifica a fronteira com quem está em guerra com ela ou com o rival.
 6. **Paz:** tratado escolhendo exigências (regiões, indenização, independência de um povo, união aduaneira). Ocupação militar sem tratado não é posse definitiva.
 7. **Desempenho:** só células de fronteira ativa entram no cálculo, com orçamento fixo por frame (o resto espera o próximo frame).
 
@@ -246,14 +255,16 @@ O território é célula; a **vida** está nas cidades. Cada país começa com a
 
 | Nível | População | Slots de obra | Para subir |
 |---|---|---|---|
-| **Povoado** | < 10 mil | 2 | crescer |
-| **Vilarejo** | 10 mil | 3 | 50 mil + **Mercado** |
-| **Cidade** | 50 mil | 5 | 400 mil + **Universidade** ou **Fábrica** |
-| **Metrópole** | 400 mil | 8 | — |
+| **Povoado** | < 10 mil | 3 | crescer |
+| **Vilarejo** | 10 mil | 6 | 50 mil + **Mercado** |
+| **Cidade** | 50 mil | 10 | 400 mil + **Universidade** ou **Fábrica** |
+| **Metrópole** | 400 mil | 16 | — |
 
-**Obras** (uma de cada por cidade; uma em construção por vez; 3/5/8/12 lotes de obra por nível): Fazenda (comida), Mercado (ouro, exigido p/ cidade), Oficina -> Fábrica (ouro; fábrica a partir de 1830), Quartel (tropas, defesa), Porto (só no litoral), Templo (prestígio), Muralha (defesa), Universidade (prestígio; abre a metrópole), Estação (a partir de 1830), Palácio (só na capital), Serraria, Mina, Arsenal, Estaleiro, Poço e as cívicas: **Escola** (alfabetização), **Hospital** (cresce, 1850+), **Banco** (ouro e juros menores), **Teatro** (prestígio e felicidade), **Parque** (felicidade, 1830+) e **Usina** (+25% na indústria da cidade, 1890+). Tudo vira número no motor: ouro por dia, crescimento, teto de tropas, prestígio por ano, defesa da cidade na guerra.
+**Obras** (uma em construção por vez; 3/6/10/16 lotes de obra por nível). **Obras de produção podem repetir até 3 vezes na mesma cidade** (fazenda, oficina, fábrica, quartel, serraria, mina, arsenal, poço e as da cadeia longa) — é assim que se especializa uma cidade (ADR-37). As demais são uma por cidade. **Cadeia longa (ADR-37):** **Siderúrgica** (1850+, minério → aço), **Manufatura** (madeira + têxteis → bens de consumo), **Fábrica de máquinas** (1870+, aço → máquinas), **Fábrica de eletrônicos** (1950+, aço + petróleo → eletrônicos), **Fábrica de armamentos** (1850+, exige arsenal; aço + ferramentas → muitas armas; tanque no pátio depois de 1914) e **Bolsa de valores** (exige banco; ouro e o dobro do investimento privado). As obras de antes: Fazenda (comida), Mercado (ouro, exigido p/ cidade), Oficina -> Fábrica (ouro; fábrica a partir de 1830), Quartel (tropas, defesa), Porto (só no litoral), Templo (prestígio), Muralha (defesa), Universidade (prestígio; abre a metrópole), Estação (a partir de 1830), Palácio (só na capital), Serraria, Mina, Arsenal, Estaleiro, Poço e as cívicas: **Escola** (alfabetização), **Hospital** (cresce, 1850+), **Banco** (ouro e juros menores), **Teatro** (prestígio e felicidade), **Parque** (felicidade, 1830+) e **Usina** (+25% na indústria da cidade, 1890+). Tudo vira número no motor: ouro por dia, crescimento, teto de tropas, prestígio por ano, defesa da cidade na guerra.
 
 **A cidade é um mapa (ADR-35):** abrir a cidade mostra a planta dela vista do alto, 16x10 lotes: mar do lado certo (pela costa real) ou um rio, avenidas em cruz, ruas, praça central com chafariz, campos e mata nos arredores. **Você escolhe o lote de cada obra** (setas + A, ou o minimapa e "Construir aqui" na caneta); porto e estaleiro só na beira d'água. **O lugar importa:** oficina, fábrica, arsenal ou usina colada numa estação ou porto produz +25%. **Bairros nascem sozinhos:** a praça e, a cada ~60 mil habitantes, uma nova semente de bairro puxam casas para perto delas; a densidade sobe de chalés a sobrados e prédios (torres depois de 1950 nas metrópoles). Gente anda nas avenidas, a carroça vira carro em 1910, barcos balançam no porto e as chaminés soltam fumaça.
+
+**No mapa, a cidade cresce como cidade (ADR-39):** de Z3 em diante cada casa nova nasce **colada numa casa que já existe**, de preferência ao longo das duas ruas principais, nunca no mar. Quanto mais gente, mais casas e mais longe a mancha vai — o contorno sai irregular, com o miolo mais alto (sobrados e prédios) e chalés na borda. Em Z4+ aparecem ruas de terra, hortas listradas na borda, a obra-símbolo no centro (palácio/templo) e a indústria na periferia; em Z5 a chaminé solta fumaça. O desenho é fixo pela posição (o bairro novo aparece colado no velho quando ela cresce).
 
 **Fundar cidade:** no seu território, a 5 células de qualquer outra cidade, por **200 + 120 de ouro por cidade que você já tem** — o preço aparece antes de confirmar. Começa como povoado com uma fazenda.
 
@@ -265,14 +276,48 @@ O território é célula; a **vida** está nas cidades. Cada país começa com a
 
 O dinheiro vem do que o país **produz e vende**, não do tamanho do mapa.
 
-- **9 bens:** grãos, madeira, fibra, minério, luxo (café, açúcar, chá, especiarias — só nos trópicos), têxteis, ferramentas, armas e petróleo (a partir de 1860). O campo produz pelo terreno; as cidades, pelas obras: Fazenda, Serraria, Mina (só com mata/serra por perto), Oficina e Fábrica (têxteis e ferramentas, consomem fibra, minério e madeira), Arsenal (armas) e Poço (só sobre jazida).
+- **13 bens:** grãos, madeira, fibra, minério, luxo (café, açúcar, chá, especiarias — só nos trópicos), têxteis, ferramentas, armas, petróleo (1860+), **aço** (1850+), **bens de consumo**, **máquinas** (1870+) e **eletrônicos** (1950+). O campo produz pelo terreno; as cidades, pelas obras: Fazenda, Serraria, Mina (só com mata/serra por perto), Oficina e Fábrica (têxteis e ferramentas, consomem fibra, minério e madeira), Arsenal e Fábrica de armamentos (armas), Poço (só sobre jazida), Siderúrgica, Manufatura, Fábrica de máquinas e de eletrônicos (ADR-37).
+- **O que o povo pede:** comer, vestir, lenha; da vila em diante **bens de consumo** e luxo; a cidade industrial pede ferramentas, carvão (minério) e **aço** para as obras (1880+); no século XX, petróleo e, depois de 1950, **eletrônicos**. Bens de consumo e eletrônicos entram no nível de vida.
+- **Pedidos do povo (ADR-37):** a cada ~8 semanas, um bem de consumo em falta vira **pedido** no despacho ("Bens de consumo faltam no mercado. Atenda em 12 semanas"). Atender (90% da demanda) alegra o povo e dá prestígio; ignorar gera protestos (felicidade cai, militância sobe). O pedido em aberto aparece no rodapé do Gabinete > Mercado.
+- **Empregos (micro):** cada obra industrial ou de extração tem vagas (oficina 4 mil, fábrica 10 mil, siderúrgica 10 mil...). 40% da população da cidade trabalha nelas; cidade pequena com fábrica demais produz menos (Gabinete > Mercado mostra "Vagas %"). Fazer a cidade crescer é parte de industrializar.
+- **Máquinas:** depois de 1870 cada obra industrial grande pede 1 carga de máquinas por semana; o país com máquinas abastecidas produz até +25%.
+- **Exportar enriquece:** o lucro das **casas exportadoras** é tributado (linha *Exportação* nas Finanças): o país pequeno que vende muito ao mundo enriquece sem precisar de território. Gabinete > Comércio mostra quanto se exporta e importa.
+- **Guerra move o mercado:** país em guerra triplica a demanda por armas — o preço mundial das armas sobe com as guerras.
+- **Contratos de armas (ADR-37):** pela folha de um país em guerra, "vender armas a eles": toda semana a sua sobra de armas vai direto para eles (até o que o exército deles pede), paga no preço mundial com ágio; eles ganham tropas e gostam mais de você. A IA mercadora faz o mesmo (o mundo arma os dois lados). **Instigar uma guerra:** agentes e ouro empurram um país a atacar o rival dele (ou o vizinho mais fraco); chance pelo temperamento e pela força; falhar vaza e derruba a opinião.
+- **Investimento privado (macro, ADR-37):** parte do PIB vira um **fundo privado** (imposto baixo atrai mais; bancos e bolsa multiplicam). Quando o fundo cobre uma obra, os investidores erguem a que o mercado mais pede, na cidade que mais combina. Nas suas cidades eles só entram se sobrarem 2 lotes (1 fica para você). Obras de Estado (quartel, muralha, palácio, templo, escola, universidade, hospital, parque, estaleiro) são sempre do governo.
 - **Quatro mercados:** a cidade come primeiro do próprio entorno (**local**); o resto vai ao **mercado nacional**; países de um **mercado comum** somam tudo e dividem o preço; o que sobra ou falta cruza o mar para o **mercado mundial** — só até a capacidade dos **portos**.
 - **Preço** sobe com a falta e cai com a sobra. Falta de comida faz a cidade encolher; falta de têxteis e luxo derruba o nível de vida e a felicidade; falta de armas trava o exército; falta de ferramentas atrasa as obras e encarece a construção.
 - **Balanço fiscal (ADR-32):** todo país fecha a semana com **receita** (imposto sobre a produção, imposto per capita — mais gente letrada arrecada mais —, taxas das cidades, renda da terra e alfândega) menos **despesa** (exército, marinha, administração, educação, manutenção das obras, juros da dívida e corrupção sobre o cofre parado). **Déficit vira dívida** com juros pelo risco (dívida/limite, calotes passados; bancos baixam); acima do limite (meio ano de receita) vem o **calote**: a dívida cai a 1/3, mas o prestígio despenca, o povo se irrita, o exército deserta e os juros sobem para sempre. **Quatro políticas** (Gabinete > Finanças, ou a IA 1x por mês): imposto, tarifa (livre comércio abre o porto, protecionismo arrecada mais), educação (puxa a alfabetização) e gasto militar (acelera ou freia o recrutamento).
 - **População e alfabetização reais:** cada país começa com a população e a alfabetização estimadas de 1800 (Maddison; Our World in Data). A população cresce pela transição demográfica (sobe com a era, cai com fome, guerra e, depois de 1950, com a alfabetização alta) e muda de dono junto com as células conquistadas. Alfabetização: escolas, universidades e o gasto em educação puxam até o teto da era; a difusão do mundo garante um piso. Letrados produzem até +25%.
 - **Portos e rotas:** cada porto dá capacidade de comércio; as 3 maiores rotas de cada país aparecem no **mapa comercial** como linhas tracejadas **pelo mar, de porto a porto** (contornam continentes; ADR-33), com navios mercantes andando por elas; as frotas ficam ancoradas na água.
 - **Marinha:** o Estaleiro (precisa de porto) lança navios de guerra. Frota protege as rotas, **bloqueia** os portos inimigos (o comércio deles cai a 1/3), garante desembarques e trava batalhas navais.
-- **Gabinete (X):** Mercado (tabela dos 9 bens), Comércio e Frota (portos, rotas, lançar navio), Diplomacia (aliados, rival, mercado comum, guerras, quem gosta de você), Política (ideologia, felicidade, risco de revolução, ambições) e **Finanças** (balanço linha a linha, dívida, juros, PIB e as 4 políticas).
+- **Gabinete (X), 7 abas em 2 linhas:** Mercado (tabela dos 13 bens, vagas, pedido do povo), Comércio e Frota (portos, rotas, lançar navio), Diplomacia (aliados, rival, mercado comum, guerras, quem gosta de você), Política (ideologia, felicidade, risco de revolução, ambições), **Finanças** (balanço linha a linha, dívida, juros, PIB, inflação e índice de preços), **Leis** (sec 4.10) e **Gráficos** (sec 4.11).
+- **Preços nominais e inflação (ADR-40):** cada país tem um **índice de preços** (1,00 em 1800). Receitas e custos (obras, recrutar, fortes, navios, fundar) saem em ouro de hoje; a **dívida antiga não sobe com os preços** — a inflação a dissolve. A inflação vem da lei de moeda (padrão-ouro 0; papel-moeda ~2%/ano; banco central ~1,5%/ano), da guerra com papel-moeda e, na **Emissão livre**, do déficit pago com dinheiro novo (sem dívida, mas a inflação dispara). Inflação alta derruba a felicidade (até -15).
+
+### 4.10 Leis (micro-gestão do Estado, ADR-40)
+
+Nove grandes assuntos, **cinco leis cada** (45 leis), todas com bônus e penalidades visíveis antes de escolher. A lei "do meio" de cada assunto é a referência (sem efeito); as outras puxam para um lado e cobram do outro.
+
+| Assunto | As 5 leis (da mais branda à mais extrema) | O que mexe |
+|---|---|---|
+| **Tributação** | Mínimos · Baixos · Moderados · Altos · Confiscatórios | receita (-50%..+60%) contra investimento privado e felicidade |
+| **Comércio exterior** | Livre comércio · Tarifa baixa · Moderada · Protecionismo · Autarquia | capacidade dos portos e exportação contra alfândega e produção nacional protegida |
+| **Educação** | Sem escola pública · Religiosas · Básico · Pública (1850) · Universal (1880) | ritmo da alfabetização e produtividade contra gasto |
+| **Serviço militar** | Voluntário · Profissional · Seletivo · Conscrição · Mobilização total | teto, recrutamento e ataque contra custo, produção e felicidade |
+| **Trabalho** | Servidão · Sem regulação · Jornada regulada (1840) · Sindicatos (1870) · Bem-estar (1910) | produção e investimento contra felicidade e militância |
+| **Modelo econômico** | Mercantilismo · Laissez-faire · Mista (1870) · Dirigismo (1900) · Planificação (1917) | exportação, investimento **privado** (até +80%) ou **estatal** (até 20% da receita vira obras) |
+| **Saúde** | Sem assistência · Caridade · Hospitais (1850) · Seguro social (1883) · Universal (1948) | crescimento da população e felicidade contra gasto social |
+| **Moeda e crédito** | Padrão-ouro · Bimetalismo · Papel-moeda · Banco central (1913) · Emissão livre | inflação, limite da dívida e juros |
+| **Imigração** | Fechadas · Restrita · Moderada · Portas abertas · Colonização | crescimento (só atrai gente se o país vive bem: porta aberta num país pobre é por onde o povo sai), colonização de terra livre |
+
+- **Debate:** mudar uma lei abre um projeto no parlamento: **15 + 15 dias por degrau** e **3 de prestígio por degrau**; uma lei por vez; dá para retirar o projeto. A IA muda **1 degrau por mês** rumo ao que combina com ela (arquétipo, ideologia, era e caixa).
+- **Aprovação ideológica:** cada ideologia prefere uma lei por assunto (o liberal quer livre comércio, laissez-faire e escola pública; o comunista, planificação, sindicatos e saúde universal; o conservador, protecionismo e mercantilismo...). Lei igual à preferida soma, a do outro extremo subtrai: **-6..+6 de felicidade**. Na tela, um quadradinho verde/amarelo/vermelho mostra o que o governo acha de cada lei.
+- **Tela (Gabinete > Leis):** a grade 3x3 mostra a lei em vigor de cada assunto; toque num assunto, depois numa lei: a tela de cima lista bônus (verde) e penalidades (vermelho) dela e, abaixo, os da lei em vigor, com o custo do debate e o ano em que ela passa a existir.
+
+### 4.11 Gráficos e marcos (ADR-41)
+
+- **Gabinete > Gráficos:** 8 séries — **PIB, população, caixa, exército, dívida, alfabetização, nível de vida, prestígio** — da partida inteira (a série guarda até 96 pontos; quando enche, junta os pares e dobra o intervalo). Linha dourada com área pintada = você; linha cinza = o **líder do ranking** de cada época (se você lidera, o 2º). Mostra o valor de hoje e a variação em 10 anos. Dinheiro em **ouro de 1800** (descontada a inflação).
+- **Marcos (o "só mais um mês"):** subir para a sua melhor posição no ranking (+2 de prestígio), **entrar para as 8 grandes potências** (+15), cair delas (aviso), **PIB real dobrou** desde o último marco (+10), **população dobrou** (+5). Cada marco aparece como faixa sobre o mapa.
 
 ### 4.9 Ranking das potências (Victoria 3)
 

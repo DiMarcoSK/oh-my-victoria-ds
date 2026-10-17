@@ -235,9 +235,9 @@ static void EcoDiag(const World *w){
   const WCountry *C=&w->c[c];const WEco *e=&w->eco[c];
   printf("     %s ouro %d (+%d imp %d com -%d) vida %d ind %d%% falta %d id %d navios %d bloco %s aliados %s,%s rival %s cap %d/%d portos %d tropas %d/%d\n",
    who[k],(int)C->gold,(int)e->inc,(int)e->trade,(int)e->exp,e->life,e->ind,e->lack,C->ideo,C->ships,Tg(w,C->bloc),Tg(w,C->ally[0]),Tg(w,C->ally[1]),Tg(w,C->rival),e->used,e->cap,e->ports,(int)C->troops,(int)C->cap);
-  printf("        pop %uk alf %d%% | rec prod %d percap %d cid %d terra %d alf %d | desp exerc %d frota %d adm %d edu %d obras %d juros %d corr %d | divida %d (lim %d, %d%%a.a., calotes %d) | pol imp %d tar %d edu %d mil %d\n",
+  printf("        pop %uk alf %d%% | rec prod %d percap %d cid %d terra %d alf %d | desp exerc %d frota %d adm %d edu %d obras %d juros %d corr %d | divida %d (lim %d, %d%%a.a., calotes %d) | leis %d%d%d%d%d%d%d%d%d infl %d precos x%d,%02d\n",
    C->popK,C->lit/10,(int)e->rProd,(int)e->rPop,(int)e->rCity,(int)e->rLand,(int)e->rTariff,(int)e->xArmy,(int)e->xNavy,(int)e->xAdmin,(int)e->xEdu,(int)e->xUpkeep,(int)e->xDebt,(int)e->xCorrupt,
-   (int)e->debt,(int)WEco_DebtLimit(w,c),e->rate,e->defaults,e->tax,e->tariff,e->edu,e->mil);
+   (int)e->debt,(int)WEco_DebtLimit(w,c),e->rate,e->defaults,e->law[0],e->law[1],e->law[2],e->law[3],e->law[4],e->law[5],e->law[6],e->law[7],e->law[8],e->infl,(int)(e->cpi/1000000),(int)(e->cpi/10000%100));
  }
  // populacao e alfabetizacao do mundo
  {u64 P=0;u64 L=0;for(u8 i=1;i<w->nC;i++)if(w->c[i].alive){P+=w->c[i].popK;L+=(u64)w->c[i].popK*w->c[i].lit;}
@@ -301,8 +301,9 @@ static void TestMundi(void){
  EcoDiag(&W1);
  CHECK(W1.nRevol>=5&&W1.nRevol<400,"revolucoes/separatismos acontecem mas nao sem parar (%u)",W1.nRevol);
  CHECK(W1.nAlliances>=10,"a IA forma aliancas (%u)",W1.nAlliances);
- {s32 mx=0;for(u8 i=1;i<W1.nC;i++)if(W1.c[i].alive&&W1.c[i].gold>mx)mx=W1.c[i].gold;
-  CHECK(mx<5000000,"ouro sem inflacao absurda (max %d)",(int)mx);}
+ // ouro REAL (ouro de 1800): com precos nominais (ADR-40) o caixa cresce com a inflacao
+ {s32 mx=0;for(u8 i=1;i<W1.nC;i++)if(W1.c[i].alive){s32 r=(s32)((s64)W1.c[i].gold*CPI1/(W1.eco[i].cpi?W1.eco[i].cpi:CPI1));if(r>mx)mx=r;}
+  CHECK(mx<5000000,"ouro sem inflacao absurda (max real %d)",(int)mx);}
  for(int g=0;g<GD_COUNT;g++)CHECK(W1.wprice[g]>=GD_BASE[g]/3&&W1.wprice[g]<=GD_BASE[g]*3,"preco mundial do bem %d no intervalo (%d)",g,W1.wprice[g]);
  printf("  ultima mensagem: %s\n",W1.msg);
  CHECK(fired>=Hist_Count()/3,"pelo menos 1/3 dos eventos historicos aconteceu (%d)",fired);

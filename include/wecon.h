@@ -31,6 +31,10 @@ void WEco_Week(World *w);              // fecha a semana do mundo (World_Day)
 // Producao/consumo de uma cidade numa semana (UI e IA). prod = saida,
 // need = insumo das obras, dem = consumo da populacao.
 void WEco_CityFlows(const World *w,int city,s32 prod[GD_COUNT],s32 need[GD_COUNT],s32 dem[GD_COUNT]);
+int WEco_CityJobs(const WCity *c,int *want); // % das vagas da industria preenchidas (want = vagas)
+// precos nominais (ADR-40): 1.000.000 = nivel de 1800
+#define CPI1 1000000u
+s32 WEco_Nom(const World *w,u8 ci,s32 v);   // valor de 1800 -> ouro de hoje no pais
 s32 WEco_GoldWeek(const World *w,u8 ci);   // saldo fiscal da ultima semana (receita - despesa)
 int WEco_ArmsPct(const World *w,u8 ci);    // 50..100: regeneracao do exercito pelas armas
 int WEco_ToolsPct(const World *w,u8 ci);   // 50..100: ritmo de obra pelas ferramentas

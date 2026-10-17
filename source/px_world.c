@@ -14,6 +14,7 @@
 #include "history.h"
 #include "settings.h"
 #include "prof.h"
+#include "wfort.h"
 // px_world.c — render da partida no mundo celular (DESIGN.md sec 4.2/4.3).
 // Tela do MAPA: barra de recursos 20px + mapa politico 256x172 em 5 zooms:
 //  Z0 mundo inteiro (2 celulas/px) .. Z4 detalhe (8 px/celula).
@@ -206,13 +207,13 @@ static void Labels(u16 *d,const World *w,const WGame *s){
  }
  // nomes de cidades (Z3: cidade e metropole; Z4: todas), sem sobrepor nada
  if(s->zoom>=3){
-  for(int pass=CT_METROPOLE;pass>=(s->zoom==4?CT_POVOADO:CT_CIDADE)&&nu<48;pass--)
+  for(int pass=CT_METROPOLE;pass>=(s->zoom>=4?CT_POVOADO:CT_CIDADE)&&nu<48;pass--)
    for(int i=0;i<w->nCity&&nu<48;i++){
     const WCity *c=&w->city[i];if(c->tier!=pass)continue;
     int px,py;if(!ToScreen(w,s,c->x,c->y,&px,&py))continue;
     char nm[40];City_Name(w,i,nm,40);
     int tw=Px_Width2(nm,&F_SERIF8);
-    int ty=WG_MAP_Y+py+(s->zoom==4?(c->tier>=CT_CIDADE?8:6):5);
+    int ty=WG_MAP_Y+py+(s->zoom==5?(c->tier>=CT_CIDADE?22:12):(s->zoom==4?(c->tier>=CT_CIDADE?12:7):5));
     Rect r={(s16)(px-tw/2-1),(s16)(ty-1),(s16)(px+tw/2+1),(s16)(ty+9)};
     bool clash=r.y1>190||r.x0<0||r.x1>256;
     for(int k=0;k<nu&&!clash;k++)if(r.x0<used[k].x1&&r.x1>used[k].x0&&r.y0<used[k].y1&&r.y1>used[k].y0)clash=true;
@@ -325,6 +326,130 @@ static void Routes(u16 *d,const World *w,const WGame *s){
   const u16 *pts;int np=PxS_Path(w,e->hub,w->eco[e->route[k]].hub,&pts);
   if(np<0){Px_WantTop();continue;}         // caminho sai no proximo quadro
   if(np>1)SeaLine(d,w,s,pts,np,col,(int)(s->tick/2)+ci*7+k*11,s->zoom>=1);
+ }
+}
+// ---- fortificacoes (ADR-38): forte em estrela, trincheira em zigue-zague,
+// bateria com canhao. Canteiro = so' o contorno pontilhado. Z2+.
+static u16 NatCol(const World *w,u8 ci){if(!ci)return C_INK;const NationDef *d=&NATIONS[w->c[ci].nat];return C3(d->r,d->g,d->b);}
+static void Forts(u16 *d,const World *w,const WGame *s){
+ if(s->zoom<2)return;
+ static const u8 RZ[WZ_COUNT]={0,0,2,3,6,10};
+ int R=RZ[s->zoom];
+ for(int k=0;k<w->nFort;k++){
+  const WFort *f=&w->fort[k];if(!f->owner)continue;
+  int x,y;CellPx(w,s,f->x,f->y,&x,&y);
+  if(x<-20||x>276||y<WG_MAP_Y-10||y>202)continue;
+  bool wip=f->days!=0;
+  u16 stone=C3(20,19,16),dark=C3(9,8,7),own=NatCol(w,f->owner);
+  // raio defendido (Z3+), tracejado na cor do dono: seus fortes e os de quem
+  // esta' em guerra com voce (o resto do mundo nao polui o mapa)
+  if(!wip&&s->zoom>=3&&(f->owner==s->me||World_AtWar(w,s->me,f->owner))){
+   int rr=(FORT[f->kind].radius*2+1)*(1<<(s->zoom-1))/2;
+   for(int a=-rr;a<=rr;a++)if(((a+(int)(s->tick>>3))&3)<2){MPut(d,x+a,y-rr,own);MPut(d,x+a,y+rr,own);MPut(d,x-rr,y+a,own);MPut(d,x+rr,y+a,own);}
+  }
+  if(f->kind==FT_TRINCHEIRA){
+   int L=R*2+2;
+   for(int i=-L;i<=L;i++){int yy=y+(((i+L)>>1)&1?1:-1)*(R>2?2:1);
+    if(wip&&(i&1))continue;
+    MPut(d,x+i,yy,dark);MPut(d,x+i,yy+1,C3(16,12,7));
+    if(R>=4&&((i+L)%5)==0){MPut(d,x+i,yy-1,C3(22,20,14));MPut(d,x+i+1,yy-1,C3(22,20,14));}}  // sacos de areia
+   if(!wip)MPut(d,x,y-R/2-2,own);
+   continue;
+  }
+  if(f->kind==FT_BATERIA){
+   for(int j=-R/2;j<=R/2;j++)for(int i=-R;i<=R;i++){bool e=i==-R||i==R||j==-R/2||j==R/2;
+    if(wip&&(!e||((i+j)&1)))continue;
+    MPut(d,x+i,y+j,e?dark:stone);}
+   if(!wip){for(int i=0;i<=R+1;i++)MPut(d,x+i,y-R/2-1,C3(6,6,7));
+    MPut(d,x-1,y-R/2-1,own);}
+   continue;
+  }
+  // forte: quadrado + losango = estrela de 8 pontas (bastioes)
+  int q=R*2/3;
+  for(int j=-R;j<=R;j++)for(int i=-R;i<=R;i++){
+   int ai=i<0?-i:i,aj=j<0?-j:j;
+   bool in=ai+aj<=R||(ai<=q&&aj<=q);
+   if(!in)continue;
+   bool edge=!(ai+1+aj<=R||(ai+1<=q&&aj<=q))||!(ai+aj+1<=R||(ai<=q&&aj+1<=q));
+   if(wip){if(edge&&((i+j)&1))MPut(d,x+i,y+j,dark);continue;}
+   MPut(d,x+i,y+j,edge?dark:(ai<=q/2&&aj<=q/2&&R>=4?C3(15,14,10):stone));
+  }
+  if(!wip){MPut(d,x,y-1,own);MPut(d,x,y,own);if(R>=4){for(int j=1;j<=R/2+1;j++)MPut(d,x,y-j-1,C_INK);MPut(d,x+1,y-R/2-2,own);MPut(d,x+2,y-R/2-2,own);}}
+ }
+}
+// ---- soldados na frente (Z4/Z5): cada aresta entre quem ataca e quem
+// defende ganha soldados dos dois lados (cor da nacao; caqui depois de 1900),
+// tiro piscando e, em Z5, fumaca e explosao de artilharia. So' visual: le o
+// mapa de donos e as frentes, nao mexe na simulacao.
+static void Soldier(u16 *d,int x,int y,u16 uni,int big,int face,bool fire,bool step){
+ u16 skin=C3(27,21,15),boot=C3(6,5,5);
+ if(big){
+  MPut(d,x,y-6,C3(8,8,9));MPut(d,x+1,y-6,C3(8,8,9));          // chapeu/capacete
+  MPut(d,x,y-5,skin);MPut(d,x+1,y-5,skin);
+  for(int j=-4;j<=-2;j++){MPut(d,x,y+j,uni);MPut(d,x+1,y+j,uni);}
+  MPut(d,x-face,y-3,uni);
+  MPut(d,x,y-1,boot);MPut(d,x+1,y-1,boot);MPut(d,x+(step?-1:0),y,boot);MPut(d,x+(step?2:1),y,boot);
+  for(int i=1;i<=3;i++)MPut(d,x+(face>0?1+i:-i),y-4+(i==3?0:0),C3(10,7,4));   // fuzil
+  if(fire){MPut(d,x+(face>0?5:-4),y-4,C3(31,28,10));MPut(d,x+(face>0?6:-5),y-4,C3(31,20,4));}
+  return;
+ }
+ MPut(d,x,y-3,skin);MPut(d,x,y-2,uni);MPut(d,x+1,y-2,uni);MPut(d,x,y-1,uni);MPut(d,x,y,step?boot:uni);MPut(d,x+1,y,boot);
+ if(fire)MPut(d,x+(face>0?2:-1),y-2,C3(31,28,10));
+}
+static void Battle(u16 *d,const World *w,const WGame *s){
+ if(s->zoom<4)return;
+ static u8 ATK[W_MAXC+1];bool any=false;
+ ATK[0]=0xFF;
+ for(u8 ci=1;ci<w->nC;ci++){const WCountry *k=&w->c[ci];ATK[ci]=(k->alive&&k->atkOn)?k->atkTo:0xFF;if(ATK[ci]!=0xFF)any=true;}
+ if(!any)return;
+ int ppc=1<<(s->zoom-1),big=s->zoom==5;
+ int vw=WG_ViewW()+2,vh=WG_ViewH()+2,n=0;
+ u32 tk=s->tick;
+ u16 khaki=C3(17,16,9);
+ for(int j=-1;j<vh&&n<200;j++){
+  int cy=s->camY+j;if(cy<0||cy>=w->h)continue;
+  for(int i=-1;i<vw&&n<200;i++){
+   int cx=s->camX+i;
+   if(w->wrap){if(cx<0)cx+=w->w;if(cx>=w->w)cx-=w->w;}else if(cx<0||cx>=w->w)continue;
+   u32 ix=World_Idx(w,cx,cy);
+   if(W_TERR[ix]==WT_WATER)continue;
+   u8 o=W_OWNER[ix];
+   static const s8 DX[4]={1,-1,0,0},DY[4]={0,0,1,-1};
+   for(int k=0;k<4;k++){
+    int nx=cx+DX[k],ny=cy+DY[k];if(ny<0||ny>=w->h)continue;
+    if(nx<0||nx>=w->w){if(!w->wrap)continue;nx=(nx+w->w)%w->w;}
+    u32 jx=World_Idx(w,nx,ny);
+    u8 q=W_OWNER[jx];
+    if(!q||q==o||ATK[q]!=o||W_TERR[jx]==WT_WATER)continue;
+    // aresta (q ataca o): centro da celula de o e direcao ate' q
+    int px,py;CellPx(w,s,cx,cy,&px,&py);
+    int ex=px+DX[k]*ppc/2,ey=py+DY[k]*ppc/2;          // meio da aresta
+    if(ex<-8||ex>264||ey<WG_MAP_Y||ey>196)continue;
+    u32 h=(u32)cx*2654435761u^(u32)cy*40503u^(u32)k*977u;
+    u16 ua=NatCol(w,q),ud=o?NatCol(w,o):C3(14,12,9);
+    if(w->date.y>=1900){ua=C3(((ua&31)+(khaki&31))/2,(((ua>>5)&31)+((khaki>>5)&31))/2,(((ua>>10)&31)+((khaki>>10)&31))/2);
+     ud=C3(((ud&31)+(khaki&31))/2,(((ud>>5)&31)+((khaki>>5)&31))/2,(((ud>>10)&31)+((khaki>>10)&31))/2);}
+    int per=big?2:1;
+    int adv=(int)(((tk>>3)+h)&3);                  // passo de avanco (vai e vem)
+    for(int m=0;m<per;m++){
+     int side=(m==0?-1:1)*(big?4:0)+(int)(h>>(8+m*3)&3)-1;   // espalha ao longo da aresta
+     int pxa=ex+DX[k]*(big?3+adv/2:2)+(DY[k]?side:0),pya=ey+DY[k]*(big?3+adv/2:2)+(DX[k]?side:0)+(big?3:1);
+     int pxd=ex-DX[k]*(big?4:2)+(DY[k]?side:0),pyd=ey-DY[k]*(big?4:2)+(DX[k]?side:0)+(big?3:1);
+     bool fa=((tk>>2)+h+m*5)%7==0,fd=((tk>>2)+h+m*3+2)%9==0;
+     int fA=DX[k]?-DX[k]:1,fD=DX[k]?DX[k]:-1;
+     Soldier(d,pxa,pya,ua,big,fA,fa,adv&1);n++;
+     if(o)Soldier(d,pxd,pyd,ud,big,fD,fd,(adv>>1)&1);
+    }
+    if(big){
+     // fumaca de polvora sobe da aresta; de vez em quando, artilharia
+     int t=(int)((tk/3+h)%24);
+     int sx=ex+(int)(h>>20&3)-1,sy=ey-t/3;
+     u16 sm=t<12?C3(24,24,23):C3(28,28,27);
+     MPut(d,sx,sy,sm);MPut(d,sx+1,sy,sm);MPut(d,sx,sy-1,sm);
+     if(((tk>>2)+h)%41==0){for(int r=0;r<3;r++)for(int a=-r;a<=r;a++){MPut(d,ex+a,ey-r+2,r<2?C3(31,30,18):C3(30,14,3));MPut(d,ex+a,ey+r-2,C3(30,18,4));}}
+    }
+   }
+  }
  }
 }
 // frotas: navio de guerra ao lado do porto principal (Z2+), com o numero
@@ -448,7 +573,7 @@ void PxW_Map(u16 *d){
  PROF(PF_MAPU,PxM_Update(WG_World(),s));   // cache: so' repinta o que mudou (px_mapr.c)
  PROF(PF_BLIT,PxM_Blit(d));
  PROF(PF_OVL,PxM_Overlay(d,w,s,phase));
- PROF(PF_CITY,PxC_MapCities(d,w,s));
+ PROF(PF_CITY,PxC_MapCities(d,w,s);Forts(d,w,s);Battle(d,w,s));
  PROF(PF_DECO,Routes(d,w,s);Fleets(d,w,s));
  PROF(PF_LBL,Labels(d,w,s));
  PROF(PF_DECO,{
@@ -532,10 +657,13 @@ static void CityCard(u16 *d,const World *w,const WGame *s,int ci){
  Ui_Bar(d,26,59,96,np?c->pop*100/np:100,C_GOLD);
  // obras construidas em miniatura (a cidade "aparece" no painel)
  u8 st=City_Style(w,ci);int x=132;
+ int more=0;
  for(int k=0;k<CITY_SLOTS;k++){
   u8 b=c->bld[k];if(!b)continue;
+  if(x>230){more++;continue;}                 // 16 slots nao cabem: o resto vira "+n"
   PxC_Building(d,x,62,14,b,st,w->date.y,(u32)ci*7+k,-1,255);x+=15;
  }
+ if(more){char q[8]="+";char n[6];Px_Itoa(more,n);Cat(q,8,n);Px_Text2(d,x+1,54,q,&F_SERIF8,C_GOLD);}
  if(c->bq){char q[48]={0};Cat(q,48,Str(STR_EM_OBRA));Cat(q,48,": ");Cat(q,48,Str(BLD[c->bq].nameStr));
   Px_Text2(d,10,68,q,&F_SERIF8,C_GOLD);}
  Px_WrapN(d,10,82,236,c->owner==s->me?Str(STR_ABRIR_CIDADE):Str(STR_CIDADE_DE),&F_SERIF8,C_TEXT_DIM,1,false);
@@ -578,13 +706,15 @@ static void PropModal(u16 *d,const World *w){
 // acao, com o preco/% no rotulo. Geometria em WG_ACT_Y/H (wgame.h).
 static void DipMenu(u16 *d,const World *w,const WGame *s){
  static const u16 LB[DM_COUNT]={STR_DM_PAZ,STR_DM_ALIANCA,STR_DM_ROMPER,STR_DM_ENTRAR,STR_DM_CONVIDAR,STR_DM_GUERRA,STR_CANCELAR,
-  STR_DM_CIDADE,STR_DM_FUNDAR,STR_DM_RECRUTAR,STR_DM_ATACAR,STR_DM_COLONIZAR};
+  STR_DM_CIDADE,STR_DM_FUNDAR,STR_DM_RECRUTAR,STR_DM_ATACAR,STR_DM_COLONIZAR,
+  STR_DM_FORTE,STR_DM_TRINCHEIRA,STR_DM_BATERIA,STR_DM_ARMAS,STR_DM_ARMAS_FIM,STR_DM_INSTIGAR};
  Ui_Navy(d,4,4,248,184);
  char t[64]={0};
  switch(s->actKind){
   case AK_PAIS:Cat(t,64,Str(STR_DM_TITULO));Cat(t,64,NatName(w,s->dipTo));break;
   case AK_CIDADE:if(s->hcity>=0)City_Name(w,s->hcity,t,64);break;
   case AK_TERRA:Cat(t,64,Str(STR_AC_TERRA));break;
+  case AK_OBRA:Cat(t,64,Str(STR_DM_OBRAS));break;
   default:Cat(t,64,Str(STR_TERRA_LIVRE));break;
  }
  if(s->actKind==AK_PAIS&&s->dipTo){FlagDef f;WDip_Flag(w,s->dipTo,&f);Px_Rect(d,10,9,22,15,C_GOLD);Flag_Draw(d,256,11,10,20,13,&f);}
@@ -603,6 +733,8 @@ static void DipMenu(u16 *d,const World *w,const WGame *s){
   if(it==DM_FUNDAR){Px_Itoa((int)City_FoundCost(w,s->me),n);Cat(lb,80,n);Cat(lb,80,Str(STR_AC_OURO));}
   else if(it==DM_RECRUTAR){Px_Itoa((int)World_RecruitCost(w,s->me),n);Cat(lb,80,n);Cat(lb,80,Str(STR_AC_OURO));}
   else if(it==DM_ATACAR||it==DM_COLONIZAR){Px_Itoa(s->pct,n);Cat(lb,80,n);Cat(lb,80,Str(STR_AC_RESERVA));}
+  else if(it>=DM_FORTE&&it<=DM_BATERIA){u8 fk=(u8)(FT_FORTE+(it-DM_FORTE));Px_Itoa((int)Fort_Cost(w,s->me,fk),n);Cat(lb,80,n);Cat(lb,80,Str(STR_AC_OURO));}
+  else if(it==DM_INSTIGAR){Px_Itoa((int)WEco_Nom(w,s->me,WDip_InstigateCost(w,s->dipTo)),n);Cat(lb,80,n);Cat(lb,80,Str(STR_AC_OURO));}
   Px_Text2(d,24,y+5,lb,&F_SERIF8,cancel?C_TEXT_DIM:C_TEXT);
  }
 }
@@ -626,7 +758,7 @@ void PxW_Panel(u16 *d){
  Ui_Parch(d,4,106,248,42);
  char t[160]={0};
  if(s->toastT){Cat(t,160,Str(s->toastId));if(s->toastArg)Cat(t,160,NatName(w,s->toastArg));
-  if(s->toastNum>=0){char n[16];Px_Itoa((int)s->toastNum,n);Cat(t,160,n);Cat(t,160,Str(STR_T_FUNDAR_CONF2));}
+  if(s->toastNum>=0){char n[16];Px_Itoa((int)s->toastNum,n);Cat(t,160,n);Cat(t,160,Str((s->toastId==STR_T_FORTE_OK||s->toastId==STR_LEI_PROPOSTA)?STR_DIAS:STR_T_FUNDAR_CONF2));}
   if(s->toastCity>=0){char n[40];City_Name(w,s->toastCity,n,40);Cat(t,160,n);}
   Px_WrapN(d,12,113,232,t,&F_SERIF8,C_INK,3,false);}
  else if(w->msg[0]){
@@ -639,8 +771,7 @@ void PxW_Panel(u16 *d){
  bool target=!s->dead&&((s->selLand)||(s->sel&&s->sel!=s->me));
  bool atWar=!s->dead&&s->sel&&!s->selLand&&World_AtWar(w,s->me,s->sel);
  bool canRec=!s->dead&&me->gold>=World_RecruitCost(w,s->me);
- bool ownCity=s->hcity>=0&&w->city[s->hcity].owner==s->me;
- bool canCity=!s->dead&&(ownCity||City_CanFound(w,s->me,s->curX,s->curY));
+ bool canCity=!s->dead;      // Construir: a folha lista o que da' (cidade, forte, trincheira, bateria)
  bool dip=!s->dead&&s->sel&&!s->selLand&&s->sel!=s->me;
  static const u8 ICO[5]={ICO_SWORD,ICO_FLAG,ICO_SHIELD,ICO_HOUSE,ICO_BOOK};
  const bool en[5]={target,dip||atWar,canRec,canCity,!s->dead};

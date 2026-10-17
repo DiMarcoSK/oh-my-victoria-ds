@@ -1,4 +1,5 @@
 #include "wdiplo.h"
+#include "wlaw.h"
 #include "hot.h"
 #include "wecon.h"
 #include "city.h"
@@ -168,7 +169,7 @@ int WDip_RevoltRisk(const World *w,u8 ci){
  if(c->ideo==ID_TRADICIONAL&&y>1848)r+=(y-1848)/8>25?25:(y-1848)/8;
  if((c->ideo==ID_COMUNISTA||c->ideo==ID_AUTORITARIO)&&y>=1975)r+=15+(y-1975)/3;
  if(c->ideo==ID_LIBERAL&&y>=1918&&y<=1939)r+=6;
- if(w->eco[ci].tax==2)r+=5;
+ if(w->eco[ci].law[LW_IMPOSTO]>=3)r+=4*(w->eco[ci].law[LW_IMPOSTO]-2);   // impostos altos/confiscatorios
  for(int i=0;i<NAT_TRAITS;i++)if(c->traits[i]==TR_REVOLUCAO)r+=8;
  if(c->ideo==ID_COMUNISTA||c->ideo==ID_AUTORITARIO)r-=10;   // repressao
  if(c->warDays>720)r+=c->warDays/180;
@@ -359,9 +360,9 @@ void WDip_OnWar(World *w,u8 a,u8 b){
 // ===================== ambicoes do jogador =====================
 static const u16 OBS[OB_COUNT]={STR_OB_FUNDAR,STR_OB_PORTO,STR_OB_NAVIOS,STR_OB_FABRICA,STR_OB_METROPOLE,
  STR_OB_ALIADO,STR_OB_BLOCO,STR_OB_VIDA,STR_OB_COMERCIO,STR_OB_CIDADES,STR_OB_EXERCITO,STR_OB_MINA,
- STR_OB_FERROVIA,STR_OB_PRESTIGIO};
+ STR_OB_FERROVIA,STR_OB_PRESTIGIO,STR_OB_ARMAS,STR_OB_ACO};
 // ouro (>0) ou prestigio (<0)
-static const s16 OBR[OB_COUNT]={150,120,-10,-15,-20,150,150,-10,250,-20,120,100,200,300};
+static const s16 OBR[OB_COUNT]={150,120,-10,-15,-20,150,150,-10,250,-20,120,100,200,300,350,200};
 u16 Obj_Str(u8 ob){return ob<OB_COUNT?OBS[ob]:STR_VAZIO;}
 s32 Obj_Reward(u8 ob){return ob<OB_COUNT?OBR[ob]:0;}
 static int CountBld(const World *w,u8 ci,u8 k){
@@ -388,6 +389,8 @@ int Obj_Pct(const World *w,u8 ci,u8 ob){
  case OB_MINA:return Pct(CountBld(w,ci,BK_MINA),1);
  case OB_FERROVIA:return Pct(CountBld(w,ci,BK_FERROVIA),2);
  case OB_PRESTIGIO:return Pct(c->prestige,150);
+ case OB_ARMAS:return Pct(c->armsTot,300);
+ case OB_ACO:return Pct(CountBld(w,ci,BK_SIDERURGICA),1);
  default:return 0;
  }
 }
@@ -417,6 +420,47 @@ static void Objectives(World *w){
 }
 
 // ===================== IA mensal =====================
+// ===================== intriga (ADR-37) =====================
+// Instigar: agentes e ouro empurram `t` a declarar guerra ao rival dele (ou a
+// um vizinho). O vendedor de armas lucra com a guerra dos outros. Sucesso
+// depende do temperamento e da forca de t contra a vitima; falha vaza e
+// derruba a opiniao. Recarga de 180 dias.
+s32 WDip_InstigateCost(const World *w,u8 t){return 150+w->c[t].troops/20+(s32)w->c[t].cells/10;}  // ouro de 1800 (nominal: WEco_Nom do pagador)
+static u8 Victim(const World *w,u8 t,u8 me){
+ const WCountry *c=&w->c[t];
+ u8 r=c->rival;
+ if(Live(w,r)&&r!=me&&!WDip_Allied(w,t,r)&&!World_AtWar(w,t,r)&&w->c[r].overlord!=t&&c->overlord!=r)return r;
+ // vizinho: o mais fraco entre os que fazem fronteira (amostra de celulas da borda)
+ u8 best=0;s32 bt=0x7FFFFFFF;
+ for(u8 j=1;j<w->nC;j++){
+  if(j==t||j==me||!Live(w,j)||WDip_Allied(w,t,j)||World_AtWar(w,t,j)||w->c[j].overlord==t||c->overlord==j)continue;
+  if(CapDist(w,t,j)>60)continue;
+  if(w->c[j].troops<bt&&World_Borders(w,t,j)){bt=w->c[j].troops;best=j;}
+ }
+ return best;
+}
+int WDip_Instigate(World *w,u8 me,u8 t,u8 *victim){
+ WCountry *M=&w->c[me],*c=&w->c[t];
+ *victim=0;
+ if(!Live(w,t)||t==me||c->player||World_AtWar(w,me,t))return -1;
+ if(M->instCd)return -2;
+ s32 cost=WEco_Nom(w,me,WDip_InstigateCost(w,t));
+ if(M->gold<cost)return -3;
+ u8 v=Victim(w,t,me);
+ if(!v)return -1;
+ M->gold-=cost;M->instCd=180;*victim=v;
+ bool bold=c->archetype==WA_EXPANSIONISTA||c->archetype==WA_OPORTUNISTA||c->archetype==WA_REVOLUCIONARIO;
+ int ch=30+(bold?25:0)+c->mood/5+(c->troops>w->c[v].troops?20:-10)+(c->rival==v?15:0)+(c->opin>20?10:0);
+ if(World_RngRange(w,100)>=ch){
+  int o=c->opin-30;c->opin=(s8)(o<-100?-100:o);
+  int ov=w->c[v].opin-15;w->c[v].opin=(s8)(ov<-100?-100:ov);
+  return 0;
+ }
+ World_DeclareWarCall(w,t,v);
+ c->warTarget=v;c->warGain=0;c->warGoal=(u16)(w->c[v].cells/3+4);c->alert=12;
+ w->nInstig++;
+ return 1;
+}
 static void Rival(World *w,u8 ci){
  WCountry *c=&w->c[ci];
  if(Live(w,c->rival)&&!WDip_Allied(w,ci,c->rival)&&World_RngRange(w,12))return;
@@ -589,14 +633,18 @@ HOT_ARM void WDip_Day(World *w){
   if(c->shipQ&&!--c->shipQ)c->ships++;
   // felicidade busca o nivel de vida (+ traits/ideologia); militancia sobe na miseria
   if(((ci+w->day)&7)==0){
-   int tgt=30+w->eco[ci].life/2+c->m.happy-(w->eco[ci].tax==2?8:(w->eco[ci].tax==0?-5:0));
+   // leis (ADR-40): efeito direto + aprovacao da ideologia; inflacao corroi o salario
+   int infl=w->eco[ci].infl;
+   int tgt=30+w->eco[ci].life/2+c->m.happy+w->eco[ci].fx.v[LFX_HAPPY]+Law_Approval(w,ci)-(infl>0?(infl/10>15?15:infl/10):0);
+   // pedido do povo (wecon.c, ADR-37): atendido alegra, ignorado revolta, aberto incomoda
+   tgt+=w->eco[ci].reqMood-(w->eco[ci].reqG<GD_COUNT?3:0);
    if(c->warDays>360)tgt-=5;
    // teatros e parques alegram (ate +8); deficit cronico e divida alta irritam
    {int fun=0;for(int i=0;i<w->nCity;i++)if(w->city[i].owner==ci)for(int k=0;k<CITY_SLOTS;k++){u8 b=w->city[i].bld[k];if(b==BK_TEATRO)fun+=2;else if(b==BK_PARQUE)fun++;}
     tgt+=fun>8?8:fun;
     if(w->eco[ci].debt>WEco_DebtLimit(w,ci)*2/3)tgt-=5;}
    if(c->happy<tgt)c->happy++;else if(c->happy>tgt)c->happy--;
-   int mt=20+c->m.militancy+(60-(int)c->happy)/2;
+   int mt=20+c->m.militancy+(60-(int)c->happy)/2+w->eco[ci].fx.v[LFX_MILIT];
    if(mt<0)mt=0;
    if(c->militancy<mt)c->militancy++;else if(c->militancy>mt)c->militancy--;
   }
@@ -613,6 +661,7 @@ HOT_ARM void WDip_Day(World *w){
    if(Opposed(c->ideo,w->c[me].ideo))d-=1;
    if(World_AtWar(w,ci,me))d-=3;
    if(c->rival==me)d-=1;
+   if(w->c[me].armsTo==ci&&w->c[me].armsV)d+=2;     // quem nos arma na guerra e' amigo
    if(!d)d=c->opin>0?-1:(c->opin<0?1:0);
    int o=c->opin+d;c->opin=(s8)(o<-100?-100:(o>100?100:o));
   }

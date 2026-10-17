@@ -125,7 +125,7 @@ static u32 Sig(const World *w,const WGame *s){
 }
 
 // ---- contexto do quadro (PxM_Update): 1 registrador-base no laco quente ----
-typedef struct { int sh,W,H,mode,rc3,wrap; } PxCtx;
+typedef struct { int sh,W,H,mode,rc3,wrap,ws,wd; } PxCtx;   // ws/wd: pesos em 1<<ws (Z5: 8 passos por celula)
 static PxCtx X;
 static int gOx,gOy;                 // origem do anel (= CS.ox/oy)
 static s8 gWarp[65];                // NZ*ppc/80 por zoom (exato), indice NZ+32
@@ -137,7 +137,10 @@ static void ZoomTables(int sh){
  for(int n=-32;n<=32;n++)gWarp[n+32]=(s8)(ppc>=2?n*ppc/80:0);
  // ceil(65536/(3*ppc)): (v*rc3)>>16 == v/(3*ppc) EXATO p/ |v| <= 510*ppc
  static const u16 RC3[4]={21846,10923,5462,2731};
- X.rc3=RC3[sh&3];warpSh=sh;
+ // Z5 (16 px/celula): pesos bilineares em 8 passos (cabem no byte do SWAR);
+ // Z0-Z4: ws==sh, wd==0 = conta identica a' de antes (eqmap continua igual)
+ X.ws=sh>3?3:sh;X.wd=sh-X.ws;
+ X.rc3=RC3[X.ws];warpSh=sh;
 }
 // byte k = 0xFF se a amostra k e' terra (mascara de 4 bits -> 4 bytes)
 static const u32 LMASK[16]={0,0xFF,0xFF00,0xFFFF,0xFF0000,0xFF00FF,0xFFFF00,0xFFFFFF,
@@ -182,12 +185,13 @@ HOT_ITCM_IN static u32 Pix(int gx,int gy,int bx,int by){
   c0=PK[(u32)y0*W+x0];c1=PK[(u32)y0*W+x1];c2=PK[(u32)y1*W+x0];c3=PK[(u32)y1*W+x1];
  }
  const u32 lm=(c0>>24)|((c1>>24)<<1)|((c2>>24)<<2)|((c3>>24)<<3);
- // pesos bilineares (<=64 cada, somam ppc^2): 1 byte por amostra
- const int ifx=ppc-fx,ify=ppc-fy;
- const u32 wp=(u32)(ifx*ify)|((u32)(fx*ify)<<8)|((u32)(ifx*fy)<<16)|((u32)(fx*fy)<<24);
+ // pesos bilineares (<=64 cada, somam pw^2): 1 byte por amostra
+ const int wsh=x->ws,pw=1<<wsh,fxw=fx>>x->wd,fyw=fy>>x->wd;
+ const int ifx=pw-fxw,ify=pw-fyw;
+ const u32 wp=(u32)(ifx*ify)|((u32)(fxw*ify)<<8)|((u32)(ifx*fyw)<<16)|((u32)(fxw*fyw)<<24);
  const u32 wl=wp&LMASK[lm];                         // so' os pesos de terra
  const int landW=(int)((wl*0x01010101u)>>24);       // soma dos 4 bytes (sem vai-um: <=64)
- const int tot=1<<(sh*2);
+ const int tot=1<<(wsh*2);
  int r,g,b;u32 key;
  if(landW*2>tot){
   // dono: maior peso somado entre as amostras de terra (empate: o 1o a aparecer)
@@ -214,11 +218,11 @@ HOT_ITCM_IN static u32 Pix(int gx,int gy,int bx,int by){
   }else{r=TER8[t][0];g=TER8[t][1];b=TER8[t][2];}
   // hillshade: derivada do relevo (mar = 0), luz de noroeste
   const int e0=(lm&1)?(int)((c0>>16)&255):0,e1=(lm&2)?(int)((c1>>16)&255):0,e2=(lm&4)?(int)((c2>>16)&255):0,e3=(lm&8)?(int)((c3>>16)&255):0;
-  const int v=(e1-e0)*ify+(e3-e2)*fy+(e2-e0)*ifx+(e3-e1)*fx;
+  const int v=(e1-e0)*ify+(e3-e2)*fyw+(e2-e0)*ifx+(e3-e1)*fxw;
   int sh2=v>=0?(int)(((u32)v*(u32)x->rc3)>>16):-(int)(((u32)(-v)*(u32)x->rc3)>>16);   // v/(3*ppc), truncado
   if(sh2>36)sh2=36;
   if(sh2<-36)sh2=-36;
-  sh2+=ELS[(e0*(int)(wp&255)+e1*(int)((wp>>8)&255)+e2*(int)((wp>>16)&255)+e3*(int)(wp>>24))>>(sh*2)];   // terra alta mais clara
+  sh2+=ELS[(e0*(int)(wp&255)+e1*(int)((wp>>8)&255)+e2*(int)((wp>>16)&255)+e3*(int)(wp>>24))>>(wsh*2)];   // terra alta mais clara
   r+=sh2;g+=sh2;b+=sh2;
   // praia: faixa clara onde a terra e' quase mar (landW < 60%); x/3 = x*21846>>16 (exato aqui)
   if(sh&&landW*5<tot*3){r=((r*2+232)*21846)>>16;g=((g*2+214)*21846)>>16;b=((b*2+160)*21846)>>16;}
@@ -234,7 +238,7 @@ HOT_ITCM_IN static u32 Pix(int gx,int gy,int bx,int by){
   key=K_SEA;
   // profundidade interpolada (terra conta como 0): raso turquesa -> fundo
   const u32 ws=wp&~LMASK[lm];
-  const int d=((int)((c0>>16)&255)*(int)(ws&255)+(int)((c1>>16)&255)*(int)((ws>>8)&255)+(int)((c2>>16)&255)*(int)((ws>>16)&255)+(int)((c3>>16)&255)*(int)(ws>>24))>>(sh*2);
+  const int d=((int)((c0>>16)&255)*(int)(ws&255)+(int)((c1>>16)&255)*(int)((ws>>8)&255)+(int)((c2>>16)&255)*(int)((ws>>16)&255)+(int)((c3>>16)&255)*(int)(ws>>24))>>(wsh*2);
   int t=(d*6554)>>8;if(t>256)t=256;      // d*256/10 (exato p/ d<=31)
   r=(112*(256-t)+30*t)>>8;g=(186*(256-t)+78*t)>>8;b=(198*(256-t)+142*t)>>8;
   // espuma: perto da linha da costa (landW > 30%)

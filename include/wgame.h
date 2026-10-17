@@ -14,14 +14,16 @@
 // + botoes rapidos + % e velocidade.
 // Layout Invertida (Settings) poe o mapa embaixo, tocavel (lcdMainOnBottom).
 enum { WMAP_POL=0, WMAP_TER, WMAP_DIP, WMAP_COM, WMAP_IDEO, WMAP_COUNT };   // modos de mapa (Y)
-enum { LT_MERCADO=0, LT_COMERCIO, LT_DIPLO, LT_POLITICA, LT_FINANCAS, LT_COUNT };    // abas do Gabinete
+enum { LT_MERCADO=0, LT_COMERCIO, LT_DIPLO, LT_POLITICA, LT_FINANCAS, LT_LEIS, LT_GRAF, LT_COUNT };    // abas do Gabinete
 // folha de acoes (A sobre a mira, ou botao bandeira): o que da' p/ fazer com o
 // alvo sob a mira — pais, sua terra, sua cidade ou terra livre. So' caneta.
 enum { DM_PAZ=0, DM_ALIANCA, DM_ROMPER, DM_ENTRAR, DM_CONVIDAR, DM_GUERRA, DM_CANCELAR,
-       DM_CIDADE, DM_FUNDAR, DM_RECRUTAR, DM_ATACAR, DM_COLONIZAR, DM_COUNT };
-enum { AK_PAIS=0, AK_TERRA, AK_CIDADE, AK_LIVRE };        // tipo do alvo da folha
+       DM_CIDADE, DM_FUNDAR, DM_RECRUTAR, DM_ATACAR, DM_COLONIZAR,
+       DM_FORTE, DM_TRINCHEIRA, DM_BATERIA, DM_ARMAS, DM_ARMAS_FIM, DM_INSTIGAR, DM_COUNT };
+// AK_OBRA: folha do botao Construir (cidade + fortificacoes na celula da mira; ADR-38)
+enum { AK_PAIS=0, AK_TERRA, AK_CIDADE, AK_LIVRE, AK_OBRA };  // tipo do alvo da folha
 enum { WG_ACT_Y=30, WG_ACT_H=22 };                        // linhas tocaveis da folha
-enum { WZ_COUNT=5 };      // zoom 0..4: (1<<z)/2 px por celula (Z0 = mundo inteiro)
+enum { WZ_COUNT=6 };      // zoom 0..5: (1<<z)/2 px por celula (Z0 = mundo inteiro; Z5 = 16 px, tropas lutando)
 enum { WG_MAP_Y=20, WG_MAP_H=172 };                    // viewport do mapa
 typedef struct {
  s16 camX, camY;      // celula no canto sup-esq do viewport (derivada de pX/pY)
@@ -62,6 +64,8 @@ typedef struct {
  u8 dipTo, dipSel, dipN, dipIt[DM_COUNT];
  u8 actKind;          // AK_*: o que esta' sob a mira quando a folha abriu
  u8 ledTab, ledSel;   // Gabinete: aba e acao destacada
+ u8 lawCat, lawPick;  // aba Leis: assunto aberto (0xFF = grade de assuntos) e lei destacada
+ u8 statSel;          // aba Graficos: serie (SR_*)
  u8 rankTab;          // ranking: criterio (RK_*)
  s16 rankTop;         // ranking: primeira linha visivel
  u32 propSeen;        // dia da ultima proposta que ja pausou o jogo
@@ -69,9 +73,21 @@ typedef struct {
  u8 botLazy;          // ficha do painel pendente durante o pan (quadros desde o pedido; ADR-36)
 } WGame;
 // Gabinete (tela de baixo): geometria compartilhada por px_ledger.c e wgame.c
-enum { LG_TAB_Y=2, LG_TAB_H=28, LG_ACT_X=16, LG_ACT_Y=120, LG_ACT_W=224, LG_ACT_H=28, LG_BACK_Y=156 };
-// Gabinete, aba Financas: 4 politicas em grade 2x2 (imposto, tarifa, educacao, militar)
-enum { LG_POL_Y=84, LG_POL_H=30, LG_POL_W=122, LG_POL_X0=4, LG_POL_X1=130 };
+// abas em 2 linhas (ADR-40): 4 em cima (64 px), 3 embaixo (85 px)
+enum { LG_TAB_Y=2, LG_TAB_RH=16, LG_TAB_H=33, LG_TAB_N0=4, LG_ACT_X=16, LG_ACT_Y=120, LG_ACT_W=224, LG_ACT_H=28, LG_BACK_Y=156 };
+static inline void Lg_TabRect(int i,int *x,int *y,int *w){
+ if(i<LG_TAB_N0){*w=256/LG_TAB_N0;*x=i**w;*y=LG_TAB_Y;}
+ else{*w=256/(LT_COUNT-LG_TAB_N0);*x=(i-LG_TAB_N0)**w;*y=LG_TAB_Y+LG_TAB_RH+1;}
+}
+static inline int Lg_TabAt(int tx,int ty){
+ if(ty<LG_TAB_Y||ty>=LG_TAB_Y+LG_TAB_H)return -1;
+ if(ty<LG_TAB_Y+LG_TAB_RH+1)return tx*LG_TAB_N0/256;
+ int i=LG_TAB_N0+tx*(LT_COUNT-LG_TAB_N0)/256;return i<LT_COUNT?i:LT_COUNT-1;
+}
+// aba Leis (painel): grade 3x3 de assuntos / 5 linhas de leis + Propor e Voltar
+enum { LW_GX=4, LW_GY=38, LW_GW=82, LW_GH=36, LW_LY=38, LW_LH=22, LW_BY=152, LW_BH=34, LW_PW=164 };
+// aba Graficos (painel): 8 series em 2 linhas de 4
+enum { GR_BX=4, GR_BY=40, GR_BW=62, GR_BH=32 };
 // ranking (SCR_RANK): abas de criterio, paginas, minha nacao (voltar = LG_BACK_Y)
 enum { RK_TAB_Y=2, RK_TAB_H=26, RK_BTN_Y=124, RK_BTN_H=26, RK_BTN_W=56, RK_UP_X=8, RK_DN_X=70, RK_ME_X=132, RK_ME_W=116 };
 // cidade (SCR_CITY, painel): minimapa de lotes, botao do lote, catalogo

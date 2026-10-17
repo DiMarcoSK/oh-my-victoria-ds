@@ -15,29 +15,37 @@ static u32 Hs(u32 a,u32 b){u32 h=a*2654435761u^b*40503u^0x9E3779B9u;h^=h>>15;h*=
 // nameStr cost days minTier minYear gold food cap prest def need flags desc
 const BldDef BLD[BK_COUNT]={
  [BK_NONE]       ={0,0,0,0,0,0,0,0,0,0,0,0,0},
- [BK_FAZENDA]    ={STR_BK_FAZENDA,     60, 30,0,   0,0,3, 0,0, 0,0,          0,STR_BD_FAZENDA},
+ [BK_FAZENDA]    ={STR_BK_FAZENDA,     60, 30,0,   0,0,3, 0,0, 0,0,   BF_MULTI,STR_BD_FAZENDA},
  [BK_MERCADO]    ={STR_BK_MERCADO,    120, 45,0,   0,2,1, 0,0, 0,0,          0,STR_BD_MERCADO},
- [BK_OFICINA]    ={STR_BK_OFICINA,    150, 60,1,   0,3,0, 0,0, 0,0,          0,STR_BD_OFICINA},
- [BK_QUARTEL]    ={STR_BK_QUARTEL,    140, 40,0,   0,0,0,30,0,10,0,          0,STR_BD_QUARTEL},
+ [BK_OFICINA]    ={STR_BK_OFICINA,    150, 60,1,   0,3,0, 0,0, 0,0,   BF_MULTI,STR_BD_OFICINA},
+ [BK_QUARTEL]    ={STR_BK_QUARTEL,    140, 40,0,   0,0,0,30,0,10,0,   BF_MULTI,STR_BD_QUARTEL},
  [BK_PORTO]      ={STR_BK_PORTO,      160, 60,0,   0,3,1, 0,0, 0,0,   BF_COAST,STR_BD_PORTO},
  [BK_TEMPLO]     ={STR_BK_TEMPLO,     110, 50,0,   0,0,1, 0,2, 0,0,          0,STR_BD_TEMPLO},
  [BK_MURALHA]    ={STR_BK_MURALHA,    180, 80,1,   0,0,0,10,0,60,0,          0,STR_BD_MURALHA},
  [BK_UNIVERSIDADE]={STR_BK_UNIVERSIDADE,300,120,2,  0,1,0, 0,5, 0,0,          0,STR_BD_UNIVERSIDADE},
- [BK_FABRICA]    ={STR_BK_FABRICA,    400,120,2,1830,8,0, 0,1, 0,BK_OFICINA, 0,STR_BD_FABRICA},
+ [BK_FABRICA]    ={STR_BK_FABRICA,    400,120,2,1830,8,0, 0,1, 0,BK_OFICINA, BF_MULTI,STR_BD_FABRICA},
  [BK_FERROVIA]   ={STR_BK_FERROVIA,   350,100,1,1830,4,2, 0,1, 0,0,          0,STR_BD_FERROVIA},
  [BK_PALACIO]    ={STR_BK_PALACIO,    500,150,2,   0,2,0,20,8,20,0, BF_CAPITAL,STR_BD_PALACIO},
- [BK_SERRARIA]   ={STR_BK_SERRARIA,    90, 35,0,   0,0,0, 0,0, 0,0,   BF_WOOD,STR_BD_SERRARIA},
- [BK_MINA]       ={STR_BK_MINA,       160, 60,0,   0,1,0, 0,0, 0,0,    BF_ORE,STR_BD_MINA},
- [BK_ARSENAL]    ={STR_BK_ARSENAL,    260, 80,1,   0,0,0,15,0, 5,BK_OFICINA,0,STR_BD_ARSENAL},
+ [BK_SERRARIA]   ={STR_BK_SERRARIA,    90, 35,0,   0,0,0, 0,0, 0,0,   BF_WOOD|BF_MULTI,STR_BD_SERRARIA},
+ [BK_MINA]       ={STR_BK_MINA,       160, 60,0,   0,1,0, 0,0, 0,0,    BF_ORE|BF_MULTI,STR_BD_MINA},
+ [BK_ARSENAL]    ={STR_BK_ARSENAL,    260, 80,1,   0,0,0,15,0, 5,BK_OFICINA,BF_MULTI,STR_BD_ARSENAL},
  [BK_ESTALEIRO]  ={STR_BK_ESTALEIRO,  240, 90,1,   0,1,0, 0,1, 0,BK_PORTO, BF_COAST,STR_BD_ESTALEIRO},
- [BK_POCO]       ={STR_BK_POCO,       300, 90,0,1860,2,0, 0,0, 0,0,    BF_OIL,STR_BD_POCO},
+ [BK_POCO]       ={STR_BK_POCO,       300, 90,0,1860,2,0, 0,0, 0,0,    BF_OIL|BF_MULTI,STR_BD_POCO},
  [BK_ESCOLA]     ={STR_BK_ESCOLA,      90, 40,0,   0,0,0, 0,1, 0,0,          0,STR_BD_ESCOLA},
  [BK_HOSPITAL]   ={STR_BK_HOSPITAL,   220, 70,1,1850,0,2, 0,1, 0,0,          0,STR_BD_HOSPITAL},
  [BK_BANCO]      ={STR_BK_BANCO,      260, 70,1,   0,4,0, 0,1, 0,BK_MERCADO, 0,STR_BD_BANCO},
  [BK_TEATRO]     ={STR_BK_TEATRO,     200, 60,2,   0,1,0, 0,3, 0,0,          0,STR_BD_TEATRO},
  [BK_PARQUE]     ={STR_BK_PARQUE,      80, 30,1,1830,0,1, 0,1, 0,0,          0,STR_BD_PARQUE},
  [BK_USINA]      ={STR_BK_USINA,      380,100,2,1890,3,0, 0,0, 0,0,          0,STR_BD_USINA},
+ // ADR-37: cadeia longa e financas
+ [BK_SIDERURGICA]={STR_BK_SIDERURGICA,420,120,1,1850,2,0, 0,1, 0,0,          BF_MULTI,STR_BD_SIDERURGICA},
+ [BK_MANUFATURA] ={STR_BK_MANUFATURA, 220, 70,1,   0,3,0, 0,0, 0,0,          BF_MULTI,STR_BD_MANUFATURA},
+ [BK_MAQUINARIA] ={STR_BK_MAQUINARIA, 480,130,2,1870,3,0, 0,1, 0,0,          BF_MULTI,STR_BD_MAQUINARIA},
+ [BK_ELETRONICA] ={STR_BK_ELETRONICA, 600,150,2,1950,5,0, 0,2, 0,0,          BF_MULTI,STR_BD_ELETRONICA},
+ [BK_ARMAMENTOS] ={STR_BK_ARMAMENTOS, 450,120,1,1850,1,0,25,0, 5,BK_ARSENAL, BF_MULTI,STR_BD_ARMAMENTOS},
+ [BK_BOLSA]      ={STR_BK_BOLSA,      520,120,2,   0,6,0, 0,3, 0,BK_BANCO,   0,STR_BD_BOLSA},
 };
+int City_MaxOf(u8 k){return k<BK_COUNT&&(BLD[k].flags&BF_MULTI)?3:1;}
 
 // Cidades de 1800 (populacao aproximada em milhares). Grafia em PT quando
 // existe exonimo consagrado; senao, o nome local (DESIGN 3.4).
@@ -127,10 +135,11 @@ static const char *const SY1[ST_COUNT][16]={
 static u8 StyleOf(const World *w,u8 owner);
 static u16 GenName(const World *w,u8 owner,u32 h){return (u16)(((u32)StyleOf(w,owner)<<13)|(h&0xFF));}
 
-int City_Slots(u8 tier){static const u8 S[CT_COUNT]={3,5,8,12};return tier<CT_COUNT?S[tier]:3;}
+int City_Slots(u8 tier){static const u8 S[CT_COUNT]={3,6,10,16};return tier<CT_COUNT?S[tier]:3;}
 int City_NextPop(u8 tier){static const u16 N[CT_COUNT]={10,50,400,0};return tier<CT_COUNT?N[tier]:0;}
 static bool Has(const WCity *c,u8 k){for(int s=0;s<CITY_SLOTS;s++)if(c->bld[s]==k)return true;return false;}
 static int Count(const WCity *c,u8 k){int n=0;for(int s=0;s<CITY_SLOTS;s++)if(c->bld[s]==k)n++;return n;}
+int City_Count(const WCity *c,u8 k){return Count(c,k);}
 HOT_ARM int City_PopCap(const WCity *c){
  static const u16 B[CT_COUNT]={14,70,460,3000};
  int m=100+20*Count(c,BK_FAZENDA)+10*Count(c,BK_PORTO)+15*Count(c,BK_FERROVIA);
@@ -309,7 +318,8 @@ static bool Has(const WCity *c,u8 k);
 // ferrovia ou porto produz +25%: o lugar da obra importa
 int City_IndustryBonus(const WCity *c,int slot){
  u8 k=c->bld[slot];
- if(k!=BK_OFICINA&&k!=BK_FABRICA&&k!=BK_ARSENAL&&k!=BK_USINA)return 0;
+ if(k!=BK_OFICINA&&k!=BK_FABRICA&&k!=BK_ARSENAL&&k!=BK_USINA&&k!=BK_SIDERURGICA&&k!=BK_MANUFATURA&&
+    k!=BK_MAQUINARIA&&k!=BK_ELETRONICA&&k!=BK_ARMAMENTOS)return 0;
  int lx=c->bpos[slot]%CG_W,ly=c->bpos[slot]/CG_W;
  if(c->bpos[slot]>=CG_N)return 0;
  for(int s=0;s<CITY_SLOTS;s++){
@@ -417,7 +427,7 @@ void City_OnOwner(World *w,u32 cell,u8 to){
  c->owner=to;c->pop=(u16)(c->pop-c->pop/8);   // saque e fuga na conquista
  c->bq=0;c->bqDays=0;
 }
-s32 City_FoundCost(const World *w,u8 ci){return 200+120*(s32)w->c[ci].nCity;}
+s32 City_FoundCost(const World *w,u8 ci){return WEco_Nom(w,ci,200+120*(s32)w->c[ci].nCity);}
 bool City_CanFound(const World *w,u8 ci,int x,int y){
  if(x<0||y<0||x>=w->w||y>=w->h||w->nCity>=W_MAXCITY)return false;
  u32 i=World_Idx(w,x,y);
@@ -434,7 +444,7 @@ int City_Found(World *w,u8 ci,int x,int y){
 bool City_CanBuild(const World *w,int i,u8 k){
  if(k==BK_NONE||k>=BK_COUNT)return false;
  const WCity *c=&w->city[i];const BldDef *b=&BLD[k];
- if(c->bq||Has(c,k))return false;
+ if(c->bq||Count(c,k)>=City_MaxOf(k))return false;
  int used=0;for(int s=0;s<City_Slots(c->tier);s++)if(c->bld[s])used++;
  if(used>=City_Slots(c->tier))return false;
  if(c->tier<b->minTier||w->date.y<b->minYear)return false;
@@ -454,19 +464,26 @@ s32 City_Cost(const World *w,int i,u8 k){
  s32 m=100+(p-b)*50/b;
  if(m<75)m=75;
  if(m>150)m=150;
- return (s32)BLD[k].cost*m/100;
+ return WEco_Nom(w,c->owner,(s32)BLD[k].cost*m/100);
 }
-bool City_Build(World *w,int i,int slot,u8 k){
+// enfileira a obra k (slot livre + lote automatico); quem paga e' o chamador
+static bool Queue(World *w,int i,int slot,u8 k){
  WCity *c=&w->city[i];
- if(!c->owner||!City_CanBuild(w,i,k)||w->c[c->owner].gold<City_Cost(w,i,k))return false;
  if(slot<0||slot>=City_Slots(c->tier)||c->bld[slot]){
   slot=-1;for(int s=0;s<City_Slots(c->tier);s++)if(!c->bld[s]){slot=s;break;}
   if(slot<0)return false;
  }
  int lot=City_AutoLot(w,i,k);
  if(lot<0&&(BLD[k].flags&BF_COAST))return false;
- w->c[c->owner].gold-=City_Cost(w,i,k);
  c->bq=k;c->bqDays=BLD[k].days;c->bqSlot=(u8)slot;c->bqLot=(u8)(lot<0?0xFF:lot);
+ return true;
+}
+bool City_Build(World *w,int i,int slot,u8 k){
+ WCity *c=&w->city[i];
+ if(!c->owner||!City_CanBuild(w,i,k)||w->c[c->owner].gold<City_Cost(w,i,k))return false;
+ s32 cost=City_Cost(w,i,k);
+ if(!Queue(w,i,slot,k))return false;
+ w->c[c->owner].gold-=cost;
  return true;
 }
 bool City_BuildAt(World *w,int i,int lot,u8 k){
@@ -515,6 +532,12 @@ static int AiScore(const World *w,int i,u8 k){
  const WCity *c=&w->city[i];const WCountry *C=&w->c[c->owner];const WEco *e=&w->eco[c->owner];
  int s=0;
  switch(k){
+  case BK_SIDERURGICA:s=40+Want(e,GD_ACO)*2/3;break;
+  case BK_MANUFATURA:s=40+Want(e,GD_BENS)/2;break;
+  case BK_MAQUINARIA:s=40+Want(e,GD_MAQUINAS)/2;break;
+  case BK_ELETRONICA:s=60+Want(e,GD_ELETRONICOS)/2;break;
+  case BK_ARMAMENTOS:s=(C->warN?100:20)+Want(e,GD_ARMAS)/2+(C->archetype==WA_MERCADOR||C->armsTo?40:0);break;
+  case BK_BOLSA:s=60+(e->invest<200?20:0);break;
   case BK_FAZENDA:s=60+(100-c->food)*2+Want(e,GD_GRAOS)/2;break;
   case BK_MERCADO:s=c->tier>=CT_VILAREJO?150:70;break;
   case BK_TEMPLO:s=40+(C->happy<50?60:0);break;
@@ -531,7 +554,7 @@ static int AiScore(const World *w,int i,u8 k){
   case BK_QUARTEL:s=C->warN?110:40;break;
   case BK_MURALHA:s=C->warN?80:20;break;
   case BK_PALACIO:s=60;break;
-  case BK_ESCOLA:s=55+(w->eco[c->owner].edu?25:0);break;
+  case BK_ESCOLA:s=55+(w->eco[c->owner].law[LW_EDUCACAO]>=2?25:0);break;
   case BK_HOSPITAL:s=50+(c->food<80?20:0);break;
   case BK_BANCO:s=45+(w->eco[c->owner].debt>0?50:0);break;
   case BK_TEATRO:s=35+(C->happy<55?40:0);break;
@@ -539,7 +562,45 @@ static int AiScore(const World *w,int i,u8 k){
   case BK_USINA:s=70+Want(e,GD_TEXTEIS)/4;break;
   default:break;
  }
+ // a 2a/3a copia so' vale se o mercado ainda pede (e se ha' gente p/ as vagas)
+ int n=Count(c,k);
+ if(n){s=s*2/(2+n*2);if(WEco_CityJobs(c,0)<90)s/=2;}
  return s;
+}
+// ---- investimento privado (ADR-37) ----
+// O fundo do pais (WEco.invest, enchido pelo PIB em wecon.c) ergue a obra que
+// o mercado mais pede, na cidade que mais combina. Obra de Estado (quartel,
+// muralha, palacio, templo, escola...) fica com o governo. Nas cidades do
+// jogador o capital so' entra se sobrarem 2 slots (1 fica p/ a escolha dele).
+static bool Private(u8 k){
+ switch(k){case BK_QUARTEL:case BK_MURALHA:case BK_PALACIO:case BK_TEMPLO:case BK_ESCOLA:case BK_UNIVERSIDADE:
+  case BK_HOSPITAL:case BK_PARQUE:case BK_ESTALEIRO:return false;default:return true;}
+}
+void City_Invest(World *w,u8 ci){
+ WEco *e=&w->eco[ci];WCountry *C=&w->c[ci];
+ if(!C->alive||e->invest<150)return;
+ int bi=-1,bk=0,bs=69;
+ for(int i=0;i<w->nCity;i++){
+  const WCity *c=&w->city[i];
+  if(c->owner!=ci||c->bq)continue;
+  int fr=0;for(int s=0;s<City_Slots(c->tier);s++)if(!c->bld[s])fr++;
+  if(fr<(C->player?2:1))continue;
+  for(u8 k=1;k<BK_COUNT;k++){
+   if(!Private(k)||!City_CanBuild(w,i,k))continue;
+   int sc=AiScore(w,i,k)+(int)(Hs((u32)i*17u+k,w->day>>6)%15);
+   if(sc>bs&&City_Cost(w,i,k)<=e->invest){bs=sc;bi=i;bk=k;}
+  }
+ }
+ if(bi<0)return;
+ s32 cost=City_Cost(w,bi,(u8)bk);
+ if(!Queue(w,bi,-1,(u8)bk))return;
+ e->invest-=cost;w->nInvest++;
+ if(C->player){char nm[40];City_Name(w,bi,nm,40);char t[96];int n=0;const char *a=Str(BLD[bk].nameStr);
+  while(*a&&n<50)t[n++]=*a++;
+  t[n++]=' ';t[n++]='-';t[n++]=' ';a=nm;
+  while(*a&&n<94)t[n++]=*a++;
+  t[n]=0;
+  World_Msg(w,Str(STR_INVEST_MSG),t);}
 }
 static void AiBuild(World *w,int i){
  WCity *c=&w->city[i];WCountry *C=&w->c[c->owner];

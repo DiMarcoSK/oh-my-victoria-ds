@@ -19,6 +19,11 @@
 #include "settings.h"
 #include "menu.h"
 #include "wgame.h"
+#include "wfort.h"
+#include "wlaw.h"
+#include "wstat.h"
+#include "str.h"
+#include "pal.h"
 #include "city.h"
 #include "wdiplo.h"
 #include "history.h"
@@ -113,7 +118,7 @@ int main(void){
  // aro de 1px da vista pode diferir (la' o vizinho de fora e' desconhecido).
  {static u16 A[256*192],B[256*192];WGame*s=WG_Ptr();
   static const u32 DIRS[4]={KEY_RIGHT|KEY_DOWN,KEY_LEFT,KEY_UP|KEY_LEFT,KEY_DOWN};
-  for(int z=1;z<5;z++){
+  for(int z=1;z<6;z++){
    while(s->zoom<z)Press(g,KEY_R);
    while(s->zoom>z)Press(g,KEY_L);
    long bad1=0;
@@ -146,7 +151,24 @@ int main(void){
   else printf("  IA nao contra-atacou em %u dias (reserva baixa ou sem fronteira)\n",w->day-d0);}
  Shot(g,"15_guerra");
  WG_Ptr()->bannerT=0;Frames(g,120);Shot(g,"15b_frente");
- WG_Ptr()->bannerT=0;Press(g,KEY_R);Shot(g,"15c_z4_cidades");Press(g,KEY_L);
+ WG_Ptr()->bannerT=0;Press(g,KEY_R);Shot(g,"15c_z4_cidades");
+ // Z5 (ADR-38): soldados lutando na frente; mira numa celula da frente
+ {World*w=WG_World();u8 me=WG_Ptr()->me;int fx=-1,fy=-1;(void)me;
+  // qualquer frente terrestre aberta no mundo (a do jogador pode ter fechado:
+  // o avanco agora e' gradual e a frente sangra)
+  bool anyF=false;for(u8 j=1;j<w->nC;j++)if(w->c[j].alive&&w->c[j].atkOn&&w->c[j].atkTo)anyF=true;
+  if(!anyF){for(u8 j=1;j<w->nC;j++)if(j!=me&&w->c[j].alive&&World_Borders(w,me,j)){
+    World_DeclareWar(w,me,j);w->c[me].troops+=3000;World_Attack(w,me,j,100);break;}
+   bool p=WG_Ptr()->paused;WG_Ptr()->paused=false;Frames(g,30);WG_Ptr()->paused=p;}
+  u8 fa=0;for(int y=0;y<w->h&&fx<0;y++)for(int x=1;x<w->w-1;x++){u32 i=World_Idx(w,x,y);u8 o=W_OWNER[i];
+   if(!o||!w->c[o].atkOn||!w->c[o].atkTo)continue;
+   if(W_OWNER[i+1]==w->c[o].atkTo||W_OWNER[i-1]==w->c[o].atkTo){fx=x;fy=y;fa=o;break;}}
+  printf("  frente na tela: %s\n",fx>=0?NATIONS[w->c[fa].nat].tag:"nenhuma frente no mundo");
+  if(fx>=0)WG_Goto(fx,fy);
+  WG_Ptr()->bannerT=0;Press(g,KEY_R);Frames(g,8);Shot(g,"15d_z5_batalha");
+  if(WG_Ptr()->zoom!=5){printf("FALHA: R nao chegou ao Z5\n");bad=1;}
+  Press(g,KEY_L);}
+ Press(g,KEY_L);
 
  printf("[cidades]\n");
  {
@@ -230,11 +252,52 @@ int main(void){
  Press(g,KEY_Y);                     Shot(g,"17c_ideologico");
  Press(g,KEY_Y);
  if(WG_Ptr()->mapMode!=WMAP_POL){printf("FALHA: Y nao voltou ao mapa politico (%d)\n",WG_Ptr()->mapMode);bad=1;}
+ printf("[construir: fortificacoes (ADR-38)]\n");
+ {
+  World *w=WG_World();WGame *s=WG_Ptr();u8 me=s->me;
+  if(w->prop.kind)Answer(g,false);
+  w->c[me].gold+=3000;
+  // celula da propria terra longe de cidade/forte
+  int bx=-1,by=-1;const WCountry *c=&w->c[me];
+  for(int y=c->by0;y<=c->by1&&bx<0;y++)for(int x=c->bx0;x<=c->bx1;x++)
+   if(Fort_CanBuild(w,me,x,y,FT_FORTE)&&City_Near(w,x,y,2)<0){bx=x;by=y;break;}
+  if(bx<0){printf("FALHA: nenhuma celula fortificavel no pais do jogador\n");bad=1;}
+  else{
+   WG_Goto(bx,by);
+   const Btn *b=Ui_Tbl(UI_WORLD);int k=0;while(b[k].id!=UI_W_CITY)k++;
+   Touch(g,b[k].x+b[k].w/2,b[k].y+b[k].h/2);
+   Shot(g,"40_folha_construir");
+   if(!s->dipOpen||s->actKind!=AK_OBRA){printf("FALHA: Construir nao abriu a folha de obras\n");bad=1;}
+   int n0=w->nFort;
+   if(!TapAct(g,DM_FORTE)){printf("FALHA: folha de obras sem Forte\n");bad=1;}
+   if(w->nFort!=n0+1){printf("FALHA: forte nao foi erguido\n");bad=1;}
+   else{
+    int fk=w->nFort-1;
+    for(int i=0;i<3000&&w->fort[fk].days;i++){if(w->prop.kind)Answer(g,false);s->paused=false;Frames(g,1);}
+    s->paused=true;
+    printf("  forte %s; bonus de defesa na celula vizinha: %d%%\n",w->fort[fk].days?"NAO pronto":"pronto",
+     Fort_DefPct(w,World_Idx(w,bx+1,by),w->fort[fk].owner));
+    if(w->fort[fk].days){printf("FALHA: forte nao terminou\n");bad=1;}
+    if(w->prop.kind)Answer(g,false);
+    WG_Goto(bx,by);for(int i=0;i<6&&s->zoom<4;i++)Press(g,KEY_R);
+    s->bannerT=0;Shot(g,"41_forte_z4");
+    printf("  forte em (%d,%d) dono %d tipo %d; mira (%d,%d) zoom %d\n",w->fort[fk].x,w->fort[fk].y,w->fort[fk].owner,w->fort[fk].kind,s->curX,s->curY,s->zoom);
+    {const u16 *t=Px_BackTop();int px=s->rX>>4,py=WG_MAP_Y+(s->rY>>4),n=0;
+     for(int y=py-12;y<=py+12;y++)for(int x=px-12;x<=px+12;x++)if(x>=0&&x<256&&y>=0&&y<192&&t[y*256+x]==PXC(20,19,16))n++;
+     printf("  pixels de pedra do forte perto da mira (%d,%d): %d\n",px,py,n);}
+    Press(g,KEY_R);Shot(g,"41b_forte_z5");
+    for(int i=0;i<6&&s->zoom>3;i++)Press(g,KEY_L);
+   }
+  }
+  printf("  fortes no mundo: %u, armas vendidas %u, guerras instigadas %u, obras do investimento privado %u\n",w->nFort,w->nArms,w->nInstig,w->nInvest);
+ }
  printf("[diplomacia + gabinete]\n");
  {
   World *w=WG_World();WGame *s=WG_Ptr();
   u8 fra=World_CountryOfNat(w,Nat_Find("FRA"));
   if(!fra||!w->c[fra].alive)for(u8 i=1;i<w->nC&&!fra;i++)if(w->c[i].alive&&i!=s->me)fra=i;
+  if(w->prop.kind)Answer(g,false);
+  s->dipOpen=false;
   WG_Goto(w->c[fra].capX,w->c[fra].capY);
   s->sel=fra;s->selLand=false;s->hcity=-1;
   Touch(g,57,169);   // botao bandeira
@@ -264,12 +327,40 @@ int main(void){
   Press(g,KEY_R);Shot(g,"31_gabinete_comercio");
   Press(g,KEY_R);Shot(g,"32_gabinete_diplo");
   Press(g,KEY_R);Shot(g,"33_gabinete_politica");
-  u8 tax0=w->eco[s->me].tax;Touch(g,LG_ACT_X+20,LG_ACT_Y+10);
-  if(w->eco[s->me].tax==tax0){printf("FALHA: toque na acao nao mudou o imposto\n");bad=1;}
-  // Financas: balanco fiscal + 4 politicas por toque
   Press(g,KEY_R);Shot(g,"37_gabinete_financas");
-  u8 edu0=w->eco[s->me].edu;Touch(g,LG_POL_X0+20,LG_POL_Y+LG_POL_H+4+10);
-  if(w->eco[s->me].edu==edu0){printf("FALHA: toque em Educacao nao mudou a politica\n");bad=1;}
+  // Leis (ADR-40): grade de assuntos -> Educacao -> outra lei -> Propor = debate -> aprovada
+  {int x,y,tw;Lg_TabRect(LT_LEIS,&x,&y,&tw);Touch(g,x+tw/2,y+8);}
+  if(s->ledTab!=LT_LEIS){printf("FALHA: toque na aba Leis nao abriu\n");bad=1;}
+  Shot(g,"42_leis_grade");
+  {WEco *e=&w->eco[s->me];u8 cat=LW_EDUCACAO,before=e->law[cat];
+   Touch(g,LW_GX+(cat%3)*LW_GW+20,LW_GY+(cat/3)*LW_GH+10);
+   if(s->lawCat!=cat){printf("FALHA: toque no assunto nao abriu as leis dele\n");bad=1;}
+   u8 to=(u8)(before>0?before-1:before+1);
+   Touch(g,128,LW_LY+to*LW_LH+6);
+   Shot(g,"43_leis_educacao");
+   w->c[s->me].prestige+=50;
+   Touch(g,4+LW_PW/2,LW_BY+10);
+   if(e->lawCat!=cat||e->lawTo!=to){printf("FALHA: Propor nao abriu o debate (motivo %d)\n",Law_Why(w,s->me,cat,to));bad=1;}
+   else{
+    int dd=e->lawDays;
+    Press(g,KEY_B);Press(g,KEY_B);                       // volta a' grade e ao mapa
+    for(int i=0;i<4000&&e->lawCat<LW_COUNT;i++){if(w->prop.kind)Answer(g,false);s->paused=false;Frames(g,1);}
+    s->paused=true;
+    printf("  lei: %s -> %s em %d dias (%s); aprovacao ideologica %+d, inflacao %d por mil\n",Str(Law_Str(cat,before)),Str(Law_Str(cat,to)),dd,
+     e->law[cat]==to?"aprovada":"NAO aprovada",Law_Approval(w,s->me),e->infl);
+    if(e->law[cat]!=to){printf("FALHA: debate terminou sem aprovar a lei\n");bad=1;}
+    Press(g,KEY_X);
+   }
+  }
+  // Graficos (ADR-41): 8 series, troca por toque
+  {int x,y,tw;Lg_TabRect(LT_GRAF,&x,&y,&tw);Touch(g,x+tw/2,y+8);}
+  if(s->ledTab!=LT_GRAF){printf("FALHA: toque na aba Graficos nao abriu\n");bad=1;}
+  Shot(g,"44_graficos_pib");
+  Touch(g,GR_BX+1*GR_BW+10,GR_BY+10);
+  if(s->statSel!=SR_POP){printf("FALHA: toque na serie nao trocou o grafico\n");bad=1;}
+  Shot(g,"45_graficos_pop");
+  printf("  graficos: %d pontos, passo %d dias, comparado com %s\n",w->st.n,w->st.step,w->st.top?NATIONS[w->c[w->st.top].nat].tag:"-");
+  if(w->st.n<2){printf("FALHA: series vazias\n");bad=1;}
   printf("  financas: receita %d despesa %d divida %d alf %d%% pop %uk\n",(int)WEco_Revenue(w,s->me),(int)WEco_Expense(w,s->me),(int)w->eco[s->me].debt,w->c[s->me].lit/10,w->c[s->me].popK);
   Press(g,KEY_B);
   if(g->screen!=SCR_WORLD){printf("FALHA: B do Gabinete nao voltou ao mapa\n");bad=1;}

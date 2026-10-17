@@ -19,7 +19,7 @@ typedef struct {
  u8 flags;        // BF_COAST (so' cidade costeira), BF_CAPITAL (so' capital)
  u16 descStr;     // StrId do efeito (1 linha)
 } BldDef;
-enum { BF_COAST=1, BF_CAPITAL=2, BF_WOOD=4, BF_ORE=8, BF_OIL=16 };
+enum { BF_COAST=1, BF_CAPITAL=2, BF_WOOD=4, BF_ORE=8, BF_OIL=16, BF_MULTI=32 }; // MULTI: ate' 3 por cidade (especializacao, ADR-37)
 extern const BldDef BLD[BK_COUNT];
 
 void City_Gen(World *w);                  // fim da geracao (historicas + vilas)
@@ -28,6 +28,9 @@ void City_OnOwner(World *w,u32 cell,u8 to); // celula com cidade mudou de dono
 int City_At(const World *w,int x,int y);  // indice da cidade na celula, -1
 int City_Near(const World *w,int x,int y,int r); // cidade a ate r celulas, -1
 int City_Slots(u8 tier);                  // slots liberados pelo nivel
+int City_MaxOf(u8 k);                     // copias permitidas por cidade (1 ou 3)
+int City_Count(const WCity *c,u8 k);      // copias erguidas
+void City_Invest(World *w,u8 ci);         // investimento privado: o fundo vira obra (ADR-37)
 s32 City_FoundCost(const World *w,u8 ci); // preco de fundar (sobe por cidade)
 bool City_CanFound(const World *w,u8 ci,int x,int y);
 int City_Found(World *w,u8 ci,int x,int y); // indice da nova cidade, -1

@@ -1,18 +1,35 @@
+#include <stdlib.h>
 #include "wecon.h"
 #include "hot.h"
 #include "city.h"
 #include "str.h"
 #include "wdiplo.h"
+#include "wlaw.h"
 // wecon.c — economia do mundo (ver wecon.h; DESIGN 4.8; SDD ADR-26).
 // Custo: 1x por semana, O(cidades) + O(paises x bens) + rotas O(portos x 3 x
 // paises). Buffers estaticos (.bss, ~27KB), zero malloc, sem float, sem RNG.
 
-//                              graos madeira fibra minerio luxo texteis ferram. armas petroleo
-const u16 GD_BASE[GD_COUNT]={  10,   12,     14,   16,     30,  26,     34,     44,   40};
-static const u16 GD_YEAR[GD_COUNT]={0,0,0,0,0,0,0,0,1860};
-u16 Gd_Str(u8 g){return (u16)(STR_GD_GRAOS+(g<GD_COUNT?g:0));}
+//                              graos madeira fibra minerio luxo texteis ferram. armas petroleo aco bens maquinas eletronicos
+const u16 GD_BASE[GD_COUNT]={  10,   12,     14,   16,     30,  26,     34,     44,   40,      36, 30,  60,      80};
+static const u16 GD_YEAR[GD_COUNT]={0,0,0,0,0,0,0,0,1860,1850,0,1870,1950};
+static const u16 GD_STR[GD_COUNT]={STR_GD_GRAOS,STR_GD_MADEIRA,STR_GD_FIBRA,STR_GD_MINERIO,STR_GD_LUXO,STR_GD_TEXTEIS,
+ STR_GD_FERRAMENTAS,STR_GD_ARMAS,STR_GD_PETROLEO,STR_GD_ACO,STR_GD_BENS,STR_GD_MAQUINAS,STR_GD_ELETRONICOS};
+u16 Gd_Str(u8 g){return GD_STR[g<GD_COUNT?g:0];}
 u16 Gd_Year(u8 g){return g<GD_COUNT?GD_YEAR[g]:0;}
-static inline bool Manuf(int g){return g>=GD_TEXTEIS&&g<=GD_ARMAS;}
+// manufaturados: saem da industria (rodam a ind% do insumo que falta)
+static inline bool Manuf(int g){return (g>=GD_TEXTEIS&&g<=GD_ARMAS)||g>=GD_ACO;}
+// vagas da industria/extracao (milhares de trabalhadores por obra, ADR-37):
+// a cidade so' toca as fabricas que a populacao consegue tocar
+static const u8 JOBS[BK_COUNT]={[BK_OFICINA]=4,[BK_FABRICA]=10,[BK_ARSENAL]=5,[BK_MINA]=4,[BK_SERRARIA]=2,
+ [BK_POCO]=3,[BK_SIDERURGICA]=10,[BK_MANUFATURA]=6,[BK_MAQUINARIA]=8,[BK_ELETRONICA]=8,[BK_ARMAMENTOS]=10};
+// % das vagas que a cidade preenche (40% da populacao trabalha nelas)
+int WEco_CityJobs(const WCity *c,int *want){
+ int j=0;for(int s=0;s<CITY_SLOTS;s++)j+=JOBS[c->bld[s]%BK_COUNT];
+ if(want)*want=j;
+ if(!j)return 100;
+ int work=c->pop*2/5;
+ return work>=j?100:work*100/j;
+}
 static inline s32 Mn(s32 a,s32 b){return a<b?a:b;}
 static inline s32 Mx(s32 a,s32 b){return a>b?a:b;}
 
@@ -29,11 +46,17 @@ void WEco_CityFlows(const World *w,int i,s32 prod[GD_COUNT],s32 need[GD_COUNT],s
  if(c->tier>=CT_VILAREJO)dem[GD_LUXO]+=pop/150;
  if(c->tier>=CT_CIDADE&&y>=1830){dem[GD_FERRAMENTAS]+=pop/80;dem[GD_MINERIO]+=pop/120;} // carvao das casas
  if(c->tier>=CT_CIDADE&&y>=1900)dem[GD_PETROLEO]+=pop/200;
+ // ADR-37: moveis, louca e roupa boa (vila em diante); aco nas obras da
+ // cidade grande industrial; eletronicos no seculo XX tardio
+ if(c->tier>=CT_VILAREJO)dem[GD_BENS]+=pop/90;
+ if(c->tier>=CT_CIDADE&&y>=1880)dem[GD_ACO]+=pop/300;
+ if(y>=1950)dem[GD_ELETRONICOS]+=pop/400;
  // subsistencia: a lavoura em volta alimenta a vila mesmo sem obra
  prod[GD_GRAOS]+=c->agri/12;
  int ind=y<1880?100:(y<1950?200:300);   // produtividade industrial por era
  int agr=100+(y-1800)*3/5;              // e a do campo
- bool rail=false;int usina=0,viz=0;
+ bool rail=false;int usina=0,viz=0,ind0=0;
+ int jp=WEco_CityJobs(c,0);              // falta gente: a industria roda a jp%
  for(int s=0;s<CITY_SLOTS;s++){if(c->bld[s]==BK_USINA&&y>=1890)usina=25;viz+=City_IndustryBonus(c,s);}
  int man=100+usina+(viz>25?25:viz);       // usina e obras coladas na ferrovia/porto
  for(int s=0;s<CITY_SLOTS;s++)switch(c->bld[s]){
@@ -51,9 +74,21 @@ void WEco_CityFlows(const World *w,int i,s32 prod[GD_COUNT],s32 need[GD_COUNT],s
   case BK_ARSENAL:need[GD_MINERIO]+=4;need[GD_FERRAMENTAS]+=3;prod[GD_ARMAS]+=10*ind/100;break;
   case BK_POCO:if(y>=1860)prod[GD_PETROLEO]+=(10+((c->res&RS_OLEO)?20:0))*ind/100;break;
   case BK_FERROVIA:rail=true;break;
+  // cadeia longa (ADR-37): minerio -> aco -> maquinas/armamentos/eletronicos
+  case BK_SIDERURGICA:if(y>=1850){need[GD_MINERIO]+=10;need[GD_MADEIRA]+=2;prod[GD_ACO]+=12*ind/100;}break;
+  case BK_MANUFATURA:need[GD_MADEIRA]+=4;need[GD_TEXTEIS]+=4;prod[GD_BENS]+=12*ind/100;break;
+  case BK_MAQUINARIA:if(y>=1870){need[GD_ACO]+=6;need[GD_FERRAMENTAS]+=2;prod[GD_MAQUINAS]+=8*ind/100;}break;
+  case BK_ELETRONICA:if(y>=1950){need[GD_ACO]+=3;need[GD_PETROLEO]+=4;prod[GD_ELETRONICOS]+=16*ind/100;}break;
+  case BK_ARMAMENTOS:if(y>=1850){need[GD_ACO]+=6;need[GD_FERRAMENTAS]+=3;prod[GD_ARMAS]+=28*ind/100;}break;
   default:break;
  }
- if(man>100){prod[GD_TEXTEIS]=prod[GD_TEXTEIS]*man/100;prod[GD_FERRAMENTAS]=prod[GD_FERRAMENTAS]*man/100;prod[GD_ARMAS]=prod[GD_ARMAS]*man/100;}
+ if(man>100)for(int g=0;g<GD_COUNT;g++)if(Manuf(g))prod[g]=prod[g]*man/100;
+ // maquinas: cada obra industrial grande pede 1 carga/semana depois de 1870
+ // (o bonus de produtividade vem da satisfacao nacional, em WEco_Week)
+ for(int s=0;s<CITY_SLOTS;s++){u8 k=c->bld[s];if(JOBS[k%BK_COUNT]>=5)ind0++;}
+ if(y>=1870)need[GD_MAQUINAS]+=ind0;
+ // cidade sem gente p/ as vagas: industria e extracao rodam a jp%
+ if(jp<100)for(int g=0;g<GD_COUNT;g++){if(g!=GD_GRAOS&&g!=GD_FIBRA&&g!=GD_LUXO)prod[g]=prod[g]*jp/100;need[g]=need[g]*jp/100;}
  if(rail)for(int g=0;g<GD_COUNT;g++)prod[g]+=prod[g]/5;
 }
 
@@ -61,7 +96,7 @@ void WEco_CityFlows(const World *w,int i,s32 prod[GD_COUNT],s32 need[GD_COUNT],s
 s32 WEco_ShipCost(const World *w,u8 ci){
  const WEco *e=&w->eco[ci];
  u8 g=w->date.y>=1860?GD_MINERIO:GD_MADEIRA;   // vela de madeira -> couracado de ferro
- return 60+(s32)e->price[g]*3+(w->date.y-1800)/4;
+ return WEco_Nom(w,ci,60+(s32)e->price[g]*3+(w->date.y-1800)/4);
 }
 int WEco_ShipDays(const World *w,u8 ci){
  int y=w->eco[ci].yards;if(y<1)y=1;
@@ -82,14 +117,15 @@ bool WEco_Blockaded(const World *w,u8 ci){
  return false;
 }
 
-s32 WEco_Revenue(const World *w,u8 ci){const WEco *e=&w->eco[ci];return e->rProd+e->rPop+e->rCity+e->rLand+e->rTariff;}
-s32 WEco_Expense(const World *w,u8 ci){const WEco *e=&w->eco[ci];return e->xArmy+e->xNavy+e->xAdmin+e->xEdu+e->xUpkeep+e->xDebt+e->xCorrupt;}
+s32 WEco_Revenue(const World *w,u8 ci){const WEco *e=&w->eco[ci];return e->rProd+e->rPop+e->rCity+e->rLand+e->rTariff+e->rExport+e->rArms;}
+s32 WEco_Expense(const World *w,u8 ci){const WEco *e=&w->eco[ci];return e->xArmy+e->xNavy+e->xAdmin+e->xEdu+e->xSoc+e->xUpkeep+e->xDebt+e->xCorrupt;}
+s32 WEco_Nom(const World *w,u8 ci,s32 v){u32 p=w->eco[ci].cpi?w->eco[ci].cpi:CPI1;return (s32)((s64)v*p/CPI1);}
 s32 WEco_GoldWeek(const World *w,u8 ci){return WEco_Revenue(w,ci)-WEco_Expense(w,ci);}
 // limite de credito: meio ano de receita (minimo 300); cai a cada calote
 s32 WEco_DebtLimit(const World *w,u8 ci){
  const WEco *e=&w->eco[ci];
  s32 r=WEco_Revenue(w,ci);if(r<12)r=12;
- return r*26/(1+e->defaults);
+ return (s32)((s64)r*26/(1+e->defaults)*Mx(20,100+e->fx.v[LFX_DEBT])/100);
 }
 
 // ---------------- populacao e alfabetizacao de 1800 ----------------
@@ -136,12 +172,19 @@ void WEco_PopInit(World *w){
 // com a alfabetizacao alta depois de 1950), fome e guerra puxam para baixo
 static int GrowthPermil(const World *w,const WCountry *c,const WEco *e){
  int y=w->date.y;
- int base=y<1850?5:(y<1900?7:(y<1950?10:(y<1990?19:12)));
+ int base=y<1850?5:(y<1900?7:(y<1950?10:(y<1990?17:11)));   // ADR-40: as leis de saude somam ate +3 por mil
  if(y>=1950&&c->lit>850)base-=(c->lit-850)/30;       // pais rico e letrado cresce menos
  base+=(e->life-60)/6;
  if(e->sat[GD_GRAOS]<60)base-=(60-e->sat[GD_GRAOS])/3; // fome
  if(c->warN)base-=4;
  if(c->unrestT)base-=3;
+ // leis (ADR-40): saude e trabalho somam direto; imigracao e' soma zero no
+ // mundo — so' atrai gente se o pais vive bem (nivel de vida acima de 60),
+ // e a porta aberta num pais pobre e' por onde o povo SAI
+ {int im=Law_FxOf(LW_IMIGRACAO,e->law[LW_IMIGRACAO],LFX_GROW);
+  int pull=((int)e->life-60)*abs(im)/15;if(pull>abs(im))pull=abs(im);
+  if(pull<-abs(im))pull=-abs(im);
+  base+=e->fx.v[LFX_GROW]-im+(im>0?pull:(im<0?-abs(im)/2:0));}
  return base<-30?-30:(base>35?35:base);
 }
 // alfabetizacao (decimos de %): teto possivel na era; a escola (gasto em
@@ -151,8 +194,7 @@ static int LitCap(int y){return y<1850?350:(y<1900?350+(y-1850)*6:(y<1950?650+(y
 static int LitFloor(int y){return y<1850?10:(y<1900?10+(y-1850)*2/5:(y<1950?30+(y-1900)*2:(y<2000?130+(y-1950)*8:530+(y-2000)*8)));}
 static void LitWeek(const World *w,WCountry *c,const WEco *e,int unis){
  int y=w->date.y,l=c->lit,cap=LitCap(y),fl=LitFloor(y);
- static const u8 PERMIL[3]={0,6,15};           // fracao (por mil) do vao ate' o teto fechada por ano
- int r=PERMIL[e->edu%3]+unis*3;if(c->m.prestigeYear>=2)r+=5;
+ int r=Mx(0,e->fx.v[LFX_LIT])+unis*3;           // fracao (por mil) do vao ate' o teto fechada por ano (lei de educacao)if(c->m.prestigeYear>=2)r+=5;
  // ganho do ano em decimos; espalhado nas 52 semanas sem estado (o resto
  // cai nas primeiras semanas do ano): deterministico, nada fora do World
  int gy=(cap>l?(cap-l):0)*r/1000,wk=(int)((w->day/7)%52);
@@ -171,7 +213,8 @@ void WEco_Init(World *w){
  for(u8 ci=0;ci<=W_MAXC;ci++){
   WEco *e=&w->eco[ci];
   u8 *z=(u8*)e;for(unsigned k=0;k<sizeof *e;k++)z[k]=0;
-  e->tax=1;e->life=70;e->ind=100;e->hub=-1;e->tariff=1;e->edu=1;e->mil=1;e->rate=4;
+  e->life=70;e->ind=100;e->hub=-1;e->rate=4;e->reqG=0xFF;e->jobs=100;e->cpi=CPI1;
+  Law_Init(w,ci);
   for(int g=0;g<GD_COUNT;g++){e->price[g]=GD_BASE[g];e->sat[g]=100;}
  }
 }
@@ -202,6 +245,43 @@ static u16 PriceOf(int g,s32 d,s32 s){
  return (u16)(GD_BASE[g]*r/256);
 }
 
+// ---------------- pedidos do povo (ADR-37) ----------------
+// A cada ~8 semanas, um bem de consumo em falta vira PEDIDO: atender (90% da
+// demanda) em 12 semanas alegra (reqMood +10) e da' prestigio; ignorar gera
+// protesto (reqMood -12, militancia). reqMood volta a 0 devagar e entra no
+// alvo de felicidade (wdiplo.c). Sem RNG: so' o calendario e o mercado.
+// So' o jogador recebe pedidos (a IA ja' segue o mercado; puni-la sem ela
+// poder ler o pedido so' multiplicava revolucoes pelo mundo).
+static void Requests(World *w,u8 ci){
+ WCountry *c=&w->c[ci];WEco *e=&w->eco[ci];
+ const int Y=w->date.y;
+ if(!c->player){e->reqG=0xFF;e->reqMood=0;return;}
+ if(e->reqMood>0)e->reqMood--;else if(e->reqMood<0&&((w->day/7)&1))e->reqMood++;
+ if(e->reqG<GD_COUNT){
+  if(e->sat[e->reqG]>=90){
+   e->reqMood=10;c->prestige+=5;
+   if(c->player)World_Msg(w,Str(STR_PEDIDO_OK),Str(Gd_Str(e->reqG)));
+   e->reqG=0xFF;return;
+  }
+  if(e->reqT&&--e->reqT)return;
+  e->reqMood=-10;c->militancy=(u8)(c->militancy>94?100:c->militancy+6);
+  if(c->player)World_Msg(w,Str(STR_PEDIDO_FALHOU),Str(Gd_Str(e->reqG)));
+  e->reqG=0xFF;return;
+ }
+ if(((w->day/7)+ci)%8)return;
+ static const u8 CONS[7]={GD_GRAOS,GD_TEXTEIS,GD_BENS,GD_LUXO,GD_FERRAMENTAS,GD_PETROLEO,GD_ELETRONICOS};
+ static const u16 FROM[7]={0,0,0,0,1830,1900,1950};
+ int best=-1,bs=60;
+ for(int k=0;k<7;k++){u8 g=CONS[k];if(Y<FROM[k]||Y<Gd_Year(g)||!e->dem[g])continue;if(e->sat[g]<bs){bs=e->sat[g];best=g;}}
+ if(best<0)return;
+ e->reqG=(u8)best;e->reqT=12;
+ if(c->player){char t[112];int n=0;const char *a=Str(Gd_Str((u8)best)),*b=Str(STR_PEDIDO_MSG);
+  while(*a&&n<40)t[n++]=*a++;
+  t[n++]=' ';
+  while(*b&&n<110)t[n++]=*b++;
+  t[n]=0;
+  World_Msg(w,Str(STR_PEDIDO),t);}
+}
 HOT_ARM void WEco_Week(World *w){
  const int Y=w->date.y;
  // 1) campo + necessidades rurais, por pais
@@ -229,6 +309,10 @@ HOT_ARM void WEco_Week(World *w){
   e->dem[GD_TEXTEIS]=rp/150;
   e->dem[GD_LUXO]=rp/(Y<1870?1000:600);
   e->dem[GD_ARMAS]=(c->troops+c->atkTroops)/600+c->ships/4;
+  // em guerra o exercito queima municao: a demanda por armas triplica e o
+  // preco mundial sobe (o pais que exporta armas lucra com as guerras, ADR-37)
+  if(c->warN)e->dem[GD_ARMAS]=e->dem[GD_ARMAS]*3+c->atkTroops/200+2;
+  e->dem[GD_BENS]=rp/(Y<1900?800:400);
   if(Y>=1900)e->dem[GD_PETROLEO]=rp/1500+c->ships/4;
   for(int g=0;g<GD_COUNT;g++)RUR[ci][g]=Manuf(g)?e->sup[g]:0;
  }
@@ -254,8 +338,7 @@ HOT_ARM void WEco_Week(World *w){
   s32 sea=e->ports*30+e->yards*10+Mn(c->ships,20)*3;
   if(WEco_Blockaded(w,ci))sea/=3;
   s32 cap=6+(s32)c->cells/50+sea;
-  static const u8 TARC[3]={120,100,80};    // livre comercio abre o porto; protecionismo fecha
-  cap=cap*(100+c->m.tradePct)/100*TARC[e->tariff%3]/100;
+  cap=cap*(100+c->m.tradePct)/100*Mx(10,100+e->fx.v[LFX_TRADE])/100;   // leis de comercio (ADR-40)
   e->cap=(u16)Mn(cap,60000);
   u8 m=MarketOf(w,ci);MCAP[m]+=e->cap;
   for(int g=0;g<GD_COUNT;g++){
@@ -278,7 +361,8 @@ HOT_ARM void WEco_Week(World *w){
   if(!c->alive)continue;
   u8 m=MarketOf(w,ci);
   int ef=MIND[m];
-  int bonus=100+c->m.prodPct+c->lit/40;if(c->unrestT)bonus=bonus*70/100;   // letrados produzem mais (ate' +25%)
+  int bonus=100+c->m.prodPct+c->lit/40+e->fx.v[LFX_PROD];if(c->unrestT)bonus=bonus*70/100;   // letrados produzem mais (ate' +25%)
+  if(Y>=1870)bonus+=e->sat[GD_MAQUINAS]/4;   // maquinas da semana passada: ate' +25% (ADR-37)
   e->ind=(u8)ef;e->lack=MLACK[m];
   for(int g=0;g<GD_COUNT;g++){
    if(Manuf(g)){s32 r=RUR[ci][g];e->sup[g]=r+(e->sup[g]-r)*ef/100*bonus/100;MS[m][g]+=e->sup[g];}
@@ -286,6 +370,27 @@ HOT_ARM void WEco_Week(World *w){
    e->dem[g]+=used;MD[m][g]+=used;
    if(Y<Gd_Year((u8)g)){e->sup[g]=e->dem[g]=0;}
   }
+ }
+ // 4b) contratos de armas (ADR-37): o vendedor manda a sobra de armas direto
+ // p/ quem esta' em guerra; o comprador paga no preco mundial com agio e
+ // reforca o exercito. A carga sai do mercado de um e entra no do outro.
+ for(u8 ci=1;ci<w->nC;ci++){
+  WCountry *c=&w->c[ci];WEco *e=&w->eco[ci];
+  c->armsV=0;e->rArms=0;
+  u8 t=c->armsTo;
+  if(!t)continue;
+  if(!c->alive||t>=w->nC||!w->c[t].alive||!w->c[t].warN||World_AtWar(w,ci,t)){c->armsTo=0;continue;}
+  WCountry *b=&w->c[t];
+  s32 wp=Mx(1,w->wprice[GD_ARMAS]);
+  s32 v=Mn(e->sup[GD_ARMAS]-e->dem[GD_ARMAS],8+(b->troops+b->atkTroops)/300);if(v>400)v=400;
+  s32 pay=WEco_Nom(w,t,v*wp/50);                    // o comprador paga em ouro de hoje
+  if(pay>b->gold){v=b->gold>0?(s32)((s64)v*b->gold/Mx(1,pay)):0;pay=WEco_Nom(w,t,v*wp/50);}
+  if(v<=0)continue;
+  e->sup[GD_ARMAS]-=v;w->eco[t].sup[GD_ARMAS]+=v;
+  MS[MarketOf(w,ci)][GD_ARMAS]-=v;MS[MarketOf(w,t)][GD_ARMAS]+=v;
+  b->gold-=pay;e->rArms=WEco_Nom(w,ci,v*wp/50);
+  if(b->troops<b->cap*3/2)b->troops+=v*2;
+  c->armsV=(u16)v;c->armsTot=(u16)Mn(60000,c->armsTot+v);w->nArms+=(u32)v;
  }
  // 5) mercado mundial: o que sobra/falta no bloco cruza o mar ate a capacidade
  s32 E[GD_COUNT],I[GD_COUNT];
@@ -330,7 +435,7 @@ HOT_ARM void WEco_Week(World *w){
   WCountry *c=&w->c[ci];WEco *e=&w->eco[ci];
   if(!c->alive)continue;
   u8 m=MarketOf(w,ci);
-  s32 val=0,trade=0;e->used=0;
+  s32 val=0,trade=0;e->used=0;e->expVal=e->impVal=0;
   for(int g=0;g<GD_COUNT;g++){
    s32 S=MS[m][g],D=MD[m][g];
    e->sat[g]=(u8)(D>0?Mn(100,Mx(0,S)*100/D):100);
@@ -350,35 +455,52 @@ HOT_ARM void WEco_Week(World *w){
    // bloco a taxa e' menor: e' o atrativo do mercado comum)
    s32 aq=q<0?-q:q;
    trade+=aq*e->price[g]*(m!=ci||MCAP[m]==0?2:4);
+   if(q>0)e->expVal+=q*e->price[g];else e->impVal+=aq*e->price[g];
    val+=e->sup[g]*e->price[g];
   }
   // uso dos portos: a parte deste pais no comercio externo do mercado
   {s32 ext=0;for(int g=0;g<GD_COUNT;g++)ext+=EXP[m][g]+IMP[m][g];
    e->used=(u16)Mn(e->cap,MCAP[m]?(s32)((s64)ext*e->cap/MCAP[m]):0);}
-  // ---- balanco fiscal (ADR-32) ----
-  static const u8 RATE[3]={1,2,3};
-  static const u8 TARR[3]={1,2,3};          // alfandega por nivel de tarifa
-  static const u8 MILX[3]={60,100,150};     // soldo por nivel de gasto militar
-  static const u8 EDUX[3]={0,3,8};          // por mil habitantes x mil por semana
-  e->gdp=val/100;
-  e->rProd=val/1000*RATE[e->tax%3]+val%1000*RATE[e->tax%3]/1000;
-  e->rCity=c->cityGold*7/2*(100+c->m.goldPct)/100;               // taxas urbanas (City_Day soma por dia)
-  e->rLand=((s32)c->cells/48+1)*7*(100+c->m.goldPct)/100;         // renda da terra
+  // ---- balanco fiscal (ADR-32) com as leis (ADR-40) e precos nominais ----
+  // tudo que e' ouro sai em valor NOMINAL (x cpi): a inflacao sobe receita e
+  // custo juntos, mas a divida antiga nao sobe — ela se dissolve.
+  const s16 *F=e->fx.v;
+  const s64 cpi=e->cpi?e->cpi:CPI1;
+  #define NOM(v) ((s32)((s64)(v)*cpi/CPI1))
+  s32 rate2=2*(100+F[LFX_REV]);if(rate2<0)rate2=0;        // aliquota base 2 (x100)
+  e->gdp=NOM(val/100);
+  e->rProd=NOM((s64)val*rate2/100000);
+  e->rCity=NOM(c->cityGold*7/2*(100+c->m.goldPct)/100);               // taxas urbanas (City_Day soma por dia)
+  e->rLand=NOM(((s32)c->cells/48+1)*7*(100+c->m.goldPct)/100);         // renda da terra
   // imposto per capita: quem tem mais gente (e mais letrada) arrecada mais
-  e->rPop=(s32)(c->popK/600)*RATE[e->tax%3]*(20+c->lit/10)/40;
-  e->rTariff=trade/200*TARR[e->tariff%3];
-  int unis=0,obras=0,banks=0;
-  for(int i=0;i<w->nCity;i++)if(w->city[i].owner==ci)for(int k=0;k<CITY_SLOTS;k++){u8 b=w->city[i].bld[k];
-   if(b){obras++;if(b==BK_UNIVERSIDADE)unis+=2;if(b==BK_ESCOLA)unis++;if(b==BK_BANCO)banks++;}}
-  e->xArmy=(c->troops+c->atkTroops)/60*MILX[e->mil%3]/100;
-  e->xNavy=c->ships;
-  e->xAdmin=(s32)c->cells/60+c->nCity+(s32)(c->popK/2000);          // maquina do Estado
-  e->xCorrupt=c->gold>2000?(c->gold-2000)/100:0;                     // cofre parado: desvio e corrupcao
-  e->xEdu=(s32)((u64)c->popK*EDUX[e->edu%3]/1000)/(Y<1870?3:1);
-  e->xUpkeep=obras/2;
+  e->rPop=NOM((s64)(c->popK/600)*rate2/100*(20+c->lit/10)/40);
+  e->rTariff=NOM(trade/200*(F[LFX_TARIFF]>0?F[LFX_TARIFF]:1));
+  // casas exportadoras: o lucro de vender ao exterior e' tributado (o pais
+  // pequeno que exporta muito enriquece, ADR-37); mercador ganha mais
+  e->rExport=NOM((s64)(e->expVal/500)*rate2/100*Mx(0,100+c->m.tradePct+F[LFX_EXPORT])/100);
+  int unis=0,obras=0,banks=0,jWant=0,jFill=0;
+  for(int i=0;i<w->nCity;i++)if(w->city[i].owner==ci){
+   {int j,p=WEco_CityJobs(&w->city[i],&j);jWant+=j;jFill+=j*p/100;}
+   for(int k=0;k<CITY_SLOTS;k++){u8 b=w->city[i].bld[k];
+   if(b){obras++;if(b==BK_UNIVERSIDADE)unis+=2;if(b==BK_ESCOLA)unis++;if(b==BK_BANCO||b==BK_BOLSA)banks++;}}}
+  e->jobs=(u8)(jWant?jFill*100/jWant:100);
+  e->xArmy=NOM((c->troops+c->atkTroops)/60*Mx(10,100+F[LFX_ARMYX])/100);
+  e->xNavy=NOM(c->ships);
+  e->xAdmin=NOM((s32)c->cells/60+c->nCity+(s32)(c->popK/2000));      // maquina do Estado
+  {s32 cofre=NOM(2000);e->xCorrupt=c->gold>cofre?(c->gold-cofre)/100:0;} // cofre parado: desvio e corrupcao
+  e->xEdu=NOM((s32)((u64)c->popK*Mx(0,F[LFX_EDU])/1000)/(Y<1870?3:1));
+  e->xSoc=NOM((s32)((u64)c->popK*Mx(0,F[LFX_SOC])/1000)/(Y<1870?3:1)); // saude e trabalho (leis)
+  e->xUpkeep=NOM(obras/2);
+  // dirigismo/planificacao: o Estado separa parte da receita p/ erguer obras
+  s32 stInv=F[LFX_STATE]>0?(e->rProd+e->rPop+e->rCity+e->rLand+e->rExport)*F[LFX_STATE]/100:0;
+  e->xUpkeep+=stInv;
   e->xDebt=(s32)((s64)e->debt*e->rate/5200);
-  e->inc=e->rProd+e->rPop+e->rCity+e->rLand;e->trade=e->rTariff;e->exp=WEco_Expense(w,ci);
+  e->inc=e->rProd+e->rPop+e->rCity+e->rLand+e->rExport+e->rArms;e->trade=e->rTariff;e->exp=WEco_Expense(w,ci);
   s32 g=c->gold+e->inc+e->trade-e->exp;
+  e->printed=0;
+  // Emissao livre (lei de moeda 4): o deficit e' coberto com dinheiro novo —
+  // sem divida, mas a inflacao dispara (abaixo)
+  if(g<0&&e->law[LW_MOEDA]==4){e->printed=-g;g=0;}
   // deficit: toma emprestado ate' o limite; acima dele, calote
   if(g<0){
    s32 lim=WEco_DebtLimit(w,ci);
@@ -393,18 +515,35 @@ HOT_ARM void WEco_Week(World *w){
   c->gold=g;
   // juros: base + risco (divida / limite) + calotes passados
   {s32 lim=WEco_DebtLimit(w,ci);int risk=lim?(int)((s64)e->debt*8/lim):8;
-   int r=3+risk+e->defaults*2-(banks>4?2:banks/2);e->rate=(u8)(r<1?1:(r>20?20:r));}
+   int r=3+risk+e->defaults*2-(banks>4?2:banks/2)+F[LFX_RATE];e->rate=(u8)(r<1?1:(r>20?20:r));}
+  // inflacao (ADR-40): a da lei de moeda + a da maquina de imprimir; o
+  // indice de precos anda 1x por semana (por mil ao ano / 52)
+  {s32 rv=Mx(12,WEco_Revenue(w,ci));
+   int tgt=F[LFX_INFL]+(e->printed>0?(int)Mn(400,(s64)e->printed*600/rv):0);
+   if(c->warN&&e->law[LW_MOEDA]>=2)tgt+=8;              // guerra com papel-moeda
+   e->infl=(s16)((e->infl*3+tgt)/4);
+   if(e->infl>0){u64 nc=(u64)e->cpi+(u64)e->cpi*(u32)e->infl/52000u;e->cpi=(u32)(nc>4000000000u?4000000000u:nc);}}
   // populacao e alfabetizacao andam 1x por semana
   {int gr=GrowthPermil(w,c,e);
    s64 d=(s64)c->popK*gr/52000;if(!d&&gr>0&&c->popK>500)d=1;
    s64 np=(s64)c->popK+d;c->popK=(u32)(np<10?10:np);
    LitWeek(w,c,e,unis);}
   // nivel de vida: comer pesa mais; o resto depende da era
-  int lw=e->sat[GD_GRAOS]*40+e->sat[GD_TEXTEIS]*20+e->sat[GD_LUXO]*15;
-  int tw=75;
+  int lw=e->sat[GD_GRAOS]*40+e->sat[GD_TEXTEIS]*20+e->sat[GD_LUXO]*15+e->sat[GD_BENS]*10;
+  int tw=85;
   if(Y>=1830){lw+=e->sat[GD_FERRAMENTAS]*15;tw+=15;}
   if(Y>=1900){lw+=e->sat[GD_PETROLEO]*10;tw+=10;}
+  if(Y>=1950){lw+=e->sat[GD_ELETRONICOS]*10;tw+=10;}
   e->life=(u8)(lw/tw);
+  Requests(w,ci);
+  // investimento privado (ADR-37): parte do PIB vira fundo (imposto baixo
+  // atrai mais; banco/bolsa multiplicam); o fundo ergue obras (City_Invest)
+  {s32 add=(s32)((s64)e->gdp*Mx(0,4*(100+F[LFX_INV]))/100000)*(2+(banks>6?6:banks))/2;
+   if(c->unrestT||c->warN>1)add/=2;
+   e->invest+=add+stInv;
+   {s32 cap=NOM(30000);if(e->invest>cap)e->invest=cap;}
+   if((((w->day/7)+ci)&3)==0)City_Invest(w,ci);}   // 1x a cada 4 semanas por pais (escalonado)
+  #undef NOM
  }
  // 7) comida local das cidades: o entorno primeiro, o mercado completa
  for(int i=0;i<w->nCity;i++){
@@ -442,16 +581,15 @@ HOT_ARM void WEco_Week(World *w){
 // IA: politica fiscal 1x por mes (chamada pela diplomacia, wdiplo.c)
 void WEco_AiPolicy(World *w,u8 ci){
  WCountry *c=&w->c[ci];WEco *e=&w->eco[ci];
- s32 bal=WEco_GoldWeek(w,ci)+e->xCorrupt,rev=WEco_Revenue(w,ci),lim=WEco_DebtLimit(w,ci);
- e->mil=(u8)(c->warN?2:(c->archetype==WA_EXPANSIONISTA?1:(bal<0?0:1)));
- e->tariff=(u8)(c->archetype==WA_MERCADOR||c->m.tradePct>=10?0:(c->archetype==WA_ISOLACIONISTA?2:1));
- if(bal<0||e->debt>lim/2){
-  if(e->tax<2&&WDip_RevoltRisk(w,ci)<40)e->tax++;
-  else if(e->edu>0)e->edu--;
-  else if(e->mil>0&&!c->warN)e->mil=0;
- }else if(bal>rev/4&&e->debt==0){
-  if(e->edu<2&&w->date.y>=1830)e->edu++;
-  else if(e->tax>0)e->tax--;
+ // mercador com sobra de armas vende a quem esta' em guerra (o maior exercito
+ // que nao e' inimigo dele nem do aliado): o mundo arma os dois lados
+ if(!c->armsTo&&e->sup[GD_ARMAS]>e->dem[GD_ARMAS]+10&&(c->archetype==WA_MERCADOR||c->archetype==WA_OPORTUNISTA)){
+  u8 best=0;s32 bt=0;
+  for(u8 j=1;j<w->nC;j++){const WCountry *b=&w->c[j];
+   if(j==ci||!b->alive||!b->warN||World_AtWar(w,ci,j)||b->gold<50)continue;
+   if(c->ally[0]&&World_AtWar(w,c->ally[0],j))continue;
+   if(b->troops>bt){bt=b->troops;best=j;}}
+  c->armsTo=best;
  }
- if(WDip_RevoltRisk(w,ci)>50&&e->tax>0)e->tax--;
+ Law_Ai(w,ci);                // leis: 1 passo por mes rumo ao alvo (wlaw.c, ADR-40)
 }
