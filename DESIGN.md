@@ -130,9 +130,9 @@ O DS tem duas telas com papéis diferentes, e os controles seguem isso:
 
 | Entrada | Tela de cima (mapa) | Tela de baixo (painel) |
 |---|---|---|
-| **Setas** | movem o **mapa**; a **mira** (anel com ponto) fica fixa no centro e o mapa corre por baixo dela | — |
+| **Setas** | movem o **mapa** com inércia (acelera segurando, desliza ao soltar, pixel a pixel em todo zoom); a **mira** (anel pequeno com ponto) fica no centro e o mapa corre por baixo dela | — |
 | **A** | **interage com o que está sob a mira**: abre a *folha de ações* no painel | — |
-| **Caneta** | — | **tudo** no painel: folha de ações, botões rápidos, despachos (Aceitar/Recusar), Gabinete, lotes da cidade |
+| **Caneta** | — | **tudo** no painel: folha de ações, botões rápidos, despachos (Aceitar/Recusar), Gabinete, minimapa e catálogo da cidade, **bolinha do ranking** (canto superior esquerdo) |
 | B | fecha a folha; recolhe a ofensiva | volta (cidade, Gabinete) |
 | L / R | zoom (a mira continua no mesmo alvo) | troca a aba do Gabinete / a cidade |
 | X / Y / START / SELECT | Gabinete / modo de mapa / pausa (menu) / pausa rápida | — |
@@ -142,6 +142,10 @@ O DS tem duas telas com papéis diferentes, e os controles seguem isso:
 - **seu território:** fundar cidade aqui (preço), recrutar tropas (preço);
 - **sua cidade:** abrir a cidade, recrutar;
 - **terra livre:** ocupar (% da reserva), recrutar.
+
+**Barra de estatísticas** (topo do mapa): caixa (com seta verde/vermelha do saldo fiscal da semana), população, exército, alfabetização, prestígio e data.
+
+**Resposta da IA:** quem é atacado pelo jogador (e os aliados dele) fica em alerta e pensa todo dia — contra-ataca em 1–2 dias, não no próximo turno de 8 dias.
 
 Mover o mapa com a folha aberta atualiza a folha para o novo alvo. No layout **Invertida** (mapa na tela de toque) o painel fica em cima, sem toque: aí a folha e os despachos aceitam CIMA/BAIXO + A/B.
 
@@ -247,11 +251,13 @@ O território é célula; a **vida** está nas cidades. Cada país começa com a
 | **Cidade** | 50 mil | 5 | 400 mil + **Universidade** ou **Fábrica** |
 | **Metrópole** | 400 mil | 8 | — |
 
-**Obras** (uma de cada por cidade; uma em construção por vez): Fazenda (comida), Mercado (ouro, exigido p/ cidade), Oficina -> Fábrica (ouro; fábrica a partir de 1830), Quartel (tropas, defesa), Porto (só no litoral), Templo (prestígio), Muralha (defesa), Universidade (prestígio; abre a metrópole), Estação (a partir de 1830), Palácio (só na capital). Tudo vira número no motor: ouro por dia, crescimento, teto de tropas, prestígio por ano, defesa da cidade na guerra.
+**Obras** (uma de cada por cidade; uma em construção por vez; 3/5/8/12 lotes de obra por nível): Fazenda (comida), Mercado (ouro, exigido p/ cidade), Oficina -> Fábrica (ouro; fábrica a partir de 1830), Quartel (tropas, defesa), Porto (só no litoral), Templo (prestígio), Muralha (defesa), Universidade (prestígio; abre a metrópole), Estação (a partir de 1830), Palácio (só na capital), Serraria, Mina, Arsenal, Estaleiro, Poço e as cívicas: **Escola** (alfabetização), **Hospital** (cresce, 1850+), **Banco** (ouro e juros menores), **Teatro** (prestígio e felicidade), **Parque** (felicidade, 1830+) e **Usina** (+25% na indústria da cidade, 1890+). Tudo vira número no motor: ouro por dia, crescimento, teto de tropas, prestígio por ano, defesa da cidade na guerra.
+
+**A cidade é um mapa (ADR-35):** abrir a cidade mostra a planta dela vista do alto, 16x10 lotes: mar do lado certo (pela costa real) ou um rio, avenidas em cruz, ruas, praça central com chafariz, campos e mata nos arredores. **Você escolhe o lote de cada obra** (setas + A, ou o minimapa e "Construir aqui" na caneta); porto e estaleiro só na beira d'água. **O lugar importa:** oficina, fábrica, arsenal ou usina colada numa estação ou porto produz +25%. **Bairros nascem sozinhos:** a praça e, a cada ~60 mil habitantes, uma nova semente de bairro puxam casas para perto delas; a densidade sobe de chalés a sobrados e prédios (torres depois de 1950 nas metrópoles). Gente anda nas avenidas, a carroça vira carro em 1910, barcos balançam no porto e as chaminés soltam fumaça.
 
 **Fundar cidade:** no seu território, a 5 células de qualquer outra cidade, por **200 + 120 de ouro por cidade que você já tem** — o preço aparece antes de confirmar. Começa como povoado com uma fazenda.
 
-**Ver a cidade viver (Imperator):** abrir a cidade mostra a cena dela na tela de cima. Cada obra aparece no seu lote quando fica pronta (com andaime enquanto constrói); o casario cresce com a população; gente anda na rua, a carroça vira carro depois de 1910, a chaminé solta fumaça, o trem passa se houver estação, barcos no porto. A arquitetura segue a cultura de quem governa (europeia, leste-asiática, islâmica, africana, indígena) e a era (madeira e estuque -> tijolo -> concreto e vidro). A cena é uma pequena pintura: céu em degradê com sol e nuvens fofas, relevo em duas camadas que somem na bruma, mar com o sol refletido, árvores do clima (copa redonda, choupo, conífera, palmeira), rua de paralelepípedo com calçadas e lampiões (a gás até 1900), sombras das obras no chão e gente de 9 px (chapéu, vestido, sombra) desenhada de trás para a frente. Na conquista, a cidade muda de dono, perde gente e a obra em curso — e a tela da cidade fecha.
+**Ver a cidade viver:** cada obra aparece no lote dela quando fica pronta (com andaime enquanto constrói) e projeta sombra; a arquitetura segue a cultura de quem governa (europeia, leste-asiática, islâmica, africana, indígena) e a era (madeira e estuque -> tijolo -> concreto e vidro); árvores do clima (copa redonda, choupo, conífera, palmeira). Na conquista, a cidade muda de dono, perde gente e a obra em curso — e a tela da cidade fecha.
 
 **IA:** constrói seguindo o caminho de nível e funda quando sobra ouro e terra — o mundo inteiro se urbaniza ao longo de 225 anos.
 
@@ -262,10 +268,15 @@ O dinheiro vem do que o país **produz e vende**, não do tamanho do mapa.
 - **9 bens:** grãos, madeira, fibra, minério, luxo (café, açúcar, chá, especiarias — só nos trópicos), têxteis, ferramentas, armas e petróleo (a partir de 1860). O campo produz pelo terreno; as cidades, pelas obras: Fazenda, Serraria, Mina (só com mata/serra por perto), Oficina e Fábrica (têxteis e ferramentas, consomem fibra, minério e madeira), Arsenal (armas) e Poço (só sobre jazida).
 - **Quatro mercados:** a cidade come primeiro do próprio entorno (**local**); o resto vai ao **mercado nacional**; países de um **mercado comum** somam tudo e dividem o preço; o que sobra ou falta cruza o mar para o **mercado mundial** — só até a capacidade dos **portos**.
 - **Preço** sobe com a falta e cai com a sobra. Falta de comida faz a cidade encolher; falta de têxteis e luxo derruba o nível de vida e a felicidade; falta de armas trava o exército; falta de ferramentas atrasa as obras e encarece a construção.
-- **Tesouro:** imposto sobre o que se produz (baixo/médio/alto), taxas das cidades e **alfândega** sobre o comércio externo. Gastos: soldo, frota e a máquina do Estado (1% do tesouro por semana — cofre parado custa).
-- **Portos e rotas:** cada porto dá capacidade de comércio; as 3 maiores rotas de cada país aparecem no **mapa comercial** como arcos tracejados com navios mercantes andando.
+- **Balanço fiscal (ADR-32):** todo país fecha a semana com **receita** (imposto sobre a produção, imposto per capita — mais gente letrada arrecada mais —, taxas das cidades, renda da terra e alfândega) menos **despesa** (exército, marinha, administração, educação, manutenção das obras, juros da dívida e corrupção sobre o cofre parado). **Déficit vira dívida** com juros pelo risco (dívida/limite, calotes passados; bancos baixam); acima do limite (meio ano de receita) vem o **calote**: a dívida cai a 1/3, mas o prestígio despenca, o povo se irrita, o exército deserta e os juros sobem para sempre. **Quatro políticas** (Gabinete > Finanças, ou a IA 1x por mês): imposto, tarifa (livre comércio abre o porto, protecionismo arrecada mais), educação (puxa a alfabetização) e gasto militar (acelera ou freia o recrutamento).
+- **População e alfabetização reais:** cada país começa com a população e a alfabetização estimadas de 1800 (Maddison; Our World in Data). A população cresce pela transição demográfica (sobe com a era, cai com fome, guerra e, depois de 1950, com a alfabetização alta) e muda de dono junto com as células conquistadas. Alfabetização: escolas, universidades e o gasto em educação puxam até o teto da era; a difusão do mundo garante um piso. Letrados produzem até +25%.
+- **Portos e rotas:** cada porto dá capacidade de comércio; as 3 maiores rotas de cada país aparecem no **mapa comercial** como linhas tracejadas **pelo mar, de porto a porto** (contornam continentes; ADR-33), com navios mercantes andando por elas; as frotas ficam ancoradas na água.
 - **Marinha:** o Estaleiro (precisa de porto) lança navios de guerra. Frota protege as rotas, **bloqueia** os portos inimigos (o comércio deles cai a 1/3), garante desembarques e trava batalhas navais.
-- **Gabinete (X):** Mercado (tabela dos 9 bens), Comércio e Frota (finanças, portos, rotas, lançar navio), Diplomacia (aliados, rival, mercado comum, guerras, quem gosta de você) e Política (ideologia, felicidade, risco de revolução, imposto e ambições).
+- **Gabinete (X):** Mercado (tabela dos 9 bens), Comércio e Frota (portos, rotas, lançar navio), Diplomacia (aliados, rival, mercado comum, guerras, quem gosta de você), Política (ideologia, felicidade, risco de revolução, ambições) e **Finanças** (balanço linha a linha, dívida, juros, PIB e as 4 políticas).
+
+### 4.9 Ranking das potências (Victoria 3)
+
+A bolinha no canto superior esquerdo do painel abre o **ranking**: todos os países vivos em ordem, separados em **Grandes potências** (1–8), **Potências maiores** (9–20), **Potências menores** (21–50) e **Insignificantes**. Critérios: **Geral** (prestígio x3 + economia — PIB e população letrada — + exército + frota + alfabetização), Economia (PIB), Militar (exército + frota) e População. A ficha mostra a sua posição, a faixa e quanto falta para passar o país da frente. O prestígio de 1800 segue o concerto da época (Grã-Bretanha, França, Rússia, Habsburgo, Prússia, Qing, Otomanos, Espanha...).
 
 ## 5. Linha do tempo de jogo e eras
 
@@ -404,6 +415,8 @@ Mínimo por país. Os de destaque passam muito do mínimo.
 ### 6.5.1 Ideologias e bandeiras que mudam
 
 Todo país tem uma **ideologia**: tradicionalista, liberal, conservador, comunista, autoritário ou teocrático. Ela mexe em ataque, defesa, renda, comércio, produção e felicidade — e **muda a bandeira**: a França comunista é a tricolor em vermelho com a estrela dourada; um golpe autoritário pinta de preto e põe a águia; a república liberal tira a coroa; a restauração a devolve. Vale para todos os países, sem desenhar bandeira nova.
+
+**Bandeiras históricas (ADR-34):** além da regra, uma tabela (`hflags.c`) dá a bandeira **real** de cada período e regime: Bourbon branca (França tradicional), Segundo Império com a águia, Espanha republicana (roxo) e franquista, Portugal monarquista azul e branco e republicano verde e vermelho, Weimar, Reich e RFA/RDA, Rússia 1858 (negro-ouro-branco) e URSS com foice e martelo, República Popular da China com as 5 estrelas, Pérsia com leão e sol, Egito, Grécia 1978, Sião/Tailândia, Etiópia com o leão de Judá, Marrocos, Canadá (Red Ensign até 1965, depois a folha de bordo), Raj, Israel, Cuba, Filipinas, Tchecoslováquia, Brasil Império (coroa no losango) e República (globo), Vietnã, Afeganistão real, os Confederados... Padrões novos: losango, triângulo na tralha, 5 faixas, *ensign* britânico; emblemas novos: foice e martelo, folha de bordo, estrela de Davi, esfera armilar, 5 estrelas.
 
 Revoluções nascem da miséria, da militância, de guerras longas, do imposto alto e do espírito da época (o velho regime envelhece depois de 1848; o partido único cansa no fim do século XX). O vizinho rival pode aproveitar o caos. Às vezes o descontentamento vira **separatismo**: uma nação do catálogo renasce dentro do império e luta pela independência.
 
