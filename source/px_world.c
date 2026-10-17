@@ -12,6 +12,7 @@
 #include "wecon.h"
 #include "wdiplo.h"
 #include "history.h"
+#include "settings.h"
 // px_world.c — render da partida no mundo celular (DESIGN.md sec 4.2/4.3).
 // Tela do MAPA: barra de recursos 20px + mapa politico 256x172 em 5 zooms:
 //  Z0 mundo inteiro (2 celulas/px) .. Z4 detalhe (8 px/celula).
@@ -269,22 +270,35 @@ static void Fleets(u16 *d,const World *w,const WGame *s){
   Px_Text2Out(d,x+6,y-6,t,&F_SERIF8,C_TEXT,C_INK,0,1,0);
  }
 }
+// MIRA: ponto no centro da vista (as setas movem o mapa por baixo dela).
+// Anel de 2px com 4 aberturas (o alvo fica visivel) e contorno de tinta +
+// ponto central; sobre algo acionavel o anel fica ouro e respira (A abre a
+// folha de acoes).
 static void Cursor(u16 *d,const World *w,const WGame *s){
  int px,py;
  if(!ToScreen(w,s,s->curX,s->curY,&px,&py))return;
  py+=WG_MAP_Y;
- int r=s->zoom>=3?(1<<(s->zoom-1))/2+2:3;
- for(int k=0;k<4;k++){
-  int dx=(k==0)-(k==1),dy=(k==2)-(k==3);
-  for(int i=0;i<4;i++){
-   int x=px+dx*(r+i),y=py+dy*(r+i);
-   if(y>=WG_MAP_Y){Px_PSet(d,x+1,y+1,C_INK);}
-  }
-  for(int i=0;i<4;i++){
-   int x=px+dx*(r+i),y=py+dy*(r+i);
-   if(y>=WG_MAP_Y)Px_PSet(d,x,y,C_TEXT);
-  }
+ bool tgt=!s->dead&&(s->hcity>=0||s->selLand||s->sel);
+ int R=tgt&&((s->tick/20)&1)?9:8;
+ u16 ring=tgt?C_GOLD_HI:C_TEXT;
+ // 2 passadas: contorno de tinta (anel R-1..R+1 + 1) e o anel em si
+ for(int pass=0;pass<2;pass++)for(int dy=-R-2;dy<=R+2;dy++)for(int dx=-R-2;dx<=R+2;dx++){
+  int q=dx*dx+dy*dy,ad=dx<0?-dx:dx,bd=dy<0?-dy:dy;
+  if(ad<=2||bd<=2)continue;                       // aberturas em cruz
+  int lo=pass?(R-1)*(R-1):(R-2)*(R-2),hi=pass?R*R+R:(R+1)*(R+1)+R+1;
+  if(q<lo||q>hi)continue;
+  if(py+dy<=WG_MAP_Y)continue;
+  Px_PSet(d,px+dx,py+dy,pass?ring:C_INK);
  }
+ // tracos da cruz (fora do anel) apontando p/ o centro
+ for(int k=0;k<4;k++){
+  int ux=(k==0)-(k==1),uy=(k==2)-(k==3);
+  for(int t=R-2;t<=R+3;t++){int x=px+ux*t,y=py+uy*t;
+   if(y<=WG_MAP_Y)continue;
+   Px_PSet(d,x+uy,y+ux,C_INK);Px_PSet(d,x-uy,y-ux,C_INK);Px_PSet(d,x,y,ring);}
+ }
+ for(int j=-2;j<=2;j++)for(int i=-2;i<=2;i++)if(py+j>WG_MAP_Y&&(i*i+j*j)<=5)Px_PSet(d,px+i,py+j,C_INK);
+ for(int j=-1;j<=1;j++)for(int i=-1;i<=1;i++)if(py+j>WG_MAP_Y&&(i==0||j==0))Px_PSet(d,px+i,py+j,ring);
 }
 static void Minimap(u16 *d,const World *w,const WGame *s){
  if(s->zoom==0)return;
@@ -439,7 +453,7 @@ static void CityCard(u16 *d,const World *w,const WGame *s,int ci){
  Px_WrapN(d,10,82,236,c->owner==s->me?Str(STR_ABRIR_CIDADE):Str(STR_CIDADE_DE),&F_SERIF8,C_TEXT_DIM,1,false);
  if(c->owner!=s->me&&c->owner)Px_Text2(d,10+Px_Width2(Str(STR_CIDADE_DE),&F_SERIF8),82,NatName(w,c->owner),&F_SERIF8,C_TEXT_DIM);
 }
-// despacho diplomatico / decisao: o jogador responde A (aceitar) ou B (recusar)
+// despacho diplomatico / decisao: o jogador toca Aceitar ou Recusar
 static void PropModal(u16 *d,const World *w){
  const WProp *p=&w->prop;
  Ui_Parch(d,4,4,248,142);
@@ -469,17 +483,39 @@ static void PropModal(u16 *d,const World *w){
  Px_Rect(d,132,PM_BTN_Y,116,PM_BTN_H,C_NAVY);Px_Border(d,132,PM_BTN_Y,116,PM_BTN_H,C_GOLD);
  Px_WrapN(d,12,PM_BTN_Y+6,108,a,&F_SERIF8,C_TEXT,2,true);
  Px_WrapN(d,136,PM_BTN_Y+6,108,b,&F_SERIF8,C_TEXT,2,true);
- Px_Text2(d,114,PM_BTN_Y+26,"A",&F_SERIF8,C_GOLD);Px_Text2(d,238,PM_BTN_Y+26,"B",&F_SERIF8,C_GOLD_DIM);
+ // painel sem toque (layout Invertida) responde por A/B: mostra a tecla
+ if(Set_Ptr()->layout==LAYOUT_SWAP){Px_Text2(d,114,PM_BTN_Y+26,"A",&F_SERIF8,C_GOLD);Px_Text2(d,238,PM_BTN_Y+26,"B",&F_SERIF8,C_GOLD_DIM);}
 }
+// folha de acoes (A sobre a mira): titulo = alvo; uma linha tocavel por
+// acao, com o preco/% no rotulo. Geometria em WG_ACT_Y/H (wgame.h).
 static void DipMenu(u16 *d,const World *w,const WGame *s){
- static const u16 LB[DM_COUNT]={STR_DM_PAZ,STR_DM_ALIANCA,STR_DM_ROMPER,STR_DM_ENTRAR,STR_DM_CONVIDAR,STR_DM_GUERRA,STR_CANCELAR};
- Ui_Navy(d,4,4,248,144);
- char t[64]={0};Cat(t,64,Str(STR_DM_TITULO));Cat(t,64,NatName(w,s->dipTo));
- Px_Text2(d,12,12,t,&F_SERIF8,C_GOLD);
+ static const u16 LB[DM_COUNT]={STR_DM_PAZ,STR_DM_ALIANCA,STR_DM_ROMPER,STR_DM_ENTRAR,STR_DM_CONVIDAR,STR_DM_GUERRA,STR_CANCELAR,
+  STR_DM_CIDADE,STR_DM_FUNDAR,STR_DM_RECRUTAR,STR_DM_ATACAR,STR_DM_COLONIZAR};
+ Ui_Navy(d,4,4,248,184);
+ char t[64]={0};
+ switch(s->actKind){
+  case AK_PAIS:Cat(t,64,Str(STR_DM_TITULO));Cat(t,64,NatName(w,s->dipTo));break;
+  case AK_CIDADE:if(s->hcity>=0)City_Name(w,s->hcity,t,64);break;
+  case AK_TERRA:Cat(t,64,Str(STR_AC_TERRA));break;
+  default:Cat(t,64,Str(STR_TERRA_LIVRE));break;
+ }
+ if(s->actKind==AK_PAIS&&s->dipTo){FlagDef f;WDip_Flag(w,s->dipTo,&f);Px_Rect(d,10,9,22,15,C_GOLD);Flag_Draw(d,256,11,10,20,13,&f);}
+ else Ui_IconId(d,12,9,s->actKind==AK_LIVRE?ICO_LAND_S:ICO_HOUSE,false);
+ Px_Text2(d,38,10,t,&F_SERIF12,C_TEXT);
+ Px_Rect(d,10,WG_ACT_Y-4,236,1,C_GOLD_DIM);
  for(int i=0;i<s->dipN;i++){
-  int y=28+i*22;bool sel=i==s->dipSel;
-  if(sel){Px_Rect(d,8,y,240,20,C_CRIMSON);Px_Border(d,8,y,240,20,C_GOLD);}
-  Px_Text2(d,20,y+6,Str(LB[s->dipIt[i]]),&F_SERIF8,s->dipIt[i]==DM_GUERRA?(sel?C_TEXT:C_EVENT):C_TEXT);
+  u8 it=s->dipIt[i];
+  int y=WG_ACT_Y+i*WG_ACT_H;
+  bool war=it==DM_GUERRA, cancel=it==DM_CANCELAR;
+  Px_Rect(d,8,y,240,WG_ACT_H-3,war?C_CRIMSON:(cancel?C_NAVY_BG:C_NAVY_HI));
+  Px_Border(d,8,y,240,WG_ACT_H-3,cancel?C_GOLD_DIM:C_GOLD);
+  if(!cancel)for(int k=0;k<4;k++)for(int j=k;j<7-k;j++)Px_PSet(d,14+k,y+5+j,C_GOLD);
+  char lb[80]={0};Cat(lb,80,Str(LB[it]));
+  char n[16];
+  if(it==DM_FUNDAR){Px_Itoa((int)City_FoundCost(w,s->me),n);Cat(lb,80,n);Cat(lb,80,Str(STR_AC_OURO));}
+  else if(it==DM_RECRUTAR){Px_Itoa((int)World_RecruitCost(w,s->me),n);Cat(lb,80,n);Cat(lb,80,Str(STR_AC_OURO));}
+  else if(it==DM_ATACAR||it==DM_COLONIZAR){Px_Itoa(s->pct,n);Cat(lb,80,n);Cat(lb,80,Str(STR_AC_RESERVA));}
+  Px_Text2(d,24,y+5,lb,&F_SERIF8,cancel?C_TEXT_DIM:C_TEXT);
  }
 }
 void PxW_Panel(u16 *d){

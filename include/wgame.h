@@ -7,13 +7,19 @@
 // interface: camera, zoom, cursor, selecao, velocidade, avisos.
 //
 // Tela do MAPA (motor principal, cima no layout Normal): barra de recursos
-// + mapa politico estilo Victoria 3 (px_world.c). Tela do PAINEL (baixo):
-// ficha do pais sob o cursor + despacho + 4 acoes + % e velocidade.
+// + mapa politico estilo Victoria 3 (px_world.c). As SETAS movem o mapa e a
+// MIRA fica no centro da tela; A abre a folha de acoes do que esta' sob ela
+// (DESIGN 3.6). Tela do PAINEL (baixo, so' caneta): ficha do alvo + despacho
+// + botoes rapidos + % e velocidade.
 // Layout Invertida (Settings) poe o mapa embaixo, tocavel (lcdMainOnBottom).
 enum { WMAP_POL=0, WMAP_TER, WMAP_DIP, WMAP_COM, WMAP_IDEO, WMAP_COUNT };   // modos de mapa (Y)
 enum { LT_MERCADO=0, LT_COMERCIO, LT_DIPLO, LT_POLITICA, LT_COUNT };    // abas do Gabinete
-// acoes do menu de diplomacia sobre outro pais (botao bandeira)
-enum { DM_PAZ=0, DM_ALIANCA, DM_ROMPER, DM_ENTRAR, DM_CONVIDAR, DM_GUERRA, DM_CANCELAR, DM_COUNT };
+// folha de acoes (A sobre a mira, ou botao bandeira): o que da' p/ fazer com o
+// alvo sob a mira — pais, sua terra, sua cidade ou terra livre. So' caneta.
+enum { DM_PAZ=0, DM_ALIANCA, DM_ROMPER, DM_ENTRAR, DM_CONVIDAR, DM_GUERRA, DM_CANCELAR,
+       DM_CIDADE, DM_FUNDAR, DM_RECRUTAR, DM_ATACAR, DM_COLONIZAR, DM_COUNT };
+enum { AK_PAIS=0, AK_TERRA, AK_CIDADE, AK_LIVRE };        // tipo do alvo da folha
+enum { WG_ACT_Y=30, WG_ACT_H=22 };                        // linhas tocaveis da folha
 enum { WZ_COUNT=5 };      // zoom 0..4: (1<<z)/2 px por celula (Z0 = mundo inteiro)
 enum { WG_MAP_Y=20, WG_MAP_H=172 };                    // viewport do mapa
 typedef struct {
@@ -44,8 +50,9 @@ typedef struct {
  bool foundAsk;       // fundar pede o 2o toque (mostra o preco)
  s32 toastNum;        // numero no aviso (-1 = nenhum)
  s16 toastCity;       // cidade citada no aviso (-1 = nenhuma)
- bool dipOpen;        // menu de diplomacia aberto sobre dipTo
+ bool dipOpen;        // folha de acoes aberta (alvo: dipTo / actKind)
  u8 dipTo, dipSel, dipN, dipIt[DM_COUNT];
+ u8 actKind;          // AK_*: o que esta' sob a mira quando a folha abriu
  u8 ledTab, ledSel;   // Gabinete: aba e acao destacada
  u32 propSeen;        // dia da ultima proposta que ja pausou o jogo
  bool propRun;        // o jogo corria quando a proposta chegou (volta a correr)
@@ -63,7 +70,7 @@ void WG_Frame(GameState *g);   // dias conforme velocidade (parado na pausa)
 void WG_Input(GameState *g,u32 down,u32 held,bool tDown,bool tUp,bool tHeld,int tx,int ty);
 void WG_CityInput(GameState *g,u32 down,bool tDown,int tx,int ty); // SCR_CITY
 void WG_LedgerInput(GameState *g,u32 down,bool tDown,int tx,int ty); // SCR_LEDGER
-int WG_DipItems(u8 *out);      // itens validos do menu de diplomacia (para dipTo)
+int WG_DipItems(u8 *out);      // itens validos da folha de acoes (alvo atual)
 void PxL_Top(u16 *d);          // Gabinete (px_ledger.c): pagina da aba
 void PxL_Bot(u16 *d);          // Gabinete: abas + acoes
 void PxW_GoodChip(u16 *d,int x,int y,u8 g); // icone 8x8 do bem (px_ledger.c)

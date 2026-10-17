@@ -120,36 +120,71 @@ static void DoAttack(void){
  if(World_Attack(&W,S.me,t,S.pct))Toast(declared?STR_T_GUERRA:STR_T_ATAQUE,t);
  else Toast(declared?STR_T_GUERRA:STR_T_SEM_TROPAS,t);
 }
-static void DoPeace(void){
- if(S.dead||!S.sel||!World_AtWar(&W,S.me,S.sel)){Toast(STR_T_ALVO,0);return;}
- Toast(World_ProposePeace(&W,S.me,S.sel)?STR_T_PAZ_OK:STR_T_PAZ_NAO,S.sel);
+// ---------------- folha de acoes (A sobre a mira / botao bandeira) ----------------
+// O alvo e' o que esta' sob a mira: sua cidade, sua terra, terra livre ou um
+// pais. A folha so' lista o que da' p/ fazer ali (DESIGN 3.6: nada de botao
+// morto); preco vai no rotulo (px_world.c), entao nao ha' 2o toque.
+static u8 TargetKind(void){
+ if(S.hcity>=0&&W.city[S.hcity].owner==S.me)return AK_CIDADE;
+ if(S.selLand)return AK_LIVRE;
+ if(S.sel==S.me)return AK_TERRA;
+ return AK_PAIS;
 }
-// ---------------- diplomacia (botao bandeira): menu sobre o pais selecionado ----------------
 int WG_DipItems(u8 *o){
  int n=0;u8 t=S.dipTo,me=S.me;
- if(!t||t>=W.nC||!W.c[t].alive||t==me)return 0;
- bool war=World_AtWar(&W,me,t),al=WDip_Allied(&W,me,t);
- if(war)o[n++]=DM_PAZ;
- else{
-  if(!al&&WDip_Allies(&W,me)<2&&W.c[t].overlord!=me&&W.c[me].overlord!=t)o[n++]=DM_ALIANCA;
-  if(al)o[n++]=DM_ROMPER;
-  u8 L=W.c[t].bloc;
-  if(L&&L<W.nC&&W.c[L].bloc==L&&W.c[me].bloc!=L&&L!=me)o[n++]=DM_ENTRAR;
-  if(!W.c[t].bloc)o[n++]=DM_CONVIDAR;
-  if(!al&&W.c[t].overlord!=me&&W.c[me].overlord!=t)o[n++]=DM_GUERRA;
+ if(S.dead)return 0;
+ switch(S.actKind){
+  case AK_CIDADE:o[n++]=DM_CIDADE;o[n++]=DM_RECRUTAR;break;
+  case AK_TERRA:
+   if(City_CanFound(&W,me,S.curX,S.curY))o[n++]=DM_FUNDAR;
+   o[n++]=DM_RECRUTAR;break;
+  case AK_LIVRE:o[n++]=DM_COLONIZAR;o[n++]=DM_RECRUTAR;break;
+  default:{
+   if(!t||t>=W.nC||!W.c[t].alive||t==me)return 0;
+   bool war=World_AtWar(&W,me,t),al=WDip_Allied(&W,me,t);
+   bool sub=W.c[t].overlord==me||W.c[me].overlord==t;
+   if(war){o[n++]=DM_ATACAR;o[n++]=DM_PAZ;}
+   else{
+    if(!al&&WDip_Allies(&W,me)<2&&!sub)o[n++]=DM_ALIANCA;
+    if(al)o[n++]=DM_ROMPER;
+    u8 L=W.c[t].bloc;
+    if(L&&L<W.nC&&W.c[L].bloc==L&&W.c[me].bloc!=L&&L!=me)o[n++]=DM_ENTRAR;
+    if(!W.c[t].bloc)o[n++]=DM_CONVIDAR;
+    if(!al&&!sub)o[n++]=DM_GUERRA;
+   }
+  }break;
  }
  o[n++]=DM_CANCELAR;
  return n;
 }
+// (re)monta a folha p/ o alvo atual; a folha segue a mira enquanto o mapa anda
+static void ActBuild(void){
+ S.actKind=TargetKind();
+ S.dipTo=S.actKind==AK_PAIS?S.sel:0;
+ S.dipSel=0;S.dipN=(u8)WG_DipItems(S.dipIt);
+}
 static void DipOpen(void){
  if(S.dead)return;
- u8 t=S.selLand?0:S.sel;
- if(!t||t==S.me||!W.c[t].alive){Toast(STR_T_ALVO,0);return;}
- S.dipTo=t;S.dipSel=0;S.dipN=(u8)WG_DipItems(S.dipIt);S.dipOpen=true;
+ ActBuild();
+ if(S.dipN<=1){Toast(STR_T_ALVO,0);return;}
+ S.dipOpen=true;
 }
+static void DoRecruit(void);
+static void OpenCity(GameState *g,int ci);
 static void DipDo(GameState *g,u8 it){
  u8 t=S.dipTo,me=S.me;
  S.dipOpen=false;g->dirty=true;g->dirtyBot=true;
+ switch(it){
+  case DM_CIDADE:if(S.hcity>=0)OpenCity(g,S.hcity);return;
+  case DM_FUNDAR:{
+   int i=City_Found(&W,me,S.curX,S.curY);
+   if(i<0){Toast(City_CanFound(&W,me,S.curX,S.curY)?STR_T_SEM_OURO:STR_T_NAO_FUNDA,0);return;}
+   Toast(STR_T_FUNDOU,0);S.toastCity=(s16)i;S.hcity=(s16)i;S.stale=true;
+  }return;
+  case DM_RECRUTAR:DoRecruit();ActBuild();S.dipOpen=true;return;   // recrutar de novo sem reabrir
+  case DM_ATACAR:case DM_COLONIZAR:DoAttack();return;
+  default:break;
+ }
  if(!t||!W.c[t].alive)return;
  switch(it){
   case DM_PAZ:Toast(World_ProposePeace(&W,me,t)?STR_T_PAZ_OK:STR_T_PAZ_NAO,t);break;
@@ -159,7 +194,12 @@ static void DipDo(GameState *g,u8 it){
    if(W.c[me].bloc&&W.c[me].bloc!=L)WDip_LeaveBloc(&W,me);
    Toast(WDip_AskBloc(&W,me,L)?STR_T_BLOCO_OK:STR_T_BLOCO_NAO,L);}break;
   case DM_CONVIDAR:Toast(WDip_InviteBloc(&W,me,t)?STR_T_BLOCO_OK:STR_T_BLOCO_NAO,t);break;
-  case DM_GUERRA:World_DeclareWarCall(&W,me,t);W.c[me].prestige-=5;Toast(STR_T_GUERRA,t);S.stale=true;break;
+  case DM_GUERRA:
+   // declarar = chamar os aliados e ja' mandar a % da reserva (um gesto so')
+   World_DeclareWarCall(&W,me,t);W.c[me].prestige-=5;S.stale=true;
+   S.sel=t;S.selLand=false;DoAttack();
+   if(!S.toastT||S.toastId==STR_T_SEM_TROPAS)Toast(STR_T_GUERRA,t);
+   break;
   default:break;
  }
 }
@@ -207,7 +247,8 @@ static void SetZoom(int z){
  S.zoom=(u8)z;
  S.camX=(s16)WrapX(S.curX-fx*WG_ViewW()/1024);
  S.camY=(s16)(S.curY-fy*WG_ViewH()/1024);
- Follow();
+ // layout Normal: a mira volta ao centro (o mapa gira em volta do alvo)
+ if(Set_Ptr()->layout!=LAYOUT_SWAP)Center();else Follow();
 }
 static void Act(GameState *g,int id){
  switch(id){
@@ -228,9 +269,11 @@ static void Act(GameState *g,int id){
  }
  S.btnDown=(u8)id;S.btnT=6;g->dirtyBot=true;
 }
-// cursor: passo por zoom (celulas por passo, frames por passo); acelera
-// depois de 24 frames segurando
-static const u8 STEP_C[WZ_COUNT]={4,2,1,1,1}, STEP_F[WZ_COUNT]={1,1,1,2,4};
+// SETAS movem o MAPA: a mira (celula alvo) fica no centro da vista e a camera
+// a acompanha (so' encosta da mira no centro nas bordas sem volta do mundo).
+// Passo por zoom ~4 px/quadro (celulas por passo, quadros por passo); dobra
+// depois de 24 quadros segurando.
+static const u8 STEP_C[WZ_COUNT]={3,3,2,1,1}, STEP_F[WZ_COUNT]={1,1,1,1,2};
 static bool MoveCursor(u32 held){
  int dx=((held&KEY_RIGHT)?1:0)-((held&KEY_LEFT)?1:0);
  int dy=((held&KEY_DOWN)?1:0)-((held&KEY_UP)?1:0);
@@ -246,7 +289,7 @@ static bool MoveCursor(u32 held){
  if(ny<0)ny=0;
  if(ny>=W.h)ny=W.h-1;
  S.curX=(s16)nx;S.curY=(s16)ny;
- Follow();
+ Center();
  return true;
 }
 // Layout Invertida: o mapa esta na tela de toque. Arrastar = pan; tocar e
@@ -284,16 +327,28 @@ static void TouchMap(GameState *g,bool tDown,bool tUp,bool tHeld,int tx,int ty){
 }
 
 void WG_Input(GameState *g,u32 d,u32 h,bool tDown,bool tUp,bool tHeld,int tx,int ty){
- // modal de proposta tem prioridade (no layout invertido o toque e' do mapa)
- if(PropInput(g,d,Set_Ptr()->layout==LAYOUT_SWAP?false:tDown,tx,ty))return;
+ // painel (tela de baixo) e' so' caneta. No layout Invertida o painel fica em
+ // cima, sem toque: ai' a folha/proposta aceitam CIMA/BAIXO + A/B.
+ bool swap=Set_Ptr()->layout==LAYOUT_SWAP;
+ if(PropInput(g,swap?d:0,swap?false:tDown,tx,ty))return;
  if(S.dipOpen){
-  if(d&KEY_UP){S.dipSel=(u8)((S.dipSel+S.dipN-1)%S.dipN);g->dirtyBot=true;}
-  if(d&KEY_DOWN){S.dipSel=(u8)((S.dipSel+1)%S.dipN);g->dirtyBot=true;}
-  if(d&KEY_B){S.dipOpen=false;g->dirtyBot=true;}
-  if(d&KEY_A)DipDo(g,S.dipIt[S.dipSel]);
-  else if(tDown&&Set_Ptr()->layout!=LAYOUT_SWAP&&ty>=28&&ty<28+S.dipN*22){
-   int i=(ty-28)/22;if(i>=0&&i<S.dipN)DipDo(g,S.dipIt[i]);
+  if(swap){
+   if(d&KEY_UP){S.dipSel=(u8)((S.dipSel+S.dipN-1)%S.dipN);g->dirtyBot=true;}
+   if(d&KEY_DOWN){S.dipSel=(u8)((S.dipSel+1)%S.dipN);g->dirtyBot=true;}
+   if(d&KEY_A){DipDo(g,S.dipIt[S.dipSel]);return;}
+  }else{
+   if(tDown&&ty>=WG_ACT_Y&&ty<WG_ACT_Y+S.dipN*WG_ACT_H){
+    int i=(ty-WG_ACT_Y)/WG_ACT_H;if(i>=0&&i<S.dipN)DipDo(g,S.dipIt[i]);
+    return;
+   }
+   if(d&KEY_A){S.dipOpen=false;g->dirtyBot=true;d&=~(u32)KEY_A;}   // A de novo fecha
   }
+  if(d&KEY_B){S.dipOpen=false;g->dirtyBot=true;d&=~(u32)KEY_B;}
+  if(!S.dipOpen)return;
+  // a folha segue a mira: o mapa continua andando com as setas (layout Normal)
+  if(!swap&&MoveCursor(h)){Hover();ActBuild();g->dirtyBot=true;g->dirty=true;}
+  if(d&KEY_L){SetZoom(S.zoom-1);g->dirty=true;}
+  if(d&KEY_R){SetZoom(S.zoom+1);g->dirty=true;}
   return;
  }
  if(d&KEY_SELECT){
@@ -305,7 +360,7 @@ void WG_Input(GameState *g,u32 d,u32 h,bool tDown,bool tUp,bool tHeld,int tx,int
  if(d&KEY_X){Act(g,UI_W_LEDGER);return;}
  if(d&KEY_B){
   if(W.c[S.me].atkOn){World_Recall(&W,S.me);Toast(STR_T_RECOLHIDA,0);g->dirtyBot=true;}
-  S.warAsk=0;
+  S.warAsk=0;S.foundAsk=false;
  }
  if(d&KEY_A){
   if(W.ended){World_Continue(&W);S.paused=false;g->dirty=true;}
@@ -314,12 +369,10 @@ void WG_Input(GameState *g,u32 d,u32 h,bool tDown,bool tUp,bool tHeld,int tx,int
     World_SetPlayer(&W,S.sel);S.me=S.sel;S.dead=false;
     Toast(STR_ASSUMIU,S.me);g->dirty=true;
    }
-  }else if(S.hcity>=0&&W.city[S.hcity].owner==S.me)OpenCity(g,S.hcity);
-  else if(!S.selLand&&S.sel==S.me)Act(g,UI_W_CITY);  // na sua terra: fundar
-  else Act(g,UI_W_ATK);
+  }else{DipOpen();g->dirtyBot=true;}   // A = interagir com o que esta' sob a mira
  }
  if(MoveCursor(h)){Hover();g->dirtyBot=true;g->dirty=true;}
- if(Set_Ptr()->layout==LAYOUT_SWAP)TouchMap(g,tDown,tUp,tHeld,tx,ty);
+ if(swap)TouchMap(g,tDown,tUp,tHeld,tx,ty);
  else if(tDown){int id=Ui_Hit(UI_WORLD,tx,ty);if(id>0)Act(g,id);}
 }
 
@@ -330,8 +383,14 @@ void WG_Frame(GameState *g){
  if(S.toastT&&!--S.toastT)g->dirtyBot=true;
  if(S.btnT&&!--S.btnT)g->dirtyBot=true;
  if(S.bannerT&&!--S.bannerT)g->dirty=true;
- // proposta nova da IA: pausa e mostra o despacho (resposta em PropInput)
- if(W.prop.kind){u32 k=W.prop.day*8u+W.prop.kind;
+ // cidade tomada enquanto aberta: volta ao mapa (o painel nao tem mais dono)
+ if((g->screen==SCR_CITY)&&(S.cityIdx<0||S.cityIdx>=W.nCity||W.city[S.cityIdx].owner!=S.me)){
+  Menu_Go(g,SCR_WORLD);Toast(STR_T_CIDADE_PERDIDA,0);
+ }
+ // proposta nova da IA: pausa e mostra o despacho (resposta em PropInput).
+ // So' no mapa: o despacho e' desenhado no painel do mapa; na cidade ou no
+ // Gabinete ele espera a volta (antes o jogo pausava sem mostrar nada).
+ if(W.prop.kind&&g->screen==SCR_WORLD){u32 k=W.prop.day*8u+W.prop.kind;
   if(k!=S.propSeen){S.propSeen=k;S.propRun=!S.paused;S.paused=true;g->dirty=true;g->dirtyBot=true;}}
  if(S.paused||S.dead||W.ended)return;
  static const u8 FPD[6]={0,24,12,6,3,1}; // frames por dia, velocidade 1..5
@@ -349,6 +408,7 @@ void WG_Frame(GameState *g){
 
 // ---------------- Gabinete (SCR_LEDGER) ----------------
 static void LedgerAct(GameState *g){
+ if(S.dead)return;
  WCountry *me=&W.c[S.me];WEco *e=&W.eco[S.me];
  switch(S.ledTab){
   case LT_MERCADO:S.mapMode=WMAP_COM;Menu_Go(g,SCR_WORLD);return;
@@ -365,14 +425,14 @@ void WG_LedgerInput(GameState *g,u32 d,bool tDown,int tx,int ty){
  bool moved=false;
  if(d&KEY_L){S.ledTab=(u8)((S.ledTab+LT_COUNT-1)%LT_COUNT);moved=true;}
  if(d&KEY_R){S.ledTab=(u8)((S.ledTab+1)%LT_COUNT);moved=true;}
- if(d&(KEY_LEFT)){S.ledTab=(u8)((S.ledTab+LT_COUNT-1)%LT_COUNT);moved=true;}
- if(d&(KEY_RIGHT)){S.ledTab=(u8)((S.ledTab+1)%LT_COUNT);moved=true;}
+ // abas e acao na tela de baixo: so' caneta (L/R trocam a aba como atalho)
+ bool act=false;
  if(tDown){
   if(ty>=LG_TAB_Y&&ty<LG_TAB_Y+LG_TAB_H){S.ledTab=(u8)(tx*LT_COUNT/256);moved=true;}
-  else if(ty>=LG_ACT_Y&&ty<LG_ACT_Y+LG_ACT_H&&tx>=LG_ACT_X&&tx<LG_ACT_X+LG_ACT_W)d|=KEY_A;
+  else if(ty>=LG_ACT_Y&&ty<LG_ACT_Y+LG_ACT_H&&tx>=LG_ACT_X&&tx<LG_ACT_X+LG_ACT_W)act=true;
   else if(ty>=LG_BACK_Y&&ty<LG_BACK_Y+LG_ACT_H)d|=KEY_B;
  }
- if(d&KEY_A){LedgerAct(g);if(g->screen!=SCR_LEDGER)return;}
+ if(act){LedgerAct(g);if(g->screen!=SCR_LEDGER)return;}
  if(d&(KEY_B|KEY_START|KEY_X)){Menu_Go(g,SCR_WORLD);return;}
  if(d&KEY_SELECT){S.paused=!S.paused;}
  if(moved){g->dirty=true;g->dirtyBot=true;}
@@ -388,42 +448,38 @@ void WG_CityInput(GameState *g,u32 d,bool tDown,int tx,int ty){
  if(ci<0||ci>=W.nCity||W.city[ci].owner!=S.me){Menu_Go(g,SCR_WORLD);return;}
  WCity *c=&W.city[ci];
  bool moved=false;
+ // lotes e catalogo de obras: so' caneta. Tocar o lote seleciona; tocar de
+ // novo abre o catalogo (lote vazio) ou lanca navio (estaleiro).
  if(tDown&&ty>=66&&ty<146&&tx>=4&&tx<252){
-  int s=((ty-66)/40)*4+(tx-4)/62;
-  if(s==S.citySlot&&!S.cityPick)d|=KEY_A;else{S.citySlot=(u8)s;S.cityPick=false;moved=true;}
+  int sl=((ty-66)/40)*4+(tx-4)/62;
+  if(sl==S.citySlot&&!S.cityPick){
+   if(S.citySlot<City_Slots(c->tier)&&!c->bld[S.citySlot]&&!c->bq){S.cityPick=true;S.pickK=FirstPick(ci);}
+   else if(c->bld[S.citySlot]==BK_ESTALEIRO)Toast(WEco_BuildShip(&W,S.me)?STR_T_NAVIO:STR_T_SEM_NAVIO,0);
+  }else{S.citySlot=(u8)sl;S.cityPick=false;}
+  moved=true;
  }else if(tDown&&S.cityPick&&ty>=148){
-  if(tx<40)d|=KEY_LEFT;else if(tx>216)d|=KEY_RIGHT;else d|=KEY_A;
- }
- if(S.cityPick){
-  if(d&(KEY_LEFT|KEY_RIGHT)){
-   int dir=(d&KEY_RIGHT)?1:-1;
-   S.pickK=(u8)(1+((S.pickK-1+dir+(BK_COUNT-1))%(BK_COUNT-1)));moved=true;
-  }
-  if(d&KEY_A){
+  if(tx<40||tx>216){
+   int dir=tx>216?1:-1;
+   S.pickK=(u8)(1+((S.pickK-1+dir+(BK_COUNT-1))%(BK_COUNT-1)));
+  }else{
    u8 k=S.pickK;
    if(City_Build(&W,ci,S.citySlot,k)){Toast(STR_T_OBRA_INI,0);S.cityPick=false;}
    else if(City_CanBuild(&W,ci,k))Toast(STR_T_SEM_OURO,0);
-   moved=true;
   }
-  if(d&KEY_B){S.cityPick=false;moved=true;}
- }else{
-  if(d&KEY_LEFT){S.citySlot=(u8)((S.citySlot+3)%4+(S.citySlot/4)*4);moved=true;}
-  if(d&KEY_RIGHT){S.citySlot=(u8)((S.citySlot+1)%4+(S.citySlot/4)*4);moved=true;}
-  if(d&(KEY_UP|KEY_DOWN)){S.citySlot=(u8)((S.citySlot+4)%8);moved=true;}
-  if(d&KEY_A){
-   if(S.citySlot<City_Slots(c->tier)&&!c->bld[S.citySlot]&&!c->bq){S.cityPick=true;S.pickK=FirstPick(ci);moved=true;}
-   else if(c->bld[S.citySlot]==BK_ESTALEIRO){Toast(WEco_BuildShip(&W,S.me)?STR_T_NAVIO:STR_T_SEM_NAVIO,0);moved=true;}
+  moved=true;
+ }
+ if(d&KEY_B){
+  if(S.cityPick){S.cityPick=false;moved=true;}
+  else{Menu_Go(g,SCR_WORLD);return;}
+ }
+ if(!S.cityPick&&(d&(KEY_L|KEY_R))){
+  // proxima/anterior cidade sua
+  int dir=(d&KEY_R)?1:-1;
+  for(int k=1;k<=W.nCity;k++){
+   int j=((ci+dir*k)%W.nCity+W.nCity)%W.nCity;
+   if(W.city[j].owner==S.me){S.cityIdx=(s16)j;S.citySlot=0;S.curX=(s16)W.city[j].x;S.curY=(s16)W.city[j].y;Center();Hover();break;}
   }
-  if(d&(KEY_L|KEY_R)){
-   // proxima/anterior cidade sua
-   int dir=(d&KEY_R)?1:-1;
-   for(int k=1;k<=W.nCity;k++){
-    int j=((ci+dir*k)%W.nCity+W.nCity)%W.nCity;
-    if(W.city[j].owner==S.me){S.cityIdx=(s16)j;S.citySlot=0;S.curX=(s16)W.city[j].x;S.curY=(s16)W.city[j].y;Center();Hover();break;}
-   }
-   g->dirty=true;
-  }
-  if(d&KEY_B){Menu_Go(g,SCR_WORLD);return;}
+  g->dirty=true;
  }
  if(d&KEY_START){Menu_Go(g,SCR_WORLD);return;}
  if(d&KEY_SELECT){S.paused=!S.paused;}

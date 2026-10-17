@@ -155,8 +155,11 @@ static void PgDiplo(u16 *d,const World *w,u8 me){
  char t[64];
  t[0]=0;Cat(t,64,Str(STR_IDEOLOGIA));Cat(t,64,": ");Cat(t,64,Str((u16)(STR_ID_0+c->ideo)));
  Px_Text2(d,12,28,t,&F_SERIF8,C_INK);
- Row(d,w,42,STR_ALIADOS,c->ally[0],0);
- if(c->ally[1])Row(d,w,54,STR_ALIADOS,c->ally[1],0);
+ // aliados vivos em ordem (um slot pode vagar antes do outro: ally[0]=0, ally[1]=X)
+ u8 al[2];int na=0;
+ for(int k=0;k<2;k++)if(c->ally[k]&&w->c[c->ally[k]].alive)al[na++]=c->ally[k];
+ Row(d,w,42,STR_ALIADOS,na?al[0]:0,0);
+ if(na>1)Row(d,w,54,STR_ALIADOS,al[1],0);
  Row(d,w,68,STR_RIVAL,c->rival,0);
  // mercado comum: lider + membros em bandeirinhas
  u8 b=c->bloc;
@@ -264,7 +267,6 @@ void PxL_Bot(u16 *d){
  Px_Border(d,LG_ACT_X,LG_ACT_Y,LG_ACT_W,LG_ACT_H,C_GOLD);
  Ui_IconId(d,LG_ACT_X+8,LG_ACT_Y+6,ico,!en);
  Px_Text2(d,LG_ACT_X+34,LG_ACT_Y+9,t,&F_SERIF8,en?C_TEXT:C_TEXT_DIM);
- Px_Text2(d,LG_ACT_X+LG_ACT_W-16,LG_ACT_Y+9,"A",&F_SERIF8,C_GOLD);
  Px_Rect(d,LG_ACT_X,LG_BACK_Y,LG_ACT_W,LG_ACT_H,C_NAVY);
  Px_Border(d,LG_ACT_X,LG_BACK_Y,LG_ACT_W,LG_ACT_H,C_GOLD_DIM);
  Ui_TextC(d,128,LG_BACK_Y+9,Str(STR_VOLTAR),0,C_TEXT);

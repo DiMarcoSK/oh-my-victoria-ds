@@ -57,6 +57,15 @@ static void Shot(GameState*g,const char*name){
  fclose(f);
 }
 static void Press(GameState*g,u32 k){host_down=k;host_held=k;Frames(g,1);host_held=0;Frames(g,2);}
+static void Touch(GameState*g,int x,int y){host_tx=x;host_ty=y;host_held=KEY_TOUCH;Frames(g,1);host_held=0;Frames(g,1);}
+// toca a linha da folha de acoes que tem o item 'it' (DM_*); false = nao ha'
+static bool TapAct(GameState*g,u8 it){
+ WGame*s=WG_Ptr();
+ for(int i=0;i<s->dipN;i++)if(s->dipIt[i]==it){Touch(g,128,WG_ACT_Y+i*WG_ACT_H+6);return true;}
+ return false;
+}
+// resposta da proposta: toque em Aceitar (esq.) ou Recusar (dir.)
+static void Answer(GameState*g,bool yes){Touch(g,yes?60:190,PM_BTN_Y+10);}
 static void Hold(GameState*g,u32 k,int n){host_down=k;host_held=k;Frames(g,1);for(int i=1;i<n;i++){host_held=k;Frames(g,1);}host_held=0;Frames(g,1);}
 
 int main(void){
@@ -91,10 +100,14 @@ int main(void){
  Press(g,KEY_L);                     Shot(g,"11_z3");
  Hold(g,KEY_DOWN,7);Hold(g,KEY_RIGHT,7);
  Shot(g,"13_cursor_franca");
- Press(g,KEY_A);                     Shot(g,"14_confirma_guerra");
+ Press(g,KEY_A);                     Shot(g,"14_folha_acoes");
+ if(!WG_Ptr()->dipOpen){printf("FALHA: A sobre a mira nao abriu a folha de acoes\n");bad=1;}
  u32 c0=WG_World()->c[WG_Ptr()->me].cells,c1=c0;
  World_Recruit(WG_World(),WG_Ptr()->me);World_Recruit(WG_World(),WG_Ptr()->me); // recruta com o ouro inicial
- WG_Ptr()->pct=100;Press(g,KEY_A);Press(g,KEY_SELECT);
+ WG_Ptr()->pct=100;
+ if(!TapAct(g,DM_GUERRA)&&!TapAct(g,DM_ATACAR)){printf("FALHA: folha sem guerra/ataque sobre a Franca\n");bad=1;}
+ if(WG_Ptr()->dipOpen){printf("FALHA: a folha nao fechou depois da acao\n");bad=1;}
+ Press(g,KEY_SELECT);
  for(int i=0;i<240;i++){Frames(g,1);u32 c=WG_World()->c[WG_Ptr()->me].cells;if(c>c1)c1=c;}
  Shot(g,"15_guerra");
  WG_Ptr()->bannerT=0;Frames(g,120);Shot(g,"15b_frente");
@@ -108,17 +121,32 @@ int main(void){
   int cap=City_Near(w,w->c[s->me].capX,w->c[s->me].capY,3);
   if(cap<0){printf("FALHA: capital do jogador sem cidade\n");bad=1;}
   else{
-   if(w->prop.kind)Press(g,KEY_B);          // despacho da IA pendente (trava o cursor): recusa antes
+   if(w->prop.kind)Answer(g,false);         // despacho da IA pendente (trava o mapa): recusa antes
    s->curX=(s16)w->city[cap].x;s->curY=(s16)w->city[cap].y;Hold(g,KEY_LEFT,1);Hold(g,KEY_RIGHT,1);
    w->c[s->me].gold+=5000;
    Press(g,KEY_A);
-   if(g->screen!=SCR_CITY){printf("FALHA: A na capital nao abriu a cidade\n");bad=1;}
+   if(!s->dipOpen||s->actKind!=AK_CIDADE){printf("FALHA: A na capital nao abriu a folha da cidade\n");bad=1;}
+   TapAct(g,DM_CIDADE);
+   if(g->screen!=SCR_CITY){printf("FALHA: folha nao abriu a cidade\n");bad=1;}
    Shot(g,"22_cidade");
-   // escolhe um slot vazio e constroi
-   for(int k=0;k<8;k++){if(!w->city[cap].bld[s->citySlot]&&s->citySlot<City_Slots(w->city[cap].tier))break;Press(g,KEY_RIGHT);if(k==3)Press(g,KEY_DOWN);}
-   Press(g,KEY_A);Shot(g,"23_escolher_obra");
-   for(int k=0;k<11&&!City_CanBuild(w,cap,s->pickK);k++)Press(g,KEY_RIGHT);
-   u8 want=s->pickK;Press(g,KEY_A);
+   // bug dos pedestres: sair e voltar a' mesma cidade tem que repintar o fundo
+   {static u16 a[256*172];Px_Top(g);for(int i=0;i<256*172;i++)a[i]=Px_BackTop()[20*256+i];
+    Press(g,KEY_B);Frames(g,4);
+    if(g->screen!=SCR_WORLD){printf("FALHA: B nao saiu da cidade\n");bad=1;}
+    Shot(g,"22b_saiu_da_cidade");
+    Press(g,KEY_A);TapAct(g,DM_CIDADE);Px_Top(g);
+    long diff=0;for(int i=0;i<256*172;i++){u16 p=Px_BackTop()[20*256+i];if(p!=a[i])diff++;}
+    printf("  reabrir a cidade: %ld px diferentes (so' pedestres/fumaca)\n",diff);
+    if(diff>256*172/8){printf("FALHA: cena da cidade reaberta mostra o mapa (cache velho)\n");bad=1;}}
+   // escolhe um slot vazio (toque) e constroi: 1o toque seleciona, 2o abre o catalogo
+   {int sl=-1;for(int k=0;k<City_Slots(w->city[cap].tier);k++)if(!w->city[cap].bld[k]){sl=k;break;}
+    if(sl<0){printf("FALHA: capital sem lote livre\n");bad=1;sl=0;}
+    int tx=4+(sl%4)*62+30,ty=66+(sl/4)*40+20;
+    Touch(g,tx,ty);Touch(g,tx,ty);}
+   if(!s->cityPick){printf("FALHA: 2o toque no lote nao abriu o catalogo\n");bad=1;}
+   Shot(g,"23_escolher_obra");
+   for(int k=0;k<11&&!City_CanBuild(w,cap,s->pickK);k++)Touch(g,230,170);
+   u8 want=s->pickK;Touch(g,128,170);
    printf("  obra pedida: %d, em construcao: %d\n",want,w->city[cap].bq);
    if(!w->city[cap].bq){printf("FALHA: obra nao entrou em construcao\n");bad=1;}
    Frames(g,30);Shot(g,"24_cidade_andaime");
@@ -139,11 +167,11 @@ int main(void){
    u16 n0=w->nCity;
    s->curX=(s16)fx;s->curY=(s16)fy;Hold(g,KEY_LEFT,1);Hold(g,KEY_RIGHT,1);
    if(!City_CanFound(w,s->me,s->curX,s->curY)){s->curX=(s16)fx;s->curY=(s16)fy;}
-   int id=Ui_Hit(UI_WORLD,130,160);
-   host_tx=130;host_ty=160;host_held=KEY_TOUCH;Frames(g,1);host_held=0;Frames(g,1);  // 1o toque: preco
+   Press(g,KEY_A);                                                    // folha: "Fundar cidade aqui — preco"
+   if(s->actKind!=AK_TERRA){printf("FALHA: mira na terra propria nao deu a folha de territorio (%d)\n",s->actKind);bad=1;}
    Shot(g,"26_fundar_preco");
-   host_held=KEY_TOUCH;Frames(g,1);host_held=0;Frames(g,1);                            // 2o: funda
-   printf("  fundar (botao %d): %u -> %u cidades\n",id,n0,w->nCity);
+   bool ok=TapAct(g,DM_FUNDAR);
+   printf("  fundar pela folha (%s): %u -> %u cidades\n",ok?"item presente":"SEM item",n0,w->nCity);
    if(w->nCity!=n0+1){printf("FALHA: nao fundou a cidade\n");bad=1;}
    Shot(g,"27_fundada");
   }else printf("  (sem celula livre p/ fundar)\n");
@@ -172,22 +200,24 @@ int main(void){
   if(!fra||!w->c[fra].alive)for(u8 i=1;i<w->nC&&!fra;i++)if(w->c[i].alive&&i!=s->me)fra=i;
   s->curX=(s16)w->c[fra].capX;s->curY=(s16)w->c[fra].capY;Hold(g,KEY_LEFT,1);Hold(g,KEY_RIGHT,1);
   s->sel=fra;s->selLand=false;s->hcity=-1;
-  host_tx=57;host_ty=169;host_held=KEY_TOUCH;Frames(g,1);host_held=0;Frames(g,1);   // botao bandeira
-  if(!s->dipOpen){printf("FALHA: bandeira nao abriu o menu de diplomacia\n");bad=1;}
+  Touch(g,57,169);   // botao bandeira
+  if(!s->dipOpen){printf("FALHA: bandeira nao abriu a folha de acoes\n");bad=1;}
   Shot(g,"34_diplomacia_menu");
   Press(g,KEY_B);
-  if(s->dipOpen){printf("FALHA: B nao fechou o menu de diplomacia\n");bad=1;}
+  if(s->dipOpen){printf("FALHA: B nao fechou a folha de acoes\n");bad=1;}
   // proposta da IA: o jogo pausa e mostra o despacho; A aceita
   w->prop.kind=PR_NONE;
   WDip_Propose(w,PR_ALIANCA,fra,0,0,0);s->paused=false;
   Frames(g,4);Shot(g,"35_proposta");
   if(!s->paused){printf("FALHA: proposta nao pausou o jogo\n");bad=1;}
   Press(g,KEY_A);
-  if(w->prop.kind){printf("FALHA: A nao respondeu a proposta\n");bad=1;}
+  if(!w->prop.kind){printf("FALHA: A respondeu a proposta (o painel e' so' caneta)\n");bad=1;}
+  Answer(g,true);
+  if(w->prop.kind){printf("FALHA: toque em Aceitar nao respondeu a proposta\n");bad=1;}
   printf("  alianca aceita: %s\n",WDip_Allied(w,s->me,fra)?"sim":"nao (pais cheio de aliados)");
   // decisao de evento (2 opcoes)
   WDip_Propose(w,PR_DECISAO,s->me,0,0,(u16)(Rnd_Count()-3));
-  Frames(g,4);Shot(g,"36_decisao");Press(g,KEY_B);
+  Frames(g,4);Shot(g,"36_decisao");Answer(g,false);
   // Gabinete: 4 abas
   Press(g,KEY_X);
   if(g->screen!=SCR_LEDGER){printf("FALHA: X nao abriu o Gabinete\n");bad=1;}
@@ -195,8 +225,8 @@ int main(void){
   Press(g,KEY_R);Shot(g,"31_gabinete_comercio");
   Press(g,KEY_R);Shot(g,"32_gabinete_diplo");
   Press(g,KEY_R);Shot(g,"33_gabinete_politica");
-  u8 tax0=w->eco[s->me].tax;Press(g,KEY_A);
-  if(w->eco[s->me].tax==tax0){printf("FALHA: A nao mudou o imposto\n");bad=1;}
+  u8 tax0=w->eco[s->me].tax;Touch(g,LG_ACT_X+20,LG_ACT_Y+10);
+  if(w->eco[s->me].tax==tax0){printf("FALHA: toque na acao nao mudou o imposto\n");bad=1;}
   Press(g,KEY_B);
   if(g->screen!=SCR_WORLD){printf("FALHA: B do Gabinete nao voltou ao mapa\n");bad=1;}
  }
@@ -212,7 +242,7 @@ int main(void){
  int props=0;
  for(int i=0;i<3650;i++){
   // despachos e decisoes da IA pausam o jogo: responde alternando A/B
-  if(WG_World()->prop.kind){if(!props)Shot(g,"29_despacho_ia");Press(g,(props&1)?KEY_B:KEY_A);props++;WG_Ptr()->paused=false;}
+  if(WG_World()->prop.kind){if(!props)Shot(g,"29_despacho_ia");Answer(g,!(props&1));props++;WG_Ptr()->paused=false;}
   Frames(g,1);
  }
  printf("  %d despachos/decisoes respondidos\n",props);
