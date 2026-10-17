@@ -101,11 +101,11 @@ Os valores exatos dos tokens estão no SDD sec 14.1. Não invente cor fora deles
 
 ### 3.3 Ilustração (retratos, cenas, brasões)
 
-- **Pixel art nativo 1:1** para 256x192. Nunca reescale a concept (ela não está em resolução nativa).
+- **Resolução nativa 1:1** para 256x192. As pinturas dos menus (pôr do sol de Westminster com o logo, oficial, cidade gótica, porto com estandarte, brasão, gravura do porto, papel e cantos) **são a própria concept**, recortada e reamostrada com filtro suave (Lanczos) para o pixel do DS — menos pixelada, igual à concept (SDD ADR-29). Nunca amplie por vizinho mais próximo e nunca recorte texto: o texto vem sempre do jogo (`str.c`).
 - Luz de cima-esquerda, outline escuro de 1px, sem anti-aliasing contra transparente, paleta quantizada para 15 bits.
 - **Pintura histórica do séc. XIX como referência** (Turner, Delacroix, gravuras de jornal ilustrado da época, retratos oficiais), traduzida para pixel. Cores quentes de pôr do sol, céus dramáticos, arquitetura reconhecível.
 - **Retratos e figuras de povos não europeus** são desenhados a partir de referência histórica documentada (roupas, armas, arquitetura, paisagem do período), nunca de caricatura ou fantasia genérica de "tribo". Ver sec 6.5.
-- Cenas de seleção de país: uma por **região cultural** (sec 4.6) e cenas únicas para os países de destaque. Cada cena mostra **gente + lugar + época** (ex.: a concept do Reino Unido: soldado, Union Jack, Tâmisa, Westminster).
+- Cenas de seleção de país: uma por **região cultural** (sec 4.6) e cenas únicas para os países de destaque. Cada cena mostra **gente + lugar + época** (ex.: a concept do Reino Unido: soldado, Union Jack, Tâmisa, Westminster). Hoje a cena do porto vale para todos: o **pano do estandarte é repintado com a bandeira da nação escolhida**, mantendo as dobras e sombras da pintura (máscara de sombra gerada com a arte).
 
 ### 3.4 Texto e voz
 
@@ -117,12 +117,33 @@ Os valores exatos dos tokens estão no SDD sec 14.1. Não invente cor fora deles
 
 ### 3.5 Não faça
 
-- ❌ Gradiente, sombra suave, vidro, neon, flat design moderno, emoji.
+- ❌ Vidro, neon, flat design moderno, emoji. Degradê só sutil e pontilhado (botões, faixa de seleção, céu, papel), como na concept.
 - ❌ Fonte sem serifa ou fonte 3x5 em tela do jogador (a 3x5 é só debug).
 - ❌ Crimson em qualquer coisa que não seja seleção.
 - ❌ Cor literal fora dos tokens (SDD sec 14.1) e `RGB15()` cru (vira pixel transparente — ADR-13).
-- ❌ Asset recortado da concept ou reescalado.
+- ❌ Recorte da concept com texto embutido, ou ampliado/reduzido sem filtro (bloco duplicado).
 - ❌ Estereótipo visual de qualquer povo (sec 6.5).
+
+### 3.6 Controles na partida (mira no centro, painel só caneta)
+
+O DS tem duas telas com papéis diferentes, e os controles seguem isso:
+
+| Entrada | Tela de cima (mapa) | Tela de baixo (painel) |
+|---|---|---|
+| **Setas** | movem o **mapa**; a **mira** (anel com ponto) fica fixa no centro e o mapa corre por baixo dela | — |
+| **A** | **interage com o que está sob a mira**: abre a *folha de ações* no painel | — |
+| **Caneta** | — | **tudo** no painel: folha de ações, botões rápidos, despachos (Aceitar/Recusar), Gabinete, lotes da cidade |
+| B | fecha a folha; recolhe a ofensiva | volta (cidade, Gabinete) |
+| L / R | zoom (a mira continua no mesmo alvo) | troca a aba do Gabinete / a cidade |
+| X / Y / START / SELECT | Gabinete / modo de mapa / pausa (menu) / pausa rápida | — |
+
+**Folha de ações:** lista só o que dá para fazer com o alvo, com o preço no rótulo (nada de 2º toque escondido):
+- **outro país:** em paz — propor aliança, romper, pedir entrada / convidar ao mercado comum, *declarar guerra e atacar*; em guerra — enviar tropas (% da reserva), propor paz;
+- **seu território:** fundar cidade aqui (preço), recrutar tropas (preço);
+- **sua cidade:** abrir a cidade, recrutar;
+- **terra livre:** ocupar (% da reserva), recrutar.
+
+Mover o mapa com a folha aberta atualiza a folha para o novo alvo. No layout **Invertida** (mapa na tela de toque) o painel fica em cima, sem toque: aí a folha e os despachos aceitam CIMA/BAIXO + A/B.
 
 ---
 
@@ -230,7 +251,7 @@ O território é célula; a **vida** está nas cidades. Cada país começa com a
 
 **Fundar cidade:** no seu território, a 5 células de qualquer outra cidade, por **200 + 120 de ouro por cidade que você já tem** — o preço aparece antes de confirmar. Começa como povoado com uma fazenda.
 
-**Ver a cidade viver (Imperator):** abrir a cidade mostra a cena dela na tela de cima. Cada obra aparece no seu lote quando fica pronta (com andaime enquanto constrói); o casario cresce com a população; gente anda na rua, a carroça vira carro depois de 1910, a chaminé solta fumaça, o trem passa se houver estação, barcos no porto. A arquitetura segue a cultura de quem governa (europeia, leste-asiática, islâmica, africana, indígena) e a era (madeira e estuque -> tijolo -> concreto e vidro). Na conquista, a cidade muda de dono, perde gente e a obra em curso.
+**Ver a cidade viver (Imperator):** abrir a cidade mostra a cena dela na tela de cima. Cada obra aparece no seu lote quando fica pronta (com andaime enquanto constrói); o casario cresce com a população; gente anda na rua, a carroça vira carro depois de 1910, a chaminé solta fumaça, o trem passa se houver estação, barcos no porto. A arquitetura segue a cultura de quem governa (europeia, leste-asiática, islâmica, africana, indígena) e a era (madeira e estuque -> tijolo -> concreto e vidro). A cena é uma pequena pintura: céu em degradê com sol e nuvens fofas, relevo em duas camadas que somem na bruma, mar com o sol refletido, árvores do clima (copa redonda, choupo, conífera, palmeira), rua de paralelepípedo com calçadas e lampiões (a gás até 1900), sombras das obras no chão e gente de 9 px (chapéu, vestido, sombra) desenhada de trás para a frente. Na conquista, a cidade muda de dono, perde gente e a obra em curso — e a tela da cidade fecha.
 
 **IA:** constrói seguindo o caminho de nível e funda quando sobra ouro e terra — o mundo inteiro se urbaniza ao longo de 225 anos.
 
