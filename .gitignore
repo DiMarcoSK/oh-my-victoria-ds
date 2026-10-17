@@ -1,0 +1,26 @@
+# Saidas de build (make / make clean)
+build/
+*.o
+*.d
+*.elf
+*.nds
+*.map
+*.lst
+*.sav
+
+# ROMs de referencia (dslink, ftpd) e de bisect: ficam locais, nao versionados
+ref_*.nds
+
+# Host / ferramentas
+host/out/
+__pycache__/
+*.pyc
+*.exe
+
+# Editor / SO
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini

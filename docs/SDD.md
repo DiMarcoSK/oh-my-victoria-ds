@@ -271,7 +271,10 @@ Menu inicial: L/R dificuldade, B seed (+`0x9E3779B9`), A comeca (`Game_New`). Me
 14. **Assets ilustrados nas telas (v0.9), fim do "100% procedural" na UI:** a concept art pede retratos, cenas, brasoes e estandartes que nao saem de codigo procedural com qualidade aceitavel. Mapa e efeitos continuam procedurais. Formato: PNG indexado -> `tools/png2c.py` -> `.c` com paleta 15 bits (+BIT 15) e pixels 8bpp RLE, **commitados** — build oficial e rootless ficam identicos, sem grit nem Python no build. Rejeitado: NitroFS (mais um ponto de falha no boot, justo onde ja sofremos; reavaliar se arte passar de 512KB).
 15. **Fonte serifada com acento (Serifa 8 / Serifa 12) substitui a 3x5 nas telas do jogador (v0.9):** a concept e o PT-BR exigem acento e hierarquia de titulo. Custo ~7KB ROM. A 3x5 fica so p/ overlay de debug. Strings saem de `source/str.c` (PT/EN), nunca literais soltos.
 16. **Layout Normal = mapa em cima (concept); Invertida = mapa embaixo e tocavel (heranca touch-first v0.8), via `lcdSwap()` (v0.9):** resolve o conflito v0.8 x concept sem manter duas UIs. O render desenha em "tela mapa" e "tela painel"; o hardware decide qual fica em cima. Exposto como a opcao "Tela" das Configurações.
-17. **Maquina de telas `g->screen` (u8) substitui `bool inMenu` (v0.9):** sao 10+ estados com "voltar" e contexto (Config abre do menu e da pausa); bool nao escala. Custo 0B liquido (troca bool por u8 + `scrPrev`).
+17. **Maquina de telas `g->screen` (u8) substitui `bool inMenu` (v0.9):** sao 10+ estados com "voltar" e contexto (Config abre do menu e da pausa); bool nao escala. Custo +1B (`bool` vira `u8` de mesmo tamanho; `scrPrev` e o byte novo).
+18. **Mundo celular + regioes, estilo Victoria 3 + frontwars.io (pos-v0.9, marcos M1-M6 do `DESIGN.md`):** territorio em celulas (mapa-mundi 512x192, dono `u8`) pintadas como em frontwars; economia/POPs/obras por **fatia de regiao** (~600 regioes x ate 4 donos), como os estados do Victoria 3. Celula = visual e militar, regiao = economica: a guerra fica fluida e a economia cabe no ARM9. O mundo sai do `GameState` (trava de 14KB) para estado proprio em `.bss` com `_Static_assert` novo (~200KB). Substitui o mapa 32x24 de `Tile` e a marcha tile-a-tile. Detalhes de design: `DESIGN.md` sec 4.
+19. **Paises como dados em ROM com bandeira procedural:** >=250 paises/povos nao cabem com arte de bandeira individual; cada bandeira e um descritor de ~6B (padrao + 3 cores + emblema compartilhado) desenhado em 16x11 e 40x58. Cena de selecao por regiao cultural, nao por pais. `DESIGN.md` sec 6.
+20. **Historia viva por eventos condicionais, nao por script (mapa-mundi 1800-1936):** cada evento historico tem ancora, janela e condicoes; se o mundo divergiu, o evento nao acontece (ou dispara a alternativa). Mantem o determinismo (RNG unico) e deixa o jogador mudar a historia. `DESIGN.md` sec 7.
 
 ## 12. GUIA PARA AGENTS (como mexer sem quebrar o jogo)
 
@@ -284,7 +287,225 @@ Menu inicial: L/R dificuldade, B seed (+`0x9E3779B9`), A comeca (`Game_New`). Me
 
 ## 13. ROADMAP (o que falta — v0.8+)
 
-- **v0.9 = UI da concept art** (menus, selecao de modo/nacao, HUD, pausa, configuracoes, fonte com acento, assets ilustrados, 5 nacoes, audio, multijogador, SRAM). Plano completo e fases F1-F8 na **sec 14.9**.
+- **v0.9 = UI da concept art** (menus, selecao de modo/nacao, HUD, pausa, configuracoes, fonte com acento, assets ilustrados, audio, multijogador, SRAM). Plano completo e fases F1-F8 na **sec 14.9**.
+- **v1.x = o mundo** (`DESIGN.md`): mapa celular estilo Victoria 3 + frontwars.io, mapa aleatorio ou mapa-mundi 1800, >=150 paises historicos e povos indigenas com traits e flavor, historia viva ate 1936. Marcos M1-M6 em `DESIGN.md` sec 9; ADRs 18-20.
 - Leis especificas por governo (editos: alistamento, feriado, embargo) via SELECT+CIMA/BAIXO; 4o governo (ex: republica mercantil); IA troca governo com estrategia (nao so panico).
 - SRAM persistente (save no cartao, nao so RAM); fila multi-marcha; som (MaxMod); mais eventos por bioma; painel com 8 precos (rolagem SELECT); data ano/mes/dia visivel; throughput visivel no painel (`FALTA CARVAO`); balance por telemetria (facil 80%/insano 20%); i18n (acentos: resolvido na v0.9 pela Serifa 8/12, sec 14.3).
 - Glossario rapido: int/ext, tarifa, uniao=ALLY, clima (S seca/C chuva), evento, marcha, tesouro, prestigio, literacia (boost industria+prestigio), militancia (risco revolta), throughput (produz menos sem insumo), seed (historia deterministica).
+
+## 14. DIRECAO DE ARTE + TELAS (alvo v0.9 — a concept art e o contrato)
+
+> Referencia unica: `concept_arts/image.png` (8 paineis de tela dupla). Status: **PLANEJADO**,
+> nada desta secao esta implementado. Em conflito, esta secao manda sobre sec 8 (controles)
+> e sec 9 (render), que descrevem o estado atual. Medidas em pixels nativos do DS (256x192
+> por tela), tolerancia +-4px. Textos entre aspas sao o texto FINAL da tela (com acento).
+>
+> **`DESIGN.md` (raiz) manda no design:** espirito visual e regras de composicao (sec 3),
+> o mapa estilo Victoria 3 + frontwars.io (sec 4), paises/povos/traits (sec 6) e historia
+> 1800-1936 (sec 7). Esta secao traduz isso em pixels. Se as duas divergirem, corrija esta.
+
+### 14.0 Como ler a concept art
+
+- Cada painel = 1 estado de tela, com as DUAS telas (cima e baixo). A legenda embaixo do painel e o nome do estado (sec 14.2).
+- **NAO renderizar:** a carcaca do DS, as legendas ("MENU PRINCIPAL", ...), a coluna da esquerda (logo + "CONCEPT ART MENUS" + "Grandes impérios não nascem do acaso.") e a da direita (coroa, "OH MY VICTORIA DS / ESTRATÉGIA · IMPÉRIO · HISTÓRIA", navio em traco, "Porque o mundo é maior do que um único reino."). Isso e branding: README, capa, tela de creditos (sec 14.5).
+- A concept **nao esta em resolucao nativa** (cada tela tem ~290px de largura na imagem, com anti-aliasing). Nunca recorte e reescale: todo asset e redesenhado 1:1 em pixel nativo (sec 14.6). As medidas abaixo ja estao convertidas.
+- Telas que a concept nao mostra (carregar, creditos, preparar partida, vitoria, abas de obras/mercado/relacoes) seguem a gramatica da sec 14.5.
+
+### 14.1 Linguagem visual (tokens de cor e componentes)
+
+Todos os tokens vivem em `include/pal.h` como constantes `PXC(r,g,b)` (5 bits por canal, **ja com `BIT(15)`**, gemeo de compilacao do `Px_Col`, ADR-13). Proibido cor literal fora de `pal.h`/`px_map.c`.
+
+| Token | Uso | Hex aprox. | `PXC(r,g,b)` |
+|---|---|---|---|
+| `C_NAVY_BG` | fundo de tela, moldura externa | `#121826` | `(2,3,4)` |
+| `C_NAVY` | paineis e botoes escuros, barra do HUD | `#1E2738` | `(3,4,7)` |
+| `C_NAVY_HI` | botao pressionado, placeholder de arte | `#2C3850` | `(5,7,10)` |
+| `C_PARCH` | pergaminho (conteudo) | `#E4D2A6` | `(28,26,20)` |
+| `C_PARCH_SH` | manchas/sombra do pergaminho, gravuras | `#C4AC7A` | `(24,21,15)` |
+| `C_INK` | texto e tracos sobre pergaminho | `#2A2018` | `(5,4,3)` |
+| `C_CRIMSON` | item selecionado | `#9A1C1F` | `(19,3,3)` |
+| `C_CRIMSON_HI` | brilho de 1px no topo da selecao | `#C2302E` | `(24,6,5)` |
+| `C_GOLD` | bordas, ornamentos, icones | `#C8A04A` | `(25,20,9)` |
+| `C_GOLD_DIM` | separadores, borda interna, icone desabilitado | `#7E6532` | `(15,12,6)` |
+| `C_TEXT` | texto sobre navy | `#EFE6D2` | `(29,28,26)` |
+| `C_TEXT_DIM` | item desabilitado | `#8A8F99` | `(17,17,19)` |
+
+Componentes (todos em `source/px_ui.c`, desenhados a partir de tabelas como o `ui.c` da v0.8 — nada de geometria solta):
+
+- **Painel pergaminho:** fill `C_PARCH` + manchas deterministicas (hash por pixel, mesmo truque do `px_map.c`, sem usar o RNG do jogo) + borda dupla (1px `C_INK`, 1px vazio, 1px `C_GOLD_DIM`) + cantos ornamentados `orn_corner` 12x12 espelhado nos 4 cantos.
+- **Painel navy:** fill `C_NAVY`, borda 1px `C_GOLD` + 1px interna `C_GOLD_DIM`.
+- **Item de lista (sobre navy):** altura 24, texto `C_TEXT` com sombra 1px `C_NAVY_BG`; separador 1px `C_GOLD_DIM` entre itens. **Selecionado:** barra `C_CRIMSON`, 1px `C_CRIMSON_HI` no topo, borda `C_GOLD`, seta `▶` branca a 6px da esquerda.
+- **Botao grande (Selecao de Modo):** 176x26, fill `C_NAVY` + borda `C_GOLD`; icone 18x18 a x+10; texto a x+44. Selecionado = fill `C_CRIMSON`.
+- **Botao icone (HUD):** 34x34, `C_NAVY` + borda `C_GOLD`, icone 20x20 centrado. Pressionado = `C_NAVY_HI` e desloca 1px p/ baixo. Desabilitado = icone em `C_GOLD_DIM`.
+- **Ornamentos:** coroa `orn_crown` 16x12 no rodape de paineis de menu; divisor `orn_div` (—◆—) 48x5 sob titulos. No maximo 1 coroa por painel.
+- **Animacao em menu:** so a barra selecionada pulsa (`C_CRIMSON_HI` liga/desliga a cada 30 frames) e o "Aperte A". Menu parado NAO redesenha a 60Hz (regra `dirty` da sec 9).
+- **Transicao entre telas:** fade por `REG_MASTER_BRIGHT` / `REG_MASTER_BRIGHT_SUB` em 8 frames (hardware, custo zero de pixel).
+
+### 14.2 Maquina de telas
+
+`g->screen` (u8, enum `Screen` em `types.h`) substitui `g->inMenu` (ADR-17). `g->scrPrev` guarda quem abriu Configurações. Toda troca seta `dirty` + `dirtyBot`.
+
+| Estado | Tela de cima | Tela de baixo | A | B |
+|---|---|---|---|---|
+| `SCR_MAIN` | splash do titulo + "Aperte A" | retrato do oficial + lista | abre item | — |
+| `SCR_MODE` | lista de modos | miniatura + descricao do modo destacado | Contra IA -> `SCR_SETUP`; Campanha -> `SCR_NATION`; Multijogador -> `SCR_MULTI` (F7) | `SCR_MAIN` |
+| `SCR_SETUP`* | mapa (mundi/aleatorio), tamanho, historia, dificuldade, semente | previa do mapa + resumo | `SCR_NATION` | `SCR_MODE` |
+| `SCR_NATION` | carrossel de 5 estandartes + nome + descricao | cena regional + mapa do pais | `Game_New` | `SCR_SETUP` (ou `SCR_MODE` na Campanha) |
+| `SCR_GAME` | barra de recursos + mapa + minimapa | ficha do tile/unidade + 4 acoes | acao contextual | cancela alvo |
+| `SCR_PAUSE` | mapa congelado escurecido + lista | descricao do item + gravura | abre item | Continuar |
+| `SCR_OPTIONS` | pergaminho com 4 ajustes | brasao + frase | — | volta p/ `scrPrev` (grava Settings) |
+| `SCR_LOAD`* | lista de slots | resumo do slot | carrega | `SCR_MAIN` |
+| `SCR_CREDITS`* | creditos rolando | navio em traco + frase | — | `SCR_MAIN` |
+| `SCR_END`* | overlay "Vitória!"/"Derrota" no mapa | retrato + "A — Voltar ao menu" | `SCR_MAIN` | — |
+
+\* nao aparece na concept; segue a sec 14.5.
+
+**Input em menus:** CIMA/BAIXO move a selecao (com wrap), A confirma, B volta, ESQ/DIR muda valor (Nação, Configurações, Preparar). START no jogo abre `SCR_PAUSE`. **Toque:** lista na tela de baixo = tap seleciona e confirma; quando a lista esta na tela de cima (Modo, Nação, Pausa, Configurações), tap em qualquer ponto da tela de baixo = A.
+
+### 14.3 Tipografia
+
+- **Serifa 12** (titulos e itens de lista/botao): bitmap proporcional, caixa alta 9px, linha 14px. Ex.: "Novo Jogo", "Escolha o Modo", "Configurações", "Reino Unido", "Infantaria".
+- **Serifa 8** (descricoes, rotulos, numeros do HUD): proporcional, caixa alta 7px, linha 11px.
+- Conjunto de glifos (ambas): ASCII 32-126 + `ÁÀÂÃÉÊÍÓÔÕÚÜÇáàâãéêíóôõúüçºª` + `◂ ▸ ▶ ◆ ✦ … · —` + **toda letra usada nos nomes de paises/povos/regioes** (`ā ē ī ō ū ŋ č š ž ñ ł ʻ Đ ạ ệ ...`, `DESIGN.md` sec 3.4). O conjunto final e **gerado a partir de `str.c`**: uma ferramenta lista os caracteres usados e o build falha se faltar glifo. 1bpp, ~7-10KB ROM no total (`source/px_font2.c`).
+- **Fonte 3x5 atual:** sai das telas do jogador; fica so p/ overlay de debug e placeholders.
+- **Logo** "Oh My Victoria DS" (com coroa e pincelada vermelha) e **arte**, nunca fonte.
+- **Strings:** todas em `source/str.c` (`Str(STR_NOVO_JOGO)`), tabelas PT e EN, UTF-8 no fonte, decodificadas por `Px_Text2` p/ indice de glifo. Idioma vem de `Settings.lang`. Proibido literal de UI fora de `str.c`.
+- Quebra por palavra: `Px_Wrap(dst,x,y,w,str,font,col)`. As descricoes da concept cabem em 4 linhas de 124px em Serifa 8.
+
+### 14.4 Telas da concept (layout por tela)
+
+Coordenadas `(x,y,w,h)` em pixels da tela respectiva.
+
+#### MENU PRINCIPAL (`SCR_MAIN`)
+- **Cima:** `art_title` 256x192 em tela cheia — Westminster/Big Ben ao por do sol, Tamisa com veleiro, logo com coroa no terco superior. Caixa "Aperte A" em `(176,164,72,20)`: painel navy, icone pena 10x10 a x+5, texto Serifa 8 `C_TEXT`; pulsa (30 frames visivel / 15 apagada).
+- **Baixo:** fundo `C_NAVY_BG`; moldura ornamentada `C_GOLD` em `(2,2,252,188)`. Retrato `art_officer` 88x160 em `(8,16)` (oficial vitoriano de quepe, meio-perfil virado p/ a direita). Painel navy da lista em `(104,14,144,162)`. Itens Serifa 12 (altura 24, primeiro em y=22, passo 30): "Novo Jogo", "Carregar", "Opções", "Créditos". Coroa em `(168,166)`. "Carregar" fica `C_TEXT_DIM` e nao seleciona se nao existe save.
+
+#### SELEÇÃO DE MODO (`SCR_MODE`)
+- **Cima:** fundo navy; pergaminho `(12,6,232,180)`; gravuras laterais tenues `orn_engrave_l/r` 24x120 em `C_PARCH_SH`. Titulo "Escolha o Modo" Serifa 12 centrado em y=16; divisor em y=32. 3 botoes grandes em x=40, y=46/82/118: [coroa] "Campanha", [espadas cruzadas] "Contra IA", [grupo de pessoas] "Multijogador".
+- **Baixo:** fundo navy; pergaminho `(12,12,232,168)`; miniatura `art_mode_<modo>` 80x96 em `(22,34)` com borda `C_GOLD`; texto Serifa 8 `C_INK` em `(110,40)`, largura 124, quebra por palavra:
+  - Campanha: "Conquiste territórios, desenvolva sua nação e escreva sua história." (texto da concept)
+  - Contra IA: "Partida livre no mapa-múndi de 1800 ou num mundo aleatório. A história é sua."
+  - Multijogador: "Desafie um amigo em outro DS, sem fio." + linha "Em breve." enquanto F7 nao entrar (item fica `C_TEXT_DIM` e nao confirma).
+
+#### SELEÇÃO DE NAÇÃO (`SCR_NATION`)
+- **Cima:** fundo navy; pergaminho `(10,8,236,176)`; titulo "Escolha sua nação" Serifa 12 em y=16 + divisor. **Carrossel:** 5 estandartes visiveis (bandeira procedural 40x58, haste dourada, ponta em V — `DESIGN.md` sec 6.2.1) em y=34, x=16+i*46, de um catalogo de >=150. ESQ/DIR move 1; L/R troca o **filtro de continente** (Todos, Europa, Américas, África, Ásia, Oceania), mostrado como `◂ Europa ▸` em Serifa 8 logo abaixo do titulo. Selecionado: sobe 3px + contorno 1px `C_GOLD`; o carrossel rola p/ manter o selecionado no centro. Setas `◂ ▸` nas laterais quando ha mais. Nome Serifa 12 centrado em y=126, ladeado por `✦` e linha fina `C_INK`. Descricao Serifa 8, 2 linhas centradas a partir de y=144 (texto do campo `descrição` da ficha do pais).
+- **Baixo:** cena da **regiao cultural** do pais (`art_region_<r>` 240x176 em `(8,8)`, moldura dupla `C_GOLD`) ou cena propria dos paises de destaque (Reino Unido = a da concept: soldado de casaca vermelha com a Union Jack no Tamisa, Westminster ao fundo). Sobre a cena, canto inferior direito: mini-mapa 64x48 do mundo com o territorio do pais piscando. **Tap no mini-mapa** abre a escolha direto no mapa-mundi (cursor sobre o pais + A).
+- **Paises:** catalogo, traits e textos em `DESIGN.md` sec 6 (a concept mostra Reino Unido, França e 3 estandartes que sao exemplos, nao uma lista fechada).
+
+#### JOGO EM ANDAMENTO (`SCR_GAME`) — layout Normal (Invertida troca as telas, ADR-16)
+- **Cima — barra de recursos** `(0,0,256,20)`: fill `C_NAVY`, linha inferior `C_GOLD`. 4 slots de 64px separados por 1px `C_GOLD_DIM`; em cada um, icone 12x12 a x+4 e numero Serifa 8 `C_TEXT` a x+20:
+  1. [moeda] tesouro — concept: "1200"
+  2. [saco] grao em estoque — concept: "850"
+  3. [pedras] carvao em estoque — concept: "430"
+  4. [coroa] prestigio "atual/600" (rumo a vitoria) — a concept mostra icone de pessoas com "12/20"; trocado p/ prestigio porque o jogo nao tem limite de populacao/exercito. Se um dia houver, volta ao icone de pessoas.
+- **Cima — mapa** `(0,20,256,172)`. Direcao de arte: **`DESIGN.md` sec 4** (Victoria 3 + frontwars.io). Resumo: zoom afastado (Z0/Z1) = mapa de papel com cor chapada por pais, fronteiras grossas e nomes espacados; zoom proximo (Z2/Z3) = terreno pintado no estilo da concept (pinheiros densos, costa com areia, castelos nas capitais com bandeira tremulando, casinhas, navios) com a cor do pais por cima a ~30%. Frente de guerra pisca e avanca celula a celula. Continua "cozido" em buffer (v0.8). Ate o M1, vale o mapa 32x24 atual com essa mesma direcao de arte.
+- **Cima — minimapa** `(186,138,68,52)`: borda 1px `C_GOLD` + 1px `C_NAVY`; mapa 32x24 a 2px/tile (64x48) com `Px_MiniCol`; retangulo 1px branco = viewport.
+- **Baixo — fundo:** `art_game_bg` (paisagem urbana com rio; so a faixa x>=182 aparece de verdade).
+- **Baixo — ficha** (painel navy `(6,6,174,132)`): retrato 56x72 em `(12,12)` com borda `C_GOLD`; nome Serifa 12 em `(76,14)` + divisor; 3 linhas Serifa 8 em x=76, y=36/52/68 com icone 10x10: [espadas cruzadas] Ataque (`Combat_Pow` como atacante), [espada] Tropas, [escudo] Defesa (`Map_Def` + muralha/forte). Conteudo contextual:
+  - tile proprio com tropas -> "Infantaria" + `unit_infantaria` (como na concept);
+  - tile proprio sem tropas, com obra -> nome da obra + glifo grande + producao/dia;
+  - tile inimigo -> nome da nacao dona + estandarte + tropas;
+  - neutro/vazio -> nome do terreno + site.
+- **Baixo — 4 acoes** (botoes icone 34x34 em y=146, x=10/50/90/130): [espada] Marchar (pede alvo: cursor no mapa + A), [escudo] Fortificar (MURALHA -> FORTE), [brasao] Recrutar, [ferramentas] Construir (abre a grade de obras). Mesmas regras de `combat.c`/`economy.c`; acao invalida = botao desabilitado.
+- **Abas v0.8** (Obras, Mercado, Relações, Sistema): "Construir" abre Obras; abas tocaveis de 20px no topo do painel de baixo alternam [Ficha] <-> [Mercado] <-> [Relações], com a gramatica da sec 14.5. **L/R = zoom do mapa** (afastar/aproximar) e **Y = modo de mapa** (`DESIGN.md` sec 4.2/4.4). Sistema (governo, imposto, velocidade, save) vai p/ a Pausa. Os combos (SELECT+L, R+CIMA, B+BAIXO...) viram atalhos opcionais.
+
+#### PAUSA / MENU DO JOGO (`SCR_PAUSE`)
+- **Cima:** ultimo frame do mapa escurecido 1 vez ao entrar (`((c>>1)&0x3DEF)|BIT(15)` por pixel, nao por frame); painel navy `(64,30,140,126)`; itens Serifa 12 com `✦` dourado a esquerda dos nao selecionados (como na concept), passo 26 a partir de y=40: "Continuar", "Salvar", "Configurações", "Sair para o Menu". Coroa em `(126,142)`. A simulacao para enquanto a pausa estiver aberta.
+- **Baixo:** pergaminho `(10,10,236,172)`; descricao do item destacado Serifa 8 centrada a partir de y=28, divisor, gravura `art_engrave_port` 216x84 em `(20,92)` (porto com veleiros e catedrais, traco sepia `C_INK` sobre pergaminho).
+  - Continuar: "Retome o jogo de onde parou." (texto da concept)
+  - Salvar: "Grave seu império no cartão." -> apos A: "Jogo salvo." por 60 frames.
+  - Configurações: "Ajuste som, idioma e tela."
+  - Sair para o Menu: "Volte ao menu principal. O que não foi salvo será perdido." (pede A de novo p/ confirmar)
+
+#### CONFIGURAÇÕES (`SCR_OPTIONS`)
+- **Cima:** fundo navy; pergaminho `(10,8,236,176)`; titulo "Configurações" Serifa 12 em y=16 + divisor. 4 linhas, rotulo Serifa 8 em x=22, passo 30 a partir de y=46:
+  - "Música": trilho 112x3 em x=82 (`C_NAVY`, parte cheia `C_INK`), puxador 6x9 `C_GOLD` com borda `C_INK`; valor "80%" alinhado a direita em x=234. ESQ/DIR = -/+10.
+  - "Efeitos": idem, "70%".
+  - "Idioma": `◂ Português ▸` (◂ em x=86, ▸ em x=226, valor centrado). Opcoes: Português, English.
+  - "Tela": `◂ Normal ▸`. Opcoes: Normal (mapa em cima, como a concept), Invertida (mapa embaixo, tocavel) — aplica `lcdSwap()` na hora (ADR-16).
+  - Linha selecionada: rotulo em `C_CRIMSON` + `▶` em x=12. Toda mudanca vale ao vivo.
+- **Baixo:** fundo navy; pergaminho `(10,10,236,172)`; brasao `art_crest` 96x72 em `(80,28)` (escudo coroado com dois leoes); "Ajuste sua experiência de jogo." Serifa 8 centrado em 2 linhas a partir de y=118.
+- Padroes: Música 80, Efeitos 70, Idioma Português, Tela Normal.
+
+### 14.5 Telas fora da concept (mesma gramatica)
+
+Regra de ouro p/ qualquer tela nova: (1) uma tela tem a lista/controle, a outra tem o contexto (descricao ou ilustracao do item destacado); (2) pergaminho p/ conteudo, navy p/ moldura e HUD; (3) selecao sempre crimson com `▶`; (4) no maximo 1 coroa e 1 divisor por painel; (5) texto vindo de `str.c`, com acento.
+
+- **Preparar partida (`SCR_SETUP`):** vem **antes** de `SCR_NATION` (o mapa escolhido define o catalogo). Cima = pergaminho "Preparar partida" com linhas `◂ valor ▸` (mesmo componente das Configurações): "Mapa `◂ Mapa-múndi 1800 ▸`" / "Aleatório"; se aleatorio: "Tamanho `◂ Pequeno ▸`" (Pequeno/Médio/Grande) e "Nações `◂ 16 ▸`" (8/16/32); se mapa-mundi: "História `◂ Ligada ▸`" (Ligada/Só flavor/Desligada); sempre "Dificuldade `◂ Normal ▸`" e "Semente `◂ 0C1A6 ▸`" (ESQ/DIR gera a proxima com `+0x9E3779B9`); botao crimson "Escolher nação". Baixo = previa do mapa (mundo real ou continentes gerados pela seed) em 240x120 + resumo. Campanha pula esta tela (sempre mapa-mundi, historia ligada). Fluxo: `SCR_MODE` -> `SCR_SETUP` -> `SCR_NATION` -> `Game_New`.
+- **Carregar (`SCR_LOAD`):** cima = pergaminho "Carregar" com slots ("Dia 142 · Reino Unido · Normal"; 1 slot ate F8, 3 depois); baixo = cena da nacao do slot.
+- **Créditos (`SCR_CREDITS`):** cima = pergaminho com creditos rolando 1px a cada 2 frames, `art_logo` no topo; baixo = navy com `art_ship_line` e "Porque o mundo é maior do que um único reino." (frase da concept).
+- **Vitória/Derrota (`SCR_END`):** cima = pergaminho central `(48,60,160,72)` sobre o mapa com "Vitória!" ou "Derrota" (Serifa 12) + motivo (prestigio/territorio/eliminado); baixo = retrato do oficial + "A — Voltar ao menu". Substitui o overlay `VITORIA!/DERROTA` atual.
+- **Obras / Mercado / Relações:** pergaminho na tela do painel; Obras = grade de botoes icone 34x34 (23 glifos, paginada); Mercado = lista dos 8 bens com preco int/ext e botoes Comprar/Vender; Relações = estandarte de cada rival + estado (Guerra/Paz/União) + botoes Paz/União.
+
+### 14.6 Assets (pipeline, inventario, orcamento)
+
+**Pipeline (ADR-14):**
+1. Fonte: `gfx/<nome>.png`, pixel nativo 1:1, indexado (<=256 cores, ideal <=64), **indice 0 = transparente**.
+2. `tools/png2c.py <png>` (Python 3 + Pillow) gera `source/gen/art_<nome>.c/.h`: struct `Art {w,h,pal[],data[]}`, paleta ja no formato `aBBBBBGGGGGRRRRR` com `BIT(15)` (exceto indice 0), pixels 8bpp com RLE simples. **Os gerados sao commitados** — o build nao roda Python. Makefile: `SOURCES := source source/gen`.
+3. `source/px_art.c`: `Art_Blit(u16 *dst,const Art *a,int x,int y)` decodifica o RLE direto no backbuffer (sem buffer intermediario, zero malloc) e pula o indice 0; `Art_BlitH` espelha na horizontal (cantos, ornamentos).
+4. **Placeholder:** asset ainda sem PNG = `Art` com `data==NULL` -> `Art_Blit` desenha retangulo `C_NAVY_HI` com borda `C_GOLD` e o nome em 3x5. Codigo de tela nunca espera a arte ficar pronta.
+
+**Regras p/ quem desenha:** pixel art nativo, sem anti-aliasing contra o transparente, outline escuro de 1px, luz vindo de cima-esquerda, cores ja quantizadas p/ 15 bits (multiplos de 8 em RGB888) antes de exportar, tons de UI tirados da tabela 14.1.
+
+**Inventario** (P1 = necessario p/ F2/F3 sem placeholder; P3 = pode ficar com fallback):
+
+| Asset | Tamanho | Onde | Prio |
+|---|---|---|---|
+| `art_title` (Westminster ao por do sol + logo) | 256x192 | Menu, cima | P1 |
+| `art_officer` | 88x160 | Menu, baixo; Vitória/Derrota | P1 |
+| emblemas de bandeira (aguia, aguia dupla, coroa, crescente+estrela, sol, leao, estrela, cruz, dragao...) — bandeiras sao procedurais (ADR-19) | 8x8 e 20x20 | Nação, Relações, mapa, Carregar | P1 |
+| `ico_*` recursos (moeda, saco, pedras, coroa) | 12x12 | barra do HUD | P1 |
+| `ico_*` stats (espadas cruzadas, espada, escudo) | 10x10 | ficha | P1 |
+| `ico_*` modo (coroa, espadas, pessoas) | 18x18 | Modo | P1 |
+| `ico_*` acoes (espada, escudo, brasao, ferramentas) + pena | 20x20 / 10x10 | HUD, "Aperte A" | P1 |
+| `orn_corner`, `orn_crown`, `orn_div` | 12x12, 16x12, 48x5 | todos os paineis | P1 |
+| `unit_infantaria` | 56x72 | ficha | P2 |
+| `art_mode_<modo>` x3 (minimo 1 compartilhado) | 80x96 | Modo, baixo | P2 |
+| `art_engrave_port` | 216x84 | Pausa, baixo | P2 |
+| `art_crest` | 96x72 | Configurações, baixo | P2 |
+| `art_game_bg` (faixa direita) | 74x192 | Jogo, baixo | P2 |
+| `orn_engrave_l/r` | 24x120 | Modo, cima | P2 |
+| sprites do mapa (castelo por nacao, cidade, navio 2 frames, pinheiro) | 16x16 | mapa | P2 |
+| `art_region_<r>` x~12 cenas por regiao cultural (`DESIGN.md` sec 6.7) | 240x176 | Nação, baixo; Carregar | P2 |
+| `art_nation_<tag>` cenas proprias dos paises de destaque (GBR = a da concept; FRA, RUS, QNG, USA, JAP...) | 240x176 | Nação, baixo | P3 |
+| `art_logo`, `art_ship_line` | 160x80, 120x64 | Créditos | P3 |
+
+**Orcamento:** ~420KB brutos em 8bpp -> ~220KB com RLE. Teto: **512KB de `.rodata` de arte** (o binario ARM9 vive na RAM principal de 4MB; o `.bss` hoje passa de ~600KB com o buffer-mundo da v0.8). Conferir no `.map` a cada asset novo. VRAM nao muda: as duas telas seguem `Bmp16`.
+
+### 14.7 Audio (Música / Efeitos)
+
+- MaxMod (`libmm9`, vem com devkitPro; no toolchain rootless precisa ser copiado como foi feito com libnds, ADR-12). Soundbank embutido via `mmInitDefaultMem`.
+- Volume: `mmSetModuleVolume(music*1024/100)`, `mmSetJingleVolume`, efeitos com volume escalado por `sfx`.
+- Faixas: tema do menu, 2 temas de jogo, jingle de vitoria e de derrota. Efeitos: mover selecao, confirmar, voltar, erro, marcha, obra concluida, evento.
+- Ate F6 os sliders funcionam e gravam o valor, mas nao ha som — nada quebra.
+
+### 14.8 Settings (fora do GameState)
+
+```c
+typedef struct { u8 music, sfx, lang, layout; } Settings; // 4B: 0..100, 0..100, LANG_PT/LANG_EN, LAYOUT_NORMAL/LAYOUT_SWAP
+```
+
+Estatico em `source/settings.c`, fora do `GameState` (nao conta no `_Static_assert` de 14KB), aplicado no boot. Persistencia em SRAM com magic proprio na F8; ate la vive so na RAM.
+
+### 14.9 Fases de entrega (cada fase fecha com build verde + playtest)
+
+| Fase | Entrega | Pronto quando |
+|---|---|---|
+| F1 Fundacao | `pal.h`, componentes de `px_ui.c` com placeholders, Serifa 8/12 com acento, `str.c` PT/EN, `g->screen` + `Screen`, `Settings`, `px_art.c` com placeholder | Navega MAIN -> MODE -> SETUP -> NATION -> GAME -> PAUSE -> OPTIONS -> volta, so com D-pad/A/B; texto acentuado legivel; zero warnings |
+| F2 Menus | layouts finais das secs 14.4/14.5 (com placeholders de arte) | Screenshot melonDS de cada tela sobreposto ao painel da concept: mesma geometria (+-4px) e mesmos textos |
+| F3 HUD | barra de recursos, mapa na tela de cima, minimapa, ficha + 4 acoes, paginas L/R, Tela Normal/Invertida | Playtest de 5 min (sec 10) sem usar nenhum combo de botoes |
+| F4 Arte | PNGs P1/P2, `png2c.py`, troca dos placeholders, direcao de arte do mapa | Checklist 14.10 inteiro marcado |
+| F5 Paises (ponte) | ficha de pais + traits + bandeira procedural (`DESIGN.md` sec 6) aplicados as 3 faccoes do mapa atual, sorteadas do catalogo; `SAVE_VER++`. O mundo completo vem depois, nos marcos M1-M6 do `DESIGN.md` sec 9 | Sim host 200 dias com 10 combinacoes de paises sem crash + replay deterministico |
+| F6 Audio | MaxMod + sliders ligados | Volume 0 = silencio; sem estalo na troca de tela |
+| F7 Multijogador | 2 DS sem fio local, lockstep deterministico (RNG unico ja ajuda) | 2 instancias melonDS sincronizadas por 30 min |
+| F8 SRAM | save + Settings persistentes, 3 slots | Desliga, liga e continua; "Carregar" lista os slots |
+
+### 14.10 Checklist de fidelidade (por tela, antes de fechar F4)
+
+- [ ] Mesma divisao cima/baixo da concept (no layout Normal)
+- [ ] Textos identicos aos da concept, com acento, em PT
+- [ ] Selecao em crimson com `▶`; nao selecionados como na concept
+- [ ] Pergaminho com cantos ornamentados onde a concept tem; coroa/divisor nos mesmos lugares
+- [ ] Nenhum `RGB15()` cru; toda cor via `Px_Col`/`PXC` (ADR-13)
+- [ ] Menu parado nao redesenha a 60Hz (so `dirty` + pulso da selecao)
+- [ ] Screenshot do melonDS salvo em `docs/screens/<estado>.png`
