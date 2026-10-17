@@ -58,7 +58,7 @@ void Game_Day(GameState *g){
  Game_CheckEnd(g);
 }
 void Game_Frame(GameState *g){
- if(g->screen==SCR_WORLD||g->screen==SCR_CITY){WG_Frame(g);return;}
+ if(g->screen==SCR_WORLD||g->screen==SCR_CITY||g->screen==SCR_LEDGER){WG_Frame(g);return;}
  if(g->screen!=SCR_GAME){Menu_Frame(g);return;}
  if(g->gameOver||g->paused)return;
  int fpd=FRAMES_PER_DAY_2;

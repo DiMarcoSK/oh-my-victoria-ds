@@ -52,15 +52,17 @@ static const Btn T_MENU[]={
  {0,0,0,0,0,0,0}
 };
 
-// Painel do mapa-mundi (SCR_WORLD): 4 botoes icone 34x34 + % + velocidade.
-// px_world.c desenha daqui; wgame.c despacha daqui.
+// Painel do mapa-mundi (SCR_WORLD): 5 botoes icone 34x34 (atacar, diplomacia,
+// recrutar, cidade, gabinete) + % + velocidade. px_world.c desenha daqui;
+// wgame.c despacha daqui. Ordem fixa: os 5 icones primeiro.
 static const Btn T_WORLD[]={
- {6,152,34,34,UI_W_ATK,0,0},
- {44,152,34,34,UI_W_PEACE,0,0},
- {82,152,34,34,UI_W_REC,0,0},
- {120,152,34,34,UI_W_CITY,0,0},
- {160,152,44,34,UI_W_PCT,0,0},
- {208,152,44,34,UI_W_SPEED,0,0},
+ {4,152,34,34,UI_W_ATK,0,0},
+ {40,152,34,34,UI_W_PEACE,0,0},
+ {76,152,34,34,UI_W_REC,0,0},
+ {112,152,34,34,UI_W_CITY,0,0},
+ {148,152,34,34,UI_W_LEDGER,0,0},
+ {186,152,32,34,UI_W_PCT,0,0},
+ {220,152,32,34,UI_W_SPEED,0,0},
  {0,0,0,0,0,0,0}
 };
 

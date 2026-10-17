@@ -61,12 +61,24 @@ static void Palette(const World *w,const WGame *s){
  for(u8 ci=1;ci<w->nC;ci++){
   const WCountry *c=&w->c[ci];int r,g,b;
   if(s->mapMode==WMAP_DIP){
+   const WCountry *me=&w->c[s->me];
    if(ci==s->me){r=9;g=25;b=13;}
    else if(World_AtWar(w,s->me,ci)){r=27;g=8;b=6;}
+   else if(me->ally[0]==ci||me->ally[1]==ci){r=6;g=20;b=26;}          // aliado: azul-petroleo
    else if(c->overlord==s->me){r=16;g=27;b=17;}
-   else if(w->c[s->me].overlord==ci){r=8;g=17;b=28;}
+   else if(me->overlord==ci){r=8;g=17;b=28;}
+   else if(me->bloc&&c->bloc==me->bloc){r=14;g=24;b=26;}               // mesmo mercado comum
+   else if(me->rival==ci||c->rival==s->me){r=28;g=17;b=6;}           // rival: laranja
    else{int k=(ci*7)%3;r=21+k;g=20+k;b=16+k;}
-  }else{const NationDef *d=&NATIONS[c->nat];r=d->r;g=d->g;b=d->b;}
+  }else if(s->mapMode==WMAP_IDEO){
+   static const u8 IC[ID_COUNT][3]={{24,19,8},{9,14,27},{8,19,22},{27,5,4},{9,9,11},{12,22,6}};
+   const u8 *q=IC[c->ideo%ID_COUNT];r=q[0];g=q[1];b=q[2];
+  }else{const NationDef *d=&NATIONS[c->nat];r=d->r;g=d->g;b=d->b;
+   if(s->mapMode==WMAP_COM){int gr=(r+g+b)/3;r=(r+gr*2)/3+3;g=(g+gr*2)/3+3;b=(b+gr*2)/3+2;   // pastel: as rotas aparecem
+    if(r>31)r=31;
+    if(g>31)g=31;
+    if(b>31)b=31;}
+  }
   CR[ci][0]=(u8)(r*8);CR[ci][1]=(u8)(g*8);CR[ci][2]=(u8)(b*8);
   FLG[ci]=(u8)((ci==s->me?1:0)|((c->kind==NK_POVO||c->kind==NK_AUTONOMO)?4:0));
  }
@@ -75,7 +87,9 @@ static u32 Sig(const World *w,const WGame *s){
  u32 h=2166136261u^s->mapMode^((u32)s->me<<8);
  for(u8 ci=1;ci<w->nC;ci++){
   h^=w->c[ci].nat|((u32)w->c[ci].alive<<8);h*=16777619u;
-  if(s->mapMode==WMAP_DIP){h^=(u32)World_AtWar(w,s->me,ci)|((u32)w->c[ci].overlord<<1);h*=16777619u;}
+  if(s->mapMode==WMAP_DIP){h^=(u32)World_AtWar(w,s->me,ci)|((u32)w->c[ci].overlord<<1)|((u32)w->c[ci].bloc<<9)|((u32)w->c[ci].rival<<17);h*=16777619u;
+   h^=(u32)w->c[ci].ally[0]|((u32)w->c[ci].ally[1]<<8);h*=16777619u;}
+  if(s->mapMode==WMAP_IDEO){h^=w->c[ci].ideo;h*=16777619u;}
  }
  return h;
 }

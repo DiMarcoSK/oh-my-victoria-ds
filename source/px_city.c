@@ -1,5 +1,7 @@
 #include "wgame.h"
 #include "city.h"
+#include "wecon.h"
+#include "wdiplo.h"
 #include "px.h"
 #include "pal.h"
 #include "font.h"
@@ -118,6 +120,13 @@ static void Smoke(int ux,int uy,int tick,u32 seed){
  }
 }
 // Pinta a obra k com base em (x,yb) e largura w. tick<0 = sem animacao.
+// bandeira atual de uma nacao (com a ideologia de quem a governa hoje)
+static void NatFlag(u8 nat,int x,int y,int w,int h){
+ const World *W=WG_World();FlagDef f;
+ u8 ci=World_CountryOfNat(W,nat);
+ if(ci)WDip_Flag(W,ci,&f);else f=NATIONS[nat].flag;
+ Flag_Draw(D,256,x,y,w,h,&f);
+}
 void PxC_Building(u16 *d,int x,int yb,int w,u8 k,u8 st,u16 year,u32 seed,int tick,u8 natFlag){
  D=d;OX=x;OY=yb;UW=w;
  Pal p=StylePal(st,year,seed);
@@ -154,7 +163,7 @@ void PxC_Building(u16 *d,int x,int yb,int w,u8 k,u8 st,u16 year,u32 seed,int tic
    Box(2,0,28,13,STONE);for(int i=0;i<7;i++)Box(2+i*4,13,2,2,STONE);
    Box(13,0,6,8,Dk(STONE,1,2));Wins(2,4,28,6,4,1,C3(9,10,12));
    Pole(28,13,14,C3(10,10,10));
-   if(natFlag<255&&w>=24){const NationDef *nd=&NATIONS[natFlag];Flag_Draw(d,256,SX(28)+1,SY(27)-YOFF,w/5,w/7,&nd->flag);}
+   if(natFlag<255&&w>=24)NatFlag(natFlag,SX(28)+1,SY(27)-YOFF,w/5,w/7);
    else Box(28,22,5,4,RED);
    break;
   case BK_PORTO:
@@ -200,9 +209,43 @@ void PxC_Building(u16 *d,int x,int yb,int w,u8 k,u8 st,u16 year,u32 seed,int tic
    else{
     Box(0,0,32,16,p.wall==C3(22,22,23)?WHITE:p.wall);Wins(0,2,32,12,8,2,C3(9,10,14));
     Box(11,0,10,22,WHITE);Dome(16,22,6,st==ST_ISLAM?p.trim:C3(12,16,14));Pole(16,28,8,C3(10,10,10));
-    if(natFlag<255&&w>=24){const NationDef *nd=&NATIONS[natFlag];Flag_Draw(d,256,SX(16)+1,SY(36)-YOFF,w/5,w/7,&nd->flag);}
+    if(natFlag<255&&w>=24)NatFlag(natFlag,SX(16)+1,SY(36)-YOFF,w/5,w/7);
    }
    break;
+  case BK_SERRARIA:{ // galpao de madeira, roda de agua e pilhas de toras
+   Box(4,0,18,10,WOOD);Tri(2,24,10,6,Dk(WOOD,3,4));
+   Dome(26,6,5,C3(12,9,6));Box(25,0,2,12,C3(8,6,4));
+   for(int i=0;i<3;i++){Box(i*5,0,4,3,C3(20,13,6));Put(SX(i*5+2),SY(2),C3(26,20,10));}
+   Box(10,10,1,6,STONE);
+   if(tick>=0)Smoke(10,16,tick,seed);
+  }break;
+  case BK_MINA:{ // morro com boca de mina, castelete (apos 1850) e vagonete
+   for(int j=0;j<14;j++)Box(j,j,32-2*j,1,j<10?C3(15,13,11):C3(18,16,13));
+   Box(11,0,8,7,C3(4,3,3));Box(10,7,10,1,WOOD);Box(10,0,1,8,WOOD);Box(19,0,1,8,WOOD);
+   if(year>=1850){Pole(25,0,20,C3(10,10,11));Pole(30,0,20,C3(10,10,11));Box(24,20,8,2,C3(10,10,11));Dome(28,22,2,C3(14,14,15));}
+   Box(0,0,7,3,C3(12,12,13));Put(SX(1),SY(0),C3(4,4,4));Put(SX(5),SY(0),C3(4,4,4));
+   Box(1,3,5,2,C3(20,12,8));
+  }break;
+  case BK_ARSENAL:{ // pavilhao de pedra com canhao e balas
+   Box(2,0,26,14,STONE);Box(2,14,26,2,Dk(STONE,2,3));for(int i=0;i<6;i++)Box(3+i*4,16,2,2,STONE);
+   Box(11,0,8,9,C3(8,7,6));Wins(2,6,26,5,4,1,C3(9,10,12));
+   Box(0,1,10,2,C3(6,6,7));Dome(2,2,3,C3(10,7,4));
+   for(int i=0;i<3;i++)Dome(27+(i%2)*2,1+(i/2)*2,1,C3(5,5,6));
+   if(tick>=0&&year>=1860)Smoke(24,18,tick,seed);
+  }break;
+  case BK_ESTALEIRO:{ // carreira com casco em obra e guindaste
+   Box(0,0,32,2,C3(14,11,8));
+   for(int j=0;j<6;j++)Box(4+j,2+j,22-2*j,1,year>=1860?C3(8,9,10):C3(18,12,6));
+   for(int i=0;i<6;i++)Pole(6+i*4,8,6,WOOD);
+   Pole(29,2,24,C3(12,12,12));Box(18,25,12,1,C3(12,12,12));Pole(19,18,7,C3(30,30,30));
+   Box(17,16,4,2,C3(20,14,7));
+  }break;
+  case BK_POCO:{ // torre trelicada + tanque
+   for(int j=0;j<26;j++){int hw=8-j*7/26;Put(SX(10-hw),SY(j),C3(8,8,9));Put(SX(10+hw),SY(j),C3(8,8,9));
+    if((j%4)==0)for(int i=-hw;i<=hw;i++)Put(SX(10+i),SY(j),C3(8,8,9));}
+   Box(9,26,3,2,C3(8,8,9));
+   Box(20,0,11,9,C3(24,24,22));Box(20,9,11,1,C3(14,14,15));Box(21,4,9,1,C3(22,6,4));
+  }break;
   default:break;
  }
 }
@@ -460,10 +503,10 @@ void PxC_Scene(u16 *d,int ci){
  // faixa do titulo: nome + nivel + bandeira
  const WCity *c=&w->city[ci];
  Px_Rect(d,0,0,256,20,C_NAVY);Px_Rect(d,0,19,256,1,C_GOLD);
- if(c->owner){Px_Rect(d,5,4,18,12,C_GOLD);Flag_Draw(d,256,6,5,16,10,&NATIONS[w->c[c->owner].nat].flag);}
+ if(c->owner){Px_Rect(d,5,4,18,12,C_GOLD);D=d;NatFlag(w->c[c->owner].nat,6,5,16,10);}
  char nm[40];City_Name(w,ci,nm,40);
  Px_Text2(d,28,4,nm,&F_SERIF12,C_TEXT);
- const char *tn=Str((u8)(STR_TIER_0+c->tier));
+ const char *tn=Str((u16)(STR_TIER_0+c->tier));
  Px_Text2(d,250-Px_Width2(tn,&F_SERIF8),6,tn,&F_SERIF8,C_GOLD);
 }
 void PxC_SceneReset(void){sceneCity=-1;}
@@ -477,7 +520,7 @@ static void FmtPop(char *o,int max,u16 pop){
  else{Num(o,max,pop);Cat(o,max,Str(STR_MIL));}
 }
 // por que a obra k nao pode ser feita (StrId) ou 0
-static u8 WhyNot(const World *w,int ci,u8 k,u16 *year){
+static u16 WhyNot(const World *w,int ci,u8 k,u16 *year){
  const WCity *c=&w->city[ci];const BldDef *b=&BLD[k];
  for(int s=0;s<CITY_SLOTS;s++)if(c->bld[s]==k)return STR_JA_TEM;
  if(c->tier<b->minTier)return STR_REQ_NIVEL;
@@ -485,6 +528,9 @@ static u8 WhyNot(const World *w,int ci,u8 k,u16 *year){
  if(b->need){bool h=false;for(int s=0;s<CITY_SLOTS;s++)if(c->bld[s]==b->need)h=true;if(!h)return STR_REQ_OBRA;}
  if((b->flags&BF_COAST)&&!(c->flags&CF_COASTAL))return STR_SO_COSTA;
  if((b->flags&BF_CAPITAL)&&!City_IsCapital(w,ci))return STR_SO_CAPITAL;
+ if((b->flags&BF_WOOD)&&c->wood<6)return STR_REQ_RECURSO;
+ if((b->flags&BF_ORE)&&c->ore<6)return STR_REQ_RECURSO;
+ if((b->flags&BF_OIL)&&!(c->res&RS_OLEO))return STR_REQ_RECURSO;
  int used=0;for(int s=0;s<City_Slots(c->tier);s++)if(c->bld[s])used++;
  if(used>=City_Slots(c->tier))return STR_SEM_SLOT;
  return 0;
@@ -503,18 +549,32 @@ void PxC_Panel(u16 *d,int ci,int slot,bool picking,u8 pk){
  Px_Text2(d,10,9,t,&F_SERIF8,C_TEXT);
  int gold=c->tier,cap=c->pop/8;
  for(int s=0;s<CITY_SLOTS;s++)if(c->bld[s]){gold+=BLD[c->bld[s]].gold;cap+=BLD[c->bld[s]].cap;}
- t[0]=0;Cat(t,96,"+");Num(t,96,gold);Cat(t,96,Str(STR_OURO_DIA));Cat(t,96," · +");Num(t,96,cap);Cat(t,96,Str(STR_TROPAS_MAIS));
- Px_Text2(d,246-Px_Width2(t,&F_SERIF8),9,t,&F_SERIF8,C_GOLD);
+ t[0]=0;Cat(t,96,Str(STR_COMIDA));Cat(t,96," ");Num(t,96,c->food);Cat(t,96,"% · +");Num(t,96,gold);Cat(t,96,Str(STR_OURO_DIA));
+ Px_Text2(d,246-Px_Width2(t,&F_SERIF8),9,t,&F_SERIF8,c->food<60?C_EVENT:C_GOLD);
+ (void)cap;
  int np=City_NextPop(c->tier);
  if(np){
-  t[0]=0;Cat(t,96,Str(STR_RUMO));Cat(t,96,Str((u8)(STR_TIER_0+c->tier+1)));Cat(t,96,": ");Num(t,96,c->pop);Cat(t,96,"/");Num(t,96,np);Cat(t,96,Str(STR_MIL));
+  t[0]=0;Cat(t,96,Str(STR_RUMO));Cat(t,96,Str((u16)(STR_TIER_0+c->tier+1)));Cat(t,96,": ");Num(t,96,c->pop);Cat(t,96,"/");Num(t,96,np);Cat(t,96,Str(STR_MIL));
   Px_Text2(d,10,23,t,&F_SERIF8,C_TEXT_DIM);
   Ui_Bar(d,10,36,236,c->pop*100/np,C_GOLD);
  }else{Px_Text2(d,10,23,Str(STR_TIER_3),&F_SERIF8,C_GOLD);Ui_Bar(d,10,36,236,100,C_GOLD);}
  // obra em andamento
  if(c->bq){t[0]=0;Cat(t,96,Str(STR_EM_OBRA));Cat(t,96,": ");Cat(t,96,Str(BLD[c->bq].nameStr));Cat(t,96," · ");Num(t,96,c->bqDays);Cat(t,96,Str(STR_DIAS));
   Px_Text2(d,10,45,t,&F_SERIF8,C_TEXT);}
- else Px_Text2(d,10,45,Str(STR_DICA_CIDADE),&F_SERIF8,C_TEXT_DIM);
+ else{
+  // o que a cidade produz por semana (ate 3 bens)
+  s32 pr[GD_COUNT],nd[GD_COUNT],dm[GD_COUNT];WEco_CityFlows(w,ci,pr,nd,dm);
+  t[0]=0;Cat(t,96,Str(STR_PRODUZ));Cat(t,96,":");int sh=0;
+  for(int r=0;r<3;r++){
+   int bg=-1;s32 bv=0;
+   for(int g=0;g<GD_COUNT;g++)if(pr[g]>bv){bv=pr[g];bg=g;}
+   if(bg<0)break;
+   Cat(t,96," ");Cat(t,96,Str(Gd_Str((u8)bg)));Cat(t,96," +");Num(t,96,bv);pr[bg]=0;sh++;
+  }
+  if(!sh)Cat(t,96," —");
+  Cat(t,96,Str(STR_POR_SEM));
+  Px_Text2(d,10,45,t,&F_SERIF8,C_TEXT_DIM);
+ }
  // slots 4x2
  for(int s=0;s<CITY_SLOTS;s++){
   int x=4+(s%4)*62,y=66+(s/4)*40;
@@ -534,12 +594,12 @@ void PxC_Panel(u16 *d,int ci,int slot,bool picking,u8 pk){
  if(picking){
   const BldDef *b=&BLD[pk];
   Ui_Arrows(d,10,240,154,C_GOLD);
-  t[0]=0;Cat(t,96,Str(b->nameStr));Cat(t,96," · ");Num(t,96,b->cost);Cat(t,96," ");Cat(t,96,Str(STR_OURO));
+  t[0]=0;Cat(t,96,Str(b->nameStr));Cat(t,96," · ");Num(t,96,City_Cost(w,ci,pk));Cat(t,96," ");Cat(t,96,Str(STR_OURO));
   Cat(t,96," · ");Num(t,96,b->days);Cat(t,96,Str(STR_DIAS));
   Ui_TextC(d,128,153,t,0,C_TEXT);
-  u16 yr=0;u8 why=WhyNot(w,ci,pk,&yr);
+  u16 yr=0;u16 why=WhyNot(w,ci,pk,&yr);
   if(why){t[0]=0;Cat(t,96,Str(why));if(why==STR_REQ_ANO)Num(t,96,yr);
-   else if(why==STR_REQ_NIVEL)Cat(t,96,Str((u8)(STR_TIER_0+b->minTier)));
+   else if(why==STR_REQ_NIVEL)Cat(t,96,Str((u16)(STR_TIER_0+b->minTier)));
    else if(why==STR_REQ_OBRA)Cat(t,96,Str(BLD[b->need].nameStr));
    Ui_TextC(d,128,166,t,0,C_EVENT);}
   else Ui_TextC(d,128,166,Str(b->descStr),0,C_TEXT_DIM);
@@ -547,6 +607,14 @@ void PxC_Panel(u16 *d,int ci,int slot,bool picking,u8 pk){
  }else{
   bool open=slot<City_Slots(c->tier);u8 k=c->bld[slot];
   if(!open)Ui_TextC(d,128,160,Str(STR_SLOT_FECHADO),0,C_TEXT_DIM);
+  else if(k==BK_ESTALEIRO){
+   const WCountry *C=&w->c[c->owner];
+   t[0]=0;Cat(t,96,Str(STR_FROTA));Cat(t,96,": ");Num(t,96,C->ships);Cat(t,96," ");Cat(t,96,Str(STR_NAVIOS));
+   if(C->shipQ){Cat(t,96," · ");Cat(t,96,Str(STR_NAVIO_FILA));Num(t,96,C->shipQ);Cat(t,96,Str(STR_DIAS));}
+   Ui_TextC(d,128,155,t,0,C_TEXT);
+   t[0]=0;Cat(t,96,Str(STR_A_NAVIO));Cat(t,96," · ");Num(t,96,WEco_ShipCost(w,c->owner));Cat(t,96," ");Cat(t,96,Str(STR_OURO));
+   Ui_TextC(d,128,170,t,0,C->shipQ?C_TEXT_DIM:C_GOLD);
+  }
   else if(k){Ui_TextC(d,128,155,Str(BLD[k].nameStr),1,C_TEXT);Ui_TextC(d,128,172,Str(BLD[k].descStr),0,C_TEXT_DIM);}
   else Ui_TextC(d,128,160,Str(STR_A_CONSTRUIR),0,C_TEXT);
  }

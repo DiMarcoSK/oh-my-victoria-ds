@@ -499,6 +499,42 @@ static const char *const ICO_HOUSE16[16]={
  ".gggggggggggggg.",
  "................",
 };
+static const char *const ICO_BOOK16[16]={
+ "................",
+ ".gggggg..gggggg.",
+ "gppppppggppppppg",
+ "gpkkkkpggpkkkkpg",
+ "gppppppggppppppg",
+ "gpkkkppggpkkkppg",
+ "gppppppggppppppg",
+ "gpkkkkpggpkkkkpg",
+ "gppppppggppppppg",
+ "gpkkppprgpkkkppg",
+ "gppppppggppppppg",
+ "gppppppggppppppg",
+ ".ggggggggggggggg",
+ "......rr........",
+ "......rr........",
+ "......r.r.......",
+};
+static const char *const ICO_SHIP16[16]={
+ ".......g........",
+ ".......gr.......",
+ "......wgw.......",
+ ".....wwgww......",
+ "....wwwgwww.....",
+ "...wwwwgwwww....",
+ "..wwwwwgwwwww...",
+ ".......g........",
+ "gggggggggggggggg",
+ ".gGGGGGGGGGGGGg.",
+ "..gggggggggggg..",
+ "...gggggggggg...",
+ "................",
+ ".dd..dd..dd..dd.",
+ "d..dd..dd..dd..d",
+ "................",
+};
 void Ui_IconId(u16*d,int x,int y,u8 id,bool dim){
  switch(id){
   case ICO_CROWN:  Ui_Icon(d,x,y,ICO_CROWN16,12,dim);break;
@@ -514,6 +550,8 @@ void Ui_IconId(u16*d,int x,int y,u8 id,bool dim){
   case ICO_CAL_S:  Ui_Icon(d,x,y,ICO_CAL12,12,dim);break;
   case ICO_LAND_S: Ui_Icon(d,x,y,ICO_LAND12,12,dim);break;
   case ICO_HOUSE:  Ui_Icon(d,x,y,ICO_HOUSE16,16,dim);break;
+  case ICO_BOOK:   Ui_Icon(d,x,y,ICO_BOOK16,16,dim);break;
+  case ICO_SHIP:   Ui_Icon(d,x,y,ICO_SHIP16,16,dim);break;
   default:break;
  }
 }

@@ -20,6 +20,8 @@
 #include "menu.h"
 #include "wgame.h"
 #include "city.h"
+#include "wdiplo.h"
+#include "history.h"
 #include "ui.h"
 
 static const char *dir=0;   // sem SHOTS nao grava screenshot
@@ -91,7 +93,7 @@ int main(void){
  Shot(g,"13_cursor_franca");
  Press(g,KEY_A);                     Shot(g,"14_confirma_guerra");
  u32 c0=WG_World()->c[WG_Ptr()->me].cells,c1=c0;
- Press(g,KEY_X);Press(g,KEY_X);            // recruta com o ouro inicial
+ World_Recruit(WG_World(),WG_Ptr()->me);World_Recruit(WG_World(),WG_Ptr()->me); // recruta com o ouro inicial
  WG_Ptr()->pct=100;Press(g,KEY_A);Press(g,KEY_SELECT);
  for(int i=0;i<240;i++){Frames(g,1);u32 c=WG_World()->c[WG_Ptr()->me].cells;if(c>c1)c1=c;}
  Shot(g,"15_guerra");
@@ -106,6 +108,7 @@ int main(void){
   int cap=City_Near(w,w->c[s->me].capX,w->c[s->me].capY,3);
   if(cap<0){printf("FALHA: capital do jogador sem cidade\n");bad=1;}
   else{
+   if(w->prop.kind)Press(g,KEY_B);          // despacho da IA pendente (trava o cursor): recusa antes
    s->curX=(s16)w->city[cap].x;s->curY=(s16)w->city[cap].y;Hold(g,KEY_LEFT,1);Hold(g,KEY_RIGHT,1);
    w->c[s->me].gold+=5000;
    Press(g,KEY_A);
@@ -156,9 +159,47 @@ int main(void){
  }
  printf("  jogador: %u -> %u celulas no auge da frente (desembarque)\n",c0,c1);
  if(c1<=c0){printf("FALHA: o ataque do jogador nao tomou nenhuma celula\n");bad=1;}
- Press(g,KEY_Y);                     Shot(g,"16_diplomatico");
- Press(g,KEY_Y);                     Shot(g,"17_terreno");
+ Press(g,KEY_Y);                     Shot(g,"16_terreno");
+ Press(g,KEY_Y);                     Shot(g,"17_diplomatico");
+ Press(g,KEY_Y);                     Shot(g,"17b_comercial");
+ Press(g,KEY_Y);                     Shot(g,"17c_ideologico");
  Press(g,KEY_Y);
+ if(WG_Ptr()->mapMode!=WMAP_POL){printf("FALHA: Y nao voltou ao mapa politico (%d)\n",WG_Ptr()->mapMode);bad=1;}
+ printf("[diplomacia + gabinete]\n");
+ {
+  World *w=WG_World();WGame *s=WG_Ptr();
+  u8 fra=World_CountryOfNat(w,Nat_Find("FRA"));
+  if(!fra||!w->c[fra].alive)for(u8 i=1;i<w->nC&&!fra;i++)if(w->c[i].alive&&i!=s->me)fra=i;
+  s->curX=(s16)w->c[fra].capX;s->curY=(s16)w->c[fra].capY;Hold(g,KEY_LEFT,1);Hold(g,KEY_RIGHT,1);
+  s->sel=fra;s->selLand=false;s->hcity=-1;
+  host_tx=57;host_ty=169;host_held=KEY_TOUCH;Frames(g,1);host_held=0;Frames(g,1);   // botao bandeira
+  if(!s->dipOpen){printf("FALHA: bandeira nao abriu o menu de diplomacia\n");bad=1;}
+  Shot(g,"34_diplomacia_menu");
+  Press(g,KEY_B);
+  if(s->dipOpen){printf("FALHA: B nao fechou o menu de diplomacia\n");bad=1;}
+  // proposta da IA: o jogo pausa e mostra o despacho; A aceita
+  w->prop.kind=PR_NONE;
+  WDip_Propose(w,PR_ALIANCA,fra,0,0,0);s->paused=false;
+  Frames(g,4);Shot(g,"35_proposta");
+  if(!s->paused){printf("FALHA: proposta nao pausou o jogo\n");bad=1;}
+  Press(g,KEY_A);
+  if(w->prop.kind){printf("FALHA: A nao respondeu a proposta\n");bad=1;}
+  printf("  alianca aceita: %s\n",WDip_Allied(w,s->me,fra)?"sim":"nao (pais cheio de aliados)");
+  // decisao de evento (2 opcoes)
+  WDip_Propose(w,PR_DECISAO,s->me,0,0,(u16)(Rnd_Count()-3));
+  Frames(g,4);Shot(g,"36_decisao");Press(g,KEY_B);
+  // Gabinete: 4 abas
+  Press(g,KEY_X);
+  if(g->screen!=SCR_LEDGER){printf("FALHA: X nao abriu o Gabinete\n");bad=1;}
+  Shot(g,"30_gabinete_mercado");
+  Press(g,KEY_R);Shot(g,"31_gabinete_comercio");
+  Press(g,KEY_R);Shot(g,"32_gabinete_diplo");
+  Press(g,KEY_R);Shot(g,"33_gabinete_politica");
+  u8 tax0=w->eco[s->me].tax;Press(g,KEY_A);
+  if(w->eco[s->me].tax==tax0){printf("FALHA: A nao mudou o imposto\n");bad=1;}
+  Press(g,KEY_B);
+  if(g->screen!=SCR_WORLD){printf("FALHA: B do Gabinete nao voltou ao mapa\n");bad=1;}
+ }
  Press(g,KEY_START);                 Shot(g,"18_pausa");
  Press(g,KEY_DOWN);Press(g,KEY_DOWN);Press(g,KEY_A);Shot(g,"19_opcoes");
  Press(g,KEY_B);Press(g,KEY_B);
@@ -168,10 +209,17 @@ int main(void){
  WG_Ptr()->speed=5;WG_Ptr()->paused=false;
  Press(g,KEY_L);
  t0=clock();u32 d0=WG_World()->day;
- for(int i=0;i<3650&&!WG_Ptr()->paused;i++)Frames(g,1);
+ int props=0;
+ for(int i=0;i<3650;i++){
+  // despachos e decisoes da IA pausam o jogo: responde alternando A/B
+  if(WG_World()->prop.kind){if(!props)Shot(g,"29_despacho_ia");Press(g,(props&1)?KEY_B:KEY_A);props++;WG_Ptr()->paused=false;}
+  Frames(g,1);
+ }
+ printf("  %d despachos/decisoes respondidos\n",props);
  u32 dd=WG_World()->day-d0;
  printf("  %u dias em %.0f ms (PC, ASan, com render)\n",dd,(double)(clock()-t0)*1000.0/CLOCKS_PER_SEC);
  Shot(g,"20_mundo_10anos");
+ WG_Ptr()->mapMode=WMAP_COM;g->dirty=true;Shot(g,"20b_rotas_10anos");WG_Ptr()->mapMode=WMAP_POL;
 
  printf("[classico 32x24]\n");
  Press(g,KEY_START);Press(g,KEY_UP);Press(g,KEY_A);Press(g,KEY_A);

@@ -10,7 +10,10 @@
 // + mapa politico estilo Victoria 3 (px_world.c). Tela do PAINEL (baixo):
 // ficha do pais sob o cursor + despacho + 4 acoes + % e velocidade.
 // Layout Invertida (Settings) poe o mapa embaixo, tocavel (lcdMainOnBottom).
-enum { WMAP_POL=0, WMAP_TER, WMAP_DIP, WMAP_COUNT };   // modos de mapa (Y)
+enum { WMAP_POL=0, WMAP_TER, WMAP_DIP, WMAP_COM, WMAP_IDEO, WMAP_COUNT };   // modos de mapa (Y)
+enum { LT_MERCADO=0, LT_COMERCIO, LT_DIPLO, LT_POLITICA, LT_COUNT };    // abas do Gabinete
+// acoes do menu de diplomacia sobre outro pais (botao bandeira)
+enum { DM_PAZ=0, DM_ALIANCA, DM_ROMPER, DM_ENTRAR, DM_CONVIDAR, DM_GUERRA, DM_CANCELAR, DM_COUNT };
 enum { WZ_COUNT=5 };      // zoom 0..4: (1<<z)/2 px por celula (Z0 = mundo inteiro)
 enum { WG_MAP_Y=20, WG_MAP_H=172 };                    // viewport do mapa
 typedef struct {
@@ -27,7 +30,7 @@ typedef struct {
  u16 frameAcc, holdF; // frames ate o dia; frames segurando o D-pad
  u8 btnDown, btnT;    // botao do painel afundado (feedback 6 frames)
  u16 toastT;          // aviso de acao no despacho
- u8 toastId;          // StrId do aviso
+ u16 toastId;         // StrId do aviso
  u8 toastArg;         // pais citado no aviso (0 = nenhum)
  u16 bannerT;         // faixa de evento historico sobre o mapa
  u32 msgSeen;         // ultimo w->msgDay exibido
@@ -41,7 +44,16 @@ typedef struct {
  bool foundAsk;       // fundar pede o 2o toque (mostra o preco)
  s32 toastNum;        // numero no aviso (-1 = nenhum)
  s16 toastCity;       // cidade citada no aviso (-1 = nenhuma)
+ bool dipOpen;        // menu de diplomacia aberto sobre dipTo
+ u8 dipTo, dipSel, dipN, dipIt[DM_COUNT];
+ u8 ledTab, ledSel;   // Gabinete: aba e acao destacada
+ u32 propSeen;        // dia da ultima proposta que ja pausou o jogo
+ bool propRun;        // o jogo corria quando a proposta chegou (volta a correr)
 } WGame;
+// Gabinete (tela de baixo): geometria compartilhada por px_ledger.c e wgame.c
+enum { LG_TAB_Y=2, LG_TAB_H=28, LG_ACT_X=16, LG_ACT_Y=120, LG_ACT_W=224, LG_ACT_H=28, LG_BACK_Y=156 };
+// modal de proposta (painel do mapa): botoes Aceitar / Recusar
+enum { PM_BTN_Y=150, PM_BTN_H=36 };
 
 WGame *WG_Ptr(void);
 World *WG_World(void);
@@ -50,6 +62,12 @@ void WG_New(u8 mode,u8 hist,u8 size,u8 nNat,u8 diff,u32 seed,int nat);
 void WG_Frame(GameState *g);   // dias conforme velocidade (parado na pausa)
 void WG_Input(GameState *g,u32 down,u32 held,bool tDown,bool tUp,bool tHeld,int tx,int ty);
 void WG_CityInput(GameState *g,u32 down,bool tDown,int tx,int ty); // SCR_CITY
+void WG_LedgerInput(GameState *g,u32 down,bool tDown,int tx,int ty); // SCR_LEDGER
+int WG_DipItems(u8 *out);      // itens validos do menu de diplomacia (para dipTo)
+void PxL_Top(u16 *d);          // Gabinete (px_ledger.c): pagina da aba
+void PxL_Bot(u16 *d);          // Gabinete: abas + acoes
+void PxW_GoodChip(u16 *d,int x,int y,u8 g); // icone 8x8 do bem (px_ledger.c)
+u16 PxW_GoodCol(u8 g);
 // Celula visivel no pixel (sx,sy) do viewport; false = fora do mapa.
 bool WG_CellAt(int sx,int sy,int *cx,int *cy);
 int WG_ViewW(void);            // largura do viewport em celulas
