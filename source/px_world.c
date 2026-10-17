@@ -28,19 +28,23 @@
 static inline int Cl(int v){return v<0?0:(v>31?31:v);}
 static inline u16 C3(int r,int g,int b){return PXC(Cl(r),Cl(g),Cl(b));}
 
-// ---- estatisticas p/ rotulos e minimapa (1x por dia) ----
+// ---- estatisticas p/ rotulos e minimapa ----
+// Varrer as 98K celulas de uma vez custava ~20 ms no DS (tranco todo dia).
+// Agora a varredura e' INCREMENTAL: PxW_StatsStep le algumas linhas por
+// quadro num rascunho (ST2) e, ao fechar a volta, publica em ST + minimapa.
+// Os rotulos andam com ~1/4 s de atraso; o quadro nunca engasga.
 typedef struct { u32 sx,sy,n; u16 x0,x1,y0,y1; } CStat;
-static CStat ST[W_MAXC+1];
+static CStat ST[W_MAXC+1],ST2[W_MAXC+1];
 enum { MINI_W=64, MINI_H=24 };
 static u16 MINI[MINI_W*MINI_H];
-void PxW_Stats(void){
- const World *w=WG_World();
- for(int i=0;i<=W_MAXC;i++){ST[i].sx=ST[i].sy=ST[i].n=0;ST[i].x0=ST[i].y0=0xFFFF;ST[i].x1=ST[i].y1=0;}
- for(int y=0;y<w->h;y++){
+static int statRow=-1;
+static void StatClear(CStat *t){for(int i=0;i<=W_MAXC;i++){t[i].sx=t[i].sy=t[i].n=0;t[i].x0=t[i].y0=0xFFFF;t[i].x1=t[i].y1=0;}}
+static void StatRows(const World *w,CStat *t,int y0,int y1){
+ for(int y=y0;y<y1;y++){
   const u8 *row=&W_OWNER[World_Idx(w,0,y)];
   for(int x=0;x<w->w;x++){
    u8 o=row[x];if(!o)continue;
-   CStat *s=&ST[o];
+   CStat *s=&t[o];
    s->sx+=(u32)x;s->sy+=(u32)y;s->n++;
    if(x<s->x0)s->x0=(u16)x;
    if(x>s->x1)s->x1=(u16)x;
@@ -48,6 +52,8 @@ void PxW_Stats(void){
    if(y>s->y1)s->y1=(u16)y;
   }
  }
+}
+static void Minimap_Build(const World *w){
  // minimapa: sempre politico (DESIGN 4.2), 1 amostra por bloco
  int sx=(w->w<<8)/MINI_W, sy=(w->h<<8)/MINI_H;
  for(int j=0;j<MINI_H;j++)for(int i=0;i<MINI_W;i++){
@@ -59,6 +65,17 @@ void PxW_Stats(void){
   else c=PXC(24,22,16);
   MINI[j*MINI_W+i]=c;
  }
+}
+void PxW_Stats(void){              // volta completa de uma vez (inicio da partida)
+ const World *w=WG_World();
+ StatClear(ST);StatRows(w,ST,0,w->h);Minimap_Build(w);statRow=-1;
+}
+void PxW_StatsStep(int rows){
+ const World *w=WG_World();
+ if(statRow<0){StatClear(ST2);statRow=0;}
+ int y1=statRow+rows;if(y1>w->h)y1=w->h;
+ StatRows(w,ST2,statRow,y1);statRow=y1;
+ if(statRow>=w->h){for(int i=0;i<=W_MAXC;i++)ST[i]=ST2[i];Minimap_Build(w);statRow=-1;}
 }
 
 // ---- utilitarios de texto ----
@@ -89,7 +106,7 @@ static bool ToScreen(const World *w,const WGame *s,int cx,int cy,int *px,int *py
  int rx=RelX(w,s->camX,cx),ry=cy-s->camY;
  if(w->wrap&&rx<0)rx+=w->w;   // a vista sempre comeca em camX
  if(s->zoom==0){*px=rx/2;*py=ry/2;}
- else{int ppc=1<<(s->zoom-1);*px=rx*ppc+ppc/2;*py=ry*ppc+ppc/2;}
+ else{int ppc=1<<(s->zoom-1);*px=rx*ppc+ppc/2-s->subX;*py=ry*ppc+ppc/2-s->subY;}
  return *px>=0&&*px<256&&*py>=0&&*py<WG_MAP_H;
 }
 // estrela de capital 5x5 com contorno de tinta
@@ -190,33 +207,40 @@ static void CellPx(const World *w,const WGame *s,int cx,int cy,int *px,int *py){
  int vw=WG_ViewW();
  if(w->wrap&&rx<-vw/2)rx+=w->w;            // a copia mais perto da vista
  if(s->zoom==0){*px=rx/2;*py=ry/2;}
- else{int ppc=1<<(s->zoom-1);*px=rx*ppc+ppc/2;*py=ry*ppc+ppc/2;}
+ else{int ppc=1<<(s->zoom-1);*px=rx*ppc+ppc/2-s->subX;*py=ry*ppc+ppc/2-s->subY;}
  *py+=WG_MAP_Y;
 }
 static inline void MPut(u16 *d,int x,int y,u16 c){if(x>=0&&x<256&&y>WG_MAP_Y&&y<192)d[y*256+x]=c;}
-// rota maritima: arco (Bezier quadratica inteira) tracejado + navio que anda
-static void Arc(u16 *d,int x0,int y0,int x2,int y2,int side,u16 col,int phase,bool ship){
- int mx=(x0+x2)/2,my=(y0+y2)/2,dx=x2-x0,dy=y2-y0;
- int x1=mx-dy*side/4,y1=my+dx*side/4;      // ponto de controle: perpendicular
- enum{N=40};
- int lx=x0,ly=y0;
- for(int i=1;i<=N;i++){
-  int a=N-i,b=i;
-  int x=(a*a*x0+2*a*b*x1+b*b*x2)/(N*N),y=(a*a*y0+2*a*b*y1+b*b*y2)/(N*N);
-  if(((i+phase/4)&3)<2){  // tracejado que corre
-   int sx=lx,sy=ly,ex=x,ey=y,ddx=ex-sx,ddy=ey-sy,st=(ddx<0?-ddx:ddx)>(ddy<0?-ddy:ddy)?(ddx<0?-ddx:ddx):(ddy<0?-ddy:ddy);
-   if(st>40)st=40;
-   for(int k=0;k<=st;k++)MPut(d,sx+(st?ddx*k/st:0),sy+(st?ddy*k/st:0),col);
-  }
-  lx=x;ly=y;
+// rota pelo mar: polilinha tracejada que corre pelos nos de mar (px_sea.c)
+// + navio mercante andando por ela. Segmento que cruza a volta do mundo
+// (salto > 200 px) nao e' desenhado.
+static void SeaLine(u16 *d,const World *w,const WGame *s,const u16 *p,int n,u16 col,int phase,bool ship){
+ static s16 X[64],Y[64];static u16 L[64];
+ if(n>64)n=64;
+ int tot=0;
+ for(int i=0;i<n;i++){int cx,cy;PxS_NodeCell(p[i],&cx,&cy);int x,y;CellPx(w,s,cx,cy,&x,&y);X[i]=(s16)x;Y[i]=(s16)y;
+  if(i){int dx=X[i]-X[i-1],dy=Y[i]-Y[i-1];if(dx<0)dx=-dx;if(dy<0)dy=-dy;int l=dx>dy?dx:dy;if(l>200)l=0;L[i]=(u16)l;tot+=l;}
+  else L[0]=0;}
+ int acc=0;
+ for(int i=1;i<n;i++){
+  int l=L[i];if(!l){continue;}
+  int x0=X[i-1],y0=Y[i-1],ddx=X[i]-x0,ddy=Y[i]-y0;
+  if((x0<-40&&X[i]<-40)||(x0>296&&X[i]>296)||(y0<0&&Y[i]<0)||(y0>232&&Y[i]>232)){acc+=l;continue;}
+  for(int k=0;k<=l;k++){if((((acc+k)+phase/2)&7)<4)MPut(d,x0+ddx*k/l,y0+ddy*k/l,col);}
+  acc+=l;
  }
- if(!ship)return;
- int i=phase%N,a=N-i,b=i;
- int x=(a*a*x0+2*a*b*x1+b*b*x2)/(N*N),y=(a*a*y0+2*a*b*y1+b*b*y2)/(N*N);
- // navio mercante 5x4: casco escuro, vela clara
- MPut(d,x-2,y+1,C_INK);MPut(d,x-1,y+1,C_INK);MPut(d,x,y+1,C_INK);MPut(d,x+1,y+1,C_INK);MPut(d,x+2,y+1,C_INK);
- MPut(d,x-1,y+2,C_INK);MPut(d,x,y+2,C_INK);MPut(d,x+1,y+2,C_INK);
- MPut(d,x,y-2,C_TEXT);MPut(d,x,y-1,C_TEXT);MPut(d,x+1,y-1,C_TEXT);MPut(d,x,y,C_INK);
+ if(!ship||tot<4)return;
+ // navio: posicao ao longo do caminho (vai e volta)
+ int t=(phase/2)%(tot*2);if(t>tot)t=tot*2-t;
+ for(int i=1;i<n;i++){
+  int l=L[i];if(!l)continue;
+  if(t<=l){int x=X[i-1]+(X[i]-X[i-1])*t/l,y=Y[i-1]+(Y[i]-Y[i-1])*t/l;
+   MPut(d,x-2,y+1,C_INK);MPut(d,x-1,y+1,C_INK);MPut(d,x,y+1,C_INK);MPut(d,x+1,y+1,C_INK);MPut(d,x+2,y+1,C_INK);
+   MPut(d,x-1,y+2,C_INK);MPut(d,x,y+2,C_INK);MPut(d,x+1,y+2,C_INK);
+   MPut(d,x,y-2,C_TEXT);MPut(d,x,y-1,C_TEXT);MPut(d,x+1,y-1,C_TEXT);MPut(d,x,y,C_INK);
+   return;}
+  t-=l;
+ }
 }
 static void Routes(u16 *d,const World *w,const WGame *s){
  bool all=s->mapMode==WMAP_COM;
@@ -242,10 +266,12 @@ static void Routes(u16 *d,const World *w,const WGame *s){
   int ax,ay;CellPx(w,s,h->x,h->y,&ax,&ay);
   const WCity *ph=&w->city[w->eco[e->route[k]].hub];
   int bx,by;CellPx(w,s,ph->x,ph->y,&bx,&by);
-  if((ax<-40&&bx<-40)||(ax>296&&bx>296)||(ay<0&&by<0)||(ay>232&&by>232))continue;
-  int ddx=bx-ax;if(ddx>400||ddx<-400)continue;
+  (void)ax;(void)ay;(void)bx;(void)by;
   u16 col=ci==s->me?C_GOLD_HI:PxW_GoodCol(e->routeG[k]);
-  Arc(d,ax,ay,bx,by,((ci+k)&1)?1:-1,col,(int)(s->tick/2)+ci*7+k*11,s->zoom>=1);
+  // o navio segue o MAR de porto a porto (antes: arco reto que cortava terra)
+  const u16 *pts;int np=PxS_Path(w,e->hub,w->eco[e->route[k]].hub,&pts);
+  if(np<0){Px_WantTop();continue;}         // caminho sai no proximo quadro
+  if(np>1)SeaLine(d,w,s,pts,np,col,(int)(s->tick/2)+ci*7+k*11,s->zoom>=1);
  }
 }
 // frotas: navio de guerra ao lado do porto principal (Z2+), com o numero
@@ -257,8 +283,10 @@ static void Fleets(u16 *d,const World *w,const WGame *s){
   if(!c->alive||c->ships<=0||e->hub<0)continue;
   if(!all&&ci!=s->me&&!World_AtWar(w,s->me,ci))continue;
   const WCity *h=&w->city[e->hub];
-  int x,y;CellPx(w,s,h->x,h->y,&x,&y);
-  x+=6;y+=6;
+  // a frota fica na agua: no' de mar mais perto do porto principal
+  int x,y,nd=PxS_Node(w,h->x,h->y);
+  if(nd>=0){int cx,cy;PxS_NodeCell(nd,&cx,&cy);CellPx(w,s,cx,cy,&x,&y);}
+  else{CellPx(w,s,h->x,h->y,&x,&y);x+=6;y+=6;}
   if(x<0||x>244||y<WG_MAP_Y+4||y>184)continue;
   bool foe=World_AtWar(w,s->me,ci);
   u16 hull=foe?C_EVENT:(ci==s->me?C_GOLD:C_NAVY);
@@ -270,35 +298,25 @@ static void Fleets(u16 *d,const World *w,const WGame *s){
   Px_Text2Out(d,x+6,y-6,t,&F_SERIF8,C_TEXT,C_INK,0,1,0);
  }
 }
-// MIRA: ponto no centro da vista (as setas movem o mapa por baixo dela).
-// Anel de 2px com 4 aberturas (o alvo fica visivel) e contorno de tinta +
-// ponto central; sobre algo acionavel o anel fica ouro e respira (A abre a
-// folha de acoes).
+// MIRA: fica onde a camera a pos (centro da vista, salvo nas bordas); as
+// setas movem o mapa por baixo dela. Anel fino de raio 4 com 4 aberturas e
+// contorno de tinta + ponto; sobre algo acionavel o anel fica ouro e respira.
 static void Cursor(u16 *d,const World *w,const WGame *s){
- int px,py;
- if(!ToScreen(w,s,s->curX,s->curY,&px,&py))return;
- py+=WG_MAP_Y;
+ (void)w;
+ int px=s->rX>>4,py=WG_MAP_Y+(s->rY>>4);
  bool tgt=!s->dead&&(s->hcity>=0||s->selLand||s->sel);
- int R=tgt&&((s->tick/20)&1)?9:8;
- u16 ring=tgt?C_GOLD_HI:C_TEXT;
- // 2 passadas: contorno de tinta (anel R-1..R+1 + 1) e o anel em si
- for(int pass=0;pass<2;pass++)for(int dy=-R-2;dy<=R+2;dy++)for(int dx=-R-2;dx<=R+2;dx++){
+ bool ph=((s->tick/24)&1);
+ int R=tgt&&ph?5:4;
+ u16 ring=tgt?(ph?C_GOLD_HI:C_WHITE):C_TEXT_DIM;   // branco/ouro pulsando: destaca sobre a arte das cidades
+ for(int pass=0;pass<2;pass++)for(int dy=-R-1;dy<=R+1;dy++)for(int dx=-R-1;dx<=R+1;dx++){
   int q=dx*dx+dy*dy,ad=dx<0?-dx:dx,bd=dy<0?-dy:dy;
-  if(ad<=2||bd<=2)continue;                       // aberturas em cruz
-  int lo=pass?(R-1)*(R-1):(R-2)*(R-2),hi=pass?R*R+R:(R+1)*(R+1)+R+1;
+  if(ad<=1||bd<=1)continue;                       // 4 aberturas
+  int lo=pass?(R-1)*(R-1)+1:(R-2)*(R-2),hi=pass?R*R+1:(R+1)*(R+1);
   if(q<lo||q>hi)continue;
   if(py+dy<=WG_MAP_Y)continue;
   Px_PSet(d,px+dx,py+dy,pass?ring:C_INK);
  }
- // tracos da cruz (fora do anel) apontando p/ o centro
- for(int k=0;k<4;k++){
-  int ux=(k==0)-(k==1),uy=(k==2)-(k==3);
-  for(int t=R-2;t<=R+3;t++){int x=px+ux*t,y=py+uy*t;
-   if(y<=WG_MAP_Y)continue;
-   Px_PSet(d,x+uy,y+ux,C_INK);Px_PSet(d,x-uy,y-ux,C_INK);Px_PSet(d,x,y,ring);}
- }
- for(int j=-2;j<=2;j++)for(int i=-2;i<=2;i++)if(py+j>WG_MAP_Y&&(i*i+j*j)<=5)Px_PSet(d,px+i,py+j,C_INK);
- for(int j=-1;j<=1;j++)for(int i=-1;i<=1;i++)if(py+j>WG_MAP_Y&&(i==0||j==0))Px_PSet(d,px+i,py+j,ring);
+ for(int j=-1;j<=1;j++)for(int i=-1;i<=1;i++)if(py+j>WG_MAP_Y)Px_PSet(d,px+i,py+j,(i||j)?C_INK:ring);
 }
 static void Minimap(u16 *d,const World *w,const WGame *s){
  if(s->zoom==0)return;
@@ -323,20 +341,35 @@ static void Minimap(u16 *d,const World *w,const WGame *s){
  }
 }
 // barra de recursos (SDD 14.4): ouro, tropas, prestigio, data
+// populacao (milhares) -> "850k", "16,8M", "320M", "1,56bi"
+static void FmtPop(u32 k,char *o){
+ char t[16];o[0]=0;
+ if(k<1000){Px_Itoa((int)k,t);Cat(o,16,t);Cat(o,16,"k");return;}
+ if(k<100000){Px_Itoa((int)(k/1000),t);Cat(o,16,t);Cat(o,16,",");char q[2]={(char)('0'+(k%1000)/100),0};Cat(o,16,q);Cat(o,16,"M");return;}
+ if(k<1000000){Px_Itoa((int)(k/1000),t);Cat(o,16,t);Cat(o,16,"M");return;}
+ Px_Itoa((int)(k/1000000),t);Cat(o,16,t);Cat(o,16,",");
+ char q[3]={(char)('0'+(k%1000000)/100000),(char)('0'+(k%100000)/10000),0};Cat(o,16,q);Cat(o,16,"bi");
+}
+// Barra de estatisticas (tela do mapa): caixa (com seta do saldo da semana),
+// populacao, exercito, alfabetizacao, prestigio e data. Celulas de largura
+// fixa (SX) p/ nada pular de lugar quando o numero cresce.
 static void Bar(u16 *d,const World *w,const WGame *s){
  Px_Rect(d,0,0,256,19,C_NAVY);
  Px_Rect(d,0,19,256,1,C_GOLD);
  const WCountry *me=&w->c[s->me];
- static const s16 SX[4]={0,78,130,176};
- for(int i=1;i<4;i++)Px_Rect(d,SX[i],3,1,13,C_GOLD_DIM);
+ static const s16 SX[7]={0,46,86,130,160,193,256};
+ for(int i=1;i<6;i++)Px_Rect(d,SX[i],3,1,13,C_GOLD_DIM);
  char t[24];
- // ouro + saldo da semana (verde/vermelho): a economia sempre a vista
- Ui_IconId(d,3,4,ICO_COIN_S,false);FmtK(me->gold,t);Px_Text2(d,18,6,t,&F_SERIF8,C_TEXT);
- {s32 wk=WEco_GoldWeek(w,s->me);char q[16];FmtK(wk,q);char q2[18]={0};if(wk>=0)Cat(q2,18,"+");Cat(q2,18,q);
-  Px_Text2(d,75-Px_Width2(q2,&F_SERIF8),6,q2,&F_SERIF8,wk<0?C_EVENT:C_PLAYER);}
- Ui_IconId(d,82,4,ICO_SWORDS_S,false);FmtK(me->troops+(me->atkOn?me->atkTroops:0),t);Px_Text2(d,97,6,t,&F_SERIF8,C_TEXT);
- Ui_IconId(d,134,4,ICO_CROWN_S,false);FmtK(me->prestige,t);Px_Text2(d,149,6,t,&F_SERIF8,C_TEXT);
- Ui_IconId(d,180,4,ICO_CAL_S,false);Cal_Format(&w->date,t,24);Px_Text2(d,195,6,t,&F_SERIF8,C_TEXT);
+ // caixa + seta do saldo fiscal da semana (verde sobe, vermelha desce)
+ Ui_IconId(d,2,4,ICO_COIN_S,false);FmtK(me->gold,t);Px_Text2(d,16,6,t,&F_SERIF8,C_TEXT);
+ {s32 wk=WEco_GoldWeek(w,s->me);int x=SX[1]-6;u16 c=wk<0?C_EVENT:C_PLAYER;
+  for(int k=0;k<3;k++)for(int j=-k;j<=k;j++)Px_PSet(d,x+j,wk<0?(10+k):(12-k),c);}
+ Ui_IconId(d,SX[1]+2,4,ICO_PEOPLE_S,false);FmtPop(me->popK,t);Px_Text2(d,SX[1]+16,6,t,&F_SERIF8,C_TEXT);
+ Ui_IconId(d,SX[2]+2,4,ICO_SWORDS_S,false);FmtK(me->troops+(me->atkOn?me->atkTroops:0),t);Px_Text2(d,SX[2]+16,6,t,&F_SERIF8,C_TEXT);
+ Ui_IconId(d,SX[3]+2,4,ICO_BOOK_S,false);Px_Itoa(me->lit/10,t);Cat(t,24,"%");Px_Text2(d,SX[3]+16,6,t,&F_SERIF8,C_TEXT);
+ Ui_IconId(d,SX[4]+2,4,ICO_CROWN_S,false);FmtK(me->prestige,t);Px_Text2(d,SX[4]+16,6,t,&F_SERIF8,C_TEXT);
+ // data compacta: 27 mai 1800
+ Cal_Format(&w->date,t,24);Px_Text2(d,253-Px_Width2(t,&F_SERIF8),6,t,&F_SERIF8,C_TEXT);
 }
 // chip de velocidade/pausa no canto do mapa
 static void SpeedChip(u16 *d,const WGame *s){
@@ -381,16 +414,16 @@ static void StatLine(u16 *d,int x,int y,u8 ico,u8 lab,const char *val){
 }
 static void Card(u16 *d,const World *w,const WGame *s,u8 ci){
  const WCountry *c=&w->c[ci];const NationDef *nd=&NATIONS[c->nat];
- Px_Rect(d,10,10,40,28,C_GOLD);
- {FlagDef f;WDip_Flag(w,ci,&f);Flag_Draw(d,256,12,12,36,24,&f);}
- const Font *f=Px_Width2(nd->name,&F_SERIF12)<=188?&F_SERIF12:&F_SERIF8;
- Px_Text2(d,56,f==&F_SERIF12?11:13,nd->name,f,C_TEXT);
+ Px_Rect(d,28,10,40,28,C_GOLD);
+ {FlagDef f;WDip_Flag(w,ci,&f);Flag_Draw(d,256,30,12,36,24,&f);}
+ const Font *f=Px_Width2(nd->name,&F_SERIF12)<=170?&F_SERIF12:&F_SERIF8;
+ Px_Text2(d,74,f==&F_SERIF12?11:13,nd->name,f,C_TEXT);
  char sub[96]={0};
  if(c->overlord&&w->c[c->overlord].alive){Cat(sub,96,Str(STR_SUDITO_DE));Cat(sub,96,NatName(w,c->overlord));}
  else{Cat(sub,96,Nat_GovName(c->gov));Cat(sub,96," · ");Cat(sub,96,Str((u16)(STR_ID_0+c->ideo)));}
- if(ci==s->me){Px_Text2(d,56,27,Str(STR_SUA_NACAO),&F_SERIF8,C_GOLD);
-  Px_Text2(d,60+Px_Width2(Str(STR_SUA_NACAO),&F_SERIF8),27,sub,&F_SERIF8,C_TEXT_DIM);}
- else Px_Text2(d,56,27,sub,&F_SERIF8,C_TEXT_DIM);
+ if(ci==s->me){Px_Text2(d,74,27,Str(STR_SUA_NACAO),&F_SERIF8,C_GOLD);
+  Px_Text2(d,78+Px_Width2(Str(STR_SUA_NACAO),&F_SERIF8),27,sub,&F_SERIF8,C_TEXT_DIM);}
+ else Px_Text2(d,74,27,sub,&F_SERIF8,C_TEXT_DIM);
  Px_Rect(d,10,41,236,1,C_GOLD_DIM);
  char a[16],b[16],t[40];
  FmtK(c->troops,a);FmtK(c->cap,b);t[0]=0;Cat(t,40,a);Cat(t,40," / ");Cat(t,40,b);
@@ -429,12 +462,12 @@ static void Card(u16 *d,const World *w,const WGame *s,u8 ci){
 // ficha da cidade sob o cursor: bandeira, nome, nivel, populacao e as obras
 static void CityCard(u16 *d,const World *w,const WGame *s,int ci){
  const WCity *c=&w->city[ci];
- if(c->owner){Px_Rect(d,10,10,40,28,C_GOLD);Flag_Draw(d,256,12,12,36,24,&NATIONS[w->c[c->owner].nat].flag);}
+ if(c->owner){Px_Rect(d,28,10,40,28,C_GOLD);Flag_Draw(d,256,30,12,36,24,&NATIONS[w->c[c->owner].nat].flag);}
  char nm[40];City_Name(w,ci,nm,40);
- Px_Text2(d,56,11,nm,&F_SERIF12,C_TEXT);
+ Px_Text2(d,74,11,nm,&F_SERIF12,C_TEXT);
  char sub[80]={0};Cat(sub,80,Str((u16)(STR_TIER_0+c->tier)));
  if(c->owner){Cat(sub,80," · ");Cat(sub,80,NatName(w,c->owner));}
- Px_Text2(d,56,27,sub,&F_SERIF8,c->owner==s->me?C_GOLD:C_TEXT_DIM);
+ Px_Text2(d,74,27,sub,&F_SERIF8,c->owner==s->me?C_GOLD:C_TEXT_DIM);
  Px_Rect(d,10,41,236,1,C_GOLD_DIM);
  char t[40];
  if(c->pop>=1000){Px_Itoa(c->pop/1000,t);Cat(t,40,",");char q[2]={(char)('0'+(c->pop%1000)/100),0};Cat(t,40,q);Cat(t,40," M");}
@@ -527,9 +560,9 @@ void PxW_Panel(u16 *d){
  if(s->hcity>=0)CityCard(d,w,s,s->hcity);
  else if(ci&&w->c[ci].alive)Card(d,w,s,ci);
  else if(s->selLand){
-  Ui_Parch(d,10,10,40,28);
-  Ui_IconId(d,24,18,ICO_LAND_S,false);
-  Px_Text2(d,56,11,Str(STR_TERRA_LIVRE),&F_SERIF12,C_TEXT);
+  Ui_Parch(d,28,10,40,28);
+  Ui_IconId(d,42,18,ICO_LAND_S,false);
+  Px_Text2(d,74,11,Str(STR_TERRA_LIVRE),&F_SERIF12,C_TEXT);
   Px_Rect(d,10,41,236,1,C_GOLD_DIM);
   Px_WrapN(d,10,48,236,Str(STR_DESC_TERRA),&F_SERIF8,C_TEXT_DIM,2,false);
   if(w->c[s->me].atkOn&&!w->c[s->me].atkTo)Px_Text2(d,10,80,Str(STR_COLONIZANDO),&F_SERIF8,C_GOLD);
@@ -575,6 +608,11 @@ void PxW_Panel(u16 *d){
   char sp[4]={(char)('0'+s->speed),'x',0};
   Ui_TextC(d,bs->x+bs->w/2,bs->y+22,sp,0,C_TEXT_DIM);
  }
+ // bolinha do ranking (canto sup-esq): medalha num disco navy com aro ouro
+ {int cx=12,cy=12;
+  for(int y=-11;y<=11;y++)for(int x=-11;x<=11;x++){int q=x*x+y*y;
+   if(q<=121)Px_PSet(d,cx+x,cy+y,q>=100?C_GOLD:(q>=81?C_GOLD_DIM:C_NAVY));}
+  Ui_IconId(d,cx-6,cy-6,ICO_RANK,false);}
  if(s->dipOpen)DipMenu(d,w,s);
 }
 

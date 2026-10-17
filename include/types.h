@@ -38,6 +38,7 @@ typedef enum {
  SCR_WORLD,  // partida no mundo celular (mapa-mundi/aleatorio, wgame.c)
  SCR_CITY,   // cidade aberta (cena viva + slots de obras, px_city.c)
  SCR_LEDGER, // Gabinete: mercado, comercio/frota, diplomacia, politica (px_ledger.c)
+ SCR_RANK,   // ranking das potencias (px_rank.c, wrank.c)
  SCR_COUNT
 } Screen;
 typedef struct {

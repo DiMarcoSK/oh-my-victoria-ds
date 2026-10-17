@@ -13,7 +13,7 @@
 // + botoes rapidos + % e velocidade.
 // Layout Invertida (Settings) poe o mapa embaixo, tocavel (lcdMainOnBottom).
 enum { WMAP_POL=0, WMAP_TER, WMAP_DIP, WMAP_COM, WMAP_IDEO, WMAP_COUNT };   // modos de mapa (Y)
-enum { LT_MERCADO=0, LT_COMERCIO, LT_DIPLO, LT_POLITICA, LT_COUNT };    // abas do Gabinete
+enum { LT_MERCADO=0, LT_COMERCIO, LT_DIPLO, LT_POLITICA, LT_FINANCAS, LT_COUNT };    // abas do Gabinete
 // folha de acoes (A sobre a mira, ou botao bandeira): o que da' p/ fazer com o
 // alvo sob a mira — pais, sua terra, sua cidade ou terra livre. So' caneta.
 enum { DM_PAZ=0, DM_ALIANCA, DM_ROMPER, DM_ENTRAR, DM_CONVIDAR, DM_GUERRA, DM_CANCELAR,
@@ -23,8 +23,13 @@ enum { WG_ACT_Y=30, WG_ACT_H=22 };                        // linhas tocaveis da 
 enum { WZ_COUNT=5 };      // zoom 0..4: (1<<z)/2 px por celula (Z0 = mundo inteiro)
 enum { WG_MAP_Y=20, WG_MAP_H=172 };                    // viewport do mapa
 typedef struct {
- s16 camX, camY;      // celula no canto sup-esq do viewport
- s16 curX, curY;      // cursor (celula)
+ s16 camX, camY;      // celula no canto sup-esq do viewport (derivada de pX/pY)
+ u8 subX, subY;       // pixels dentro da celula (Z2+): rolagem pixel a pixel
+ s32 pX, pY;          // camera em 1/16 de pixel da vista (ADR-31)
+ s16 rX, rY;          // mira na vista, 1/16 px (centro, salvo nas bordas)
+ s16 vX, vY;          // velocidade da camera (1/16 px por quadro)
+ u8 phase;            // fase do dia em andamento (0 = nenhuma; World_DayPhase)
+ s16 curX, curY;      // celula sob a mira
  u8 zoom, mapMode;
  u8 me;               // pais do jogador (indice em World.c)
  u8 sel;              // pais sob o cursor (0 = terra livre ou nada)
@@ -44,7 +49,9 @@ typedef struct {
  bool stale;          // estatisticas de rotulos/minimapa precisam recalcular
  s16 hcity;           // cidade sob o cursor (-1 = nenhuma)
  s16 cityIdx;         // cidade aberta no SCR_CITY
- u8 citySlot;         // slot destacado na cidade
+ u8 citySlot;         // (legado) slot destacado
+ u8 cityLot;          // lote sob a mira no mapa da cidade (0..CG_N-1)
+ u8 cityHold;         // quadros segurando a seta no mapa da cidade (repeticao)
  bool cityPick;       // escolhendo a obra do slot
  u8 pickK;            // obra em escolha (BK_*)
  bool foundAsk;       // fundar pede o 2o toque (mostra o preco)
@@ -54,11 +61,20 @@ typedef struct {
  u8 dipTo, dipSel, dipN, dipIt[DM_COUNT];
  u8 actKind;          // AK_*: o que esta' sob a mira quando a folha abriu
  u8 ledTab, ledSel;   // Gabinete: aba e acao destacada
+ u8 rankTab;          // ranking: criterio (RK_*)
+ s16 rankTop;         // ranking: primeira linha visivel
  u32 propSeen;        // dia da ultima proposta que ja pausou o jogo
  bool propRun;        // o jogo corria quando a proposta chegou (volta a correr)
 } WGame;
 // Gabinete (tela de baixo): geometria compartilhada por px_ledger.c e wgame.c
 enum { LG_TAB_Y=2, LG_TAB_H=28, LG_ACT_X=16, LG_ACT_Y=120, LG_ACT_W=224, LG_ACT_H=28, LG_BACK_Y=156 };
+// Gabinete, aba Financas: 4 politicas em grade 2x2 (imposto, tarifa, educacao, militar)
+enum { LG_POL_Y=84, LG_POL_H=30, LG_POL_W=122, LG_POL_X0=4, LG_POL_X1=130 };
+// ranking (SCR_RANK): abas de criterio, paginas, minha nacao (voltar = LG_BACK_Y)
+enum { RK_TAB_Y=2, RK_TAB_H=26, RK_BTN_Y=124, RK_BTN_H=26, RK_BTN_W=56, RK_UP_X=8, RK_DN_X=70, RK_ME_X=132, RK_ME_W=116 };
+// cidade (SCR_CITY, painel): minimapa de lotes, botao do lote, catalogo
+enum { CY_MINI_X=6, CY_MINI_Y=46, CY_CELL=7, CY_BTN_Y=120, CY_BTN_H=22, CY_PICK_Y=118,
+       CY_ARW_W=36, CY_OK_X=56, CY_OK_Y=162, CY_OK_W=96, CY_OK_H=24, CY_NO_X=158, CY_NO_W=90 };
 // modal de proposta (painel do mapa): botoes Aceitar / Recusar
 enum { PM_BTN_Y=150, PM_BTN_H=36 };
 
@@ -67,9 +83,13 @@ World *WG_World(void);
 // Gera o mundo e posiciona camera/cursor na capital do jogador. diff 0..2.
 void WG_New(u8 mode,u8 hist,u8 size,u8 nNat,u8 diff,u32 seed,int nat);
 void WG_Frame(GameState *g);   // dias conforme velocidade (parado na pausa)
+void WG_Goto(int x,int y);     // poe a celula sob a mira (camera centrada nela)
 void WG_Input(GameState *g,u32 down,u32 held,bool tDown,bool tUp,bool tHeld,int tx,int ty);
 void WG_CityInput(GameState *g,u32 down,bool tDown,int tx,int ty); // SCR_CITY
 void WG_LedgerInput(GameState *g,u32 down,bool tDown,int tx,int ty); // SCR_LEDGER
+void WG_RankInput(GameState *g,u32 down,bool tDown,int tx,int ty);   // SCR_RANK
+void PxR_Top(u16 *d);          // ranking (px_rank.c): lista
+void PxR_Bot(u16 *d);          // ranking: criterio, paginas, sua posicao
 int WG_DipItems(u8 *out);      // itens validos da folha de acoes (alvo atual)
 void PxL_Top(u16 *d);          // Gabinete (px_ledger.c): pagina da aba
 void PxL_Bot(u16 *d);          // Gabinete: abas + acoes
@@ -83,7 +103,8 @@ int WG_ViewH(void);
 // px_world.c
 void PxW_Map(u16 *d);          // barra de recursos + mapa (tela do mapa)
 void PxW_Panel(u16 *d);        // ficha + despacho + acoes (tela do painel)
-void PxW_Stats(void);          // centros/caixas p/ rotulos + minimapa (1x/dia)
+void PxW_Stats(void);          // centros/caixas p/ rotulos + minimapa (volta inteira)
+void PxW_StatsStep(int rows);  // idem, incremental: algumas linhas por quadro
 // camada do mapa com cache incremental (px_mapr.c, ADR-24)
 void PxM_Update(World *w,const WGame *s);
 void PxM_Blit(u16 *d);
@@ -95,7 +116,14 @@ const u8 *PxM_Key(void);      // dono por pixel do viewport (0xFE fora, 0xFF mar
 void PxC_Building(u16 *d,int x,int yb,int w,u8 k,u8 style,u16 year,u32 seed,int tick,u8 natFlag);
 void PxC_MapCities(u16 *d,const World *w,const WGame *s);
 void PxC_Scene(u16 *d,int city);         // tela de cima do SCR_CITY
-void PxC_Panel(u16 *d,int city,int slot,bool picking,u8 pk);
+void PxC_Panel(u16 *d,int city,int lot,bool picking,u8 pk);
+u8 PxC_LotDen(const World *w,int city,int lot);   // 0 nada, 1-3 casas, 4 campo, 5 mata
 void PxC_SceneReset(void);
+// px_sea.c: rotas pelo mar (grade grossa + BFS + cache; ADR-33)
+void PxS_Reset(void);
+void PxS_Frame(void);                    // orcamento de buscas do quadro
+int PxS_Node(const World *w,int x,int y); // no' de mar perto da celula (-1 = nenhum)
+int PxS_Path(const World *w,int cityA,int cityB,const u16 **pts); // n pontos; 0 sem mar; -1 depois
+void PxS_NodeCell(int n,int *x,int *y);  // centro do no' em celulas
 // Mapa da Terra em sepia (selecao de nacao / preparar partida).
 void PxW_Earth(u16 *d,int x,int y,int w,int h,int markNat,int pulse);

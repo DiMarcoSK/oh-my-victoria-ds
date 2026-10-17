@@ -41,8 +41,15 @@ void Px_Init(void){
  dmaCopy(backTop,BG_BMP_RAM(0),256*192*2);
  dmaCopy(backBot,BG_BMP_RAM_SUB(0),256*192*2);
 }
-void Px_FlipTop(void){dmaCopy(backTop,BG_BMP_RAM(0),256*192*2);}
-void Px_FlipBot(void){dmaCopy(backBot,BG_BMP_RAM_SUB(0),256*192*2);}
+// O DMA le a RAM principal direto: o que a CPU escreveu ainda pode estar so'
+// no cache de dados (write-back) -> a tela mostraria pixels velhos (restos de
+// sprite). Esvazia o cache do buffer antes de copiar.
+void Px_FlipTop(void){DC_FlushRange(backTop,256*192*2);dmaCopy(backTop,BG_BMP_RAM(0),256*192*2);}
+void Px_FlipBot(void){DC_FlushRange(backBot,256*192*2);dmaCopy(backBot,BG_BMP_RAM_SUB(0),256*192*2);}
+// pedido de redesenho so' da tela de cima (mapa andando: o painel nao muda)
+static bool topWant;
+void Px_WantTop(void){topWant=true;}
+bool Px_TakeTop(void){bool t=topWant;topWant=false;return t;}
 u16 *Px_BackTop(void){return backTop;}
 u16 *Px_BackBot(void){return backBot;}
 void Px_Clear(u16 *b,u16 c){for(int i=0;i<256*192;i++)b[i]=c;}

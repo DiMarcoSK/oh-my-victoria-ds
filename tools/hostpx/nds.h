@@ -57,6 +57,7 @@ void vramSetBankC(int v);
 int  bgInit(int bg,int type,int size,int mapbase,int tilebase);
 int  bgInitSub(int bg,int type,int size,int mapbase,int tilebase);
 void dmaCopy(const void*src,void*dst,u32 size);
+static inline void DC_FlushRange(const void*p,u32 n){(void)p;(void)n;}
 void swiWaitForVBlank(void);
 void scanKeys(void);
 u32  keysDown(void);

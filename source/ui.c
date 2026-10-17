@@ -63,6 +63,7 @@ static const Btn T_WORLD[]={
  {148,152,34,34,UI_W_LEDGER,0,0},
  {186,152,32,34,UI_W_PCT,0,0},
  {220,152,32,34,UI_W_SPEED,0,0},
+ {0,0,24,24,UI_W_RANK,0,0},        // bolinha do ranking (canto sup-esq)
  {0,0,0,0,0,0,0}
 };
 

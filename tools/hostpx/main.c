@@ -23,6 +23,8 @@
 #include "wdiplo.h"
 #include "history.h"
 #include "ui.h"
+#include "wrank.h"
+#include "wecon.h"
 
 static const char *dir=0;   // sem SHOTS nao grava screenshot
 static int bad=0;
@@ -34,8 +36,9 @@ static void Frames(GameState*g,int n){
   In_Handle(g);
   Game_Frame(g);
   Px_Tick(g);                       // bake do mapa classico: onde morava o hang
-  if(g->dirty){Px_Top(g);Px_Bot(g);g->dirty=false;g->dirtyBot=false;}
-  else if(g->dirtyBot){Px_Bot(g);g->dirtyBot=false;}
+  if(g->dirty){Px_Top(g);Px_Bot(g);g->dirty=false;g->dirtyBot=false;Px_TakeTop();}
+  else if(g->dirtyBot){Px_Bot(g);g->dirtyBot=false;if(Px_TakeTop())Px_Top(g);}
+  else if(Px_TakeTop())Px_Top(g);
   else if((f%15)==0){Px_Top(g);Px_Bot(g);}
   host_down=0;                      // keysDown so' vale 1 frame
  }
@@ -98,7 +101,13 @@ int main(void){
  Press(g,KEY_L);Press(g,KEY_L);      Shot(g,"10_z0");
  Press(g,KEY_R);Press(g,KEY_R);Press(g,KEY_R);Press(g,KEY_R);Shot(g,"12_z4");
  Press(g,KEY_L);                     Shot(g,"11_z3");
- Hold(g,KEY_DOWN,7);Hold(g,KEY_RIGHT,7);
+ // pan suave: segurar a seta tem que andar o mapa pixel a pixel e parar
+ {WGame*s=WG_Ptr();s32 p0=s->pX;Hold(g,KEY_RIGHT,20);s32 p1=s->pX;Frames(g,30);
+  printf("  pan: %d px em 20 quadros, deslizou %d px ao soltar, v=%d\n",(int)((p1-p0)>>4),(int)((s->pX-p1)>>4),s->vX);
+  if(p1-p0<20*16*2){printf("FALHA: segurar a seta nao andou o mapa\n");bad=1;}
+  if(s->vX){printf("FALHA: o mapa nao parou depois de soltar\n");bad=1;}}
+ {World*w=WG_World();u8 fra=World_CountryOfNat(w,Nat_Find("FRA"));WG_Goto(w->c[fra].capX+3,w->c[fra].capY+4);}
+ Hold(g,KEY_DOWN,3);
  Shot(g,"13_cursor_franca");
  Press(g,KEY_A);                     Shot(g,"14_folha_acoes");
  if(!WG_Ptr()->dipOpen){printf("FALHA: A sobre a mira nao abriu a folha de acoes\n");bad=1;}
@@ -108,7 +117,12 @@ int main(void){
  if(!TapAct(g,DM_GUERRA)&&!TapAct(g,DM_ATACAR)){printf("FALHA: folha sem guerra/ataque sobre a Franca\n");bad=1;}
  if(WG_Ptr()->dipOpen){printf("FALHA: a folha nao fechou depois da acao\n");bad=1;}
  Press(g,KEY_SELECT);
- for(int i=0;i<240;i++){Frames(g,1);u32 c=WG_World()->c[WG_Ptr()->me].cells;if(c>c1)c1=c;}
+ // resposta da IA: quantos dias ate' o alvo abrir frente de volta (contra-ataque)
+ {World*w=WG_World();u8 me=WG_Ptr()->me,fra=World_CountryOfNat(w,Nat_Find("FRA"));u32 d0=w->day;int resp=-1;
+  for(int i=0;i<240;i++){Frames(g,1);u32 c=w->c[me].cells;if(c>c1)c1=c;
+   if(resp<0&&fra&&w->c[fra].atkOn&&w->c[fra].atkTo==me)resp=(int)(w->day-d0);}
+  if(resp>=0)printf("  IA respondeu ao ataque em %d dia(s)\n",resp);
+  else printf("  IA nao contra-atacou em %u dias (reserva baixa ou sem fronteira)\n",w->day-d0);}
  Shot(g,"15_guerra");
  WG_Ptr()->bannerT=0;Frames(g,120);Shot(g,"15b_frente");
  WG_Ptr()->bannerT=0;Press(g,KEY_R);Shot(g,"15c_z4_cidades");Press(g,KEY_L);
@@ -122,7 +136,7 @@ int main(void){
   if(cap<0){printf("FALHA: capital do jogador sem cidade\n");bad=1;}
   else{
    if(w->prop.kind)Answer(g,false);         // despacho da IA pendente (trava o mapa): recusa antes
-   s->curX=(s16)w->city[cap].x;s->curY=(s16)w->city[cap].y;Hold(g,KEY_LEFT,1);Hold(g,KEY_RIGHT,1);
+   WG_Goto(w->city[cap].x,w->city[cap].y);
    w->c[s->me].gold+=5000;
    Press(g,KEY_A);
    if(!s->dipOpen||s->actKind!=AK_CIDADE){printf("FALHA: A na capital nao abriu a folha da cidade\n");bad=1;}
@@ -138,15 +152,18 @@ int main(void){
     long diff=0;for(int i=0;i<256*172;i++){u16 p=Px_BackTop()[20*256+i];if(p!=a[i])diff++;}
     printf("  reabrir a cidade: %ld px diferentes (so' pedestres/fumaca)\n",diff);
     if(diff>256*172/8){printf("FALHA: cena da cidade reaberta mostra o mapa (cache velho)\n");bad=1;}}
-   // escolhe um slot vazio (toque) e constroi: 1o toque seleciona, 2o abre o catalogo
-   {int sl=-1;for(int k=0;k<City_Slots(w->city[cap].tier);k++)if(!w->city[cap].bld[k]){sl=k;break;}
-    if(sl<0){printf("FALHA: capital sem lote livre\n");bad=1;sl=0;}
-    int tx=4+(sl%4)*62+30,ty=66+(sl/4)*40+20;
-    Touch(g,tx,ty);Touch(g,tx,ty);}
-   if(!s->cityPick){printf("FALHA: 2o toque no lote nao abriu o catalogo\n");bad=1;}
+   // mapa da cidade: lote livre pelo minimapa -> Construir aqui -> catalogo
+   {int lot=-1;for(int i=0;i<CG_N;i++)if(City_LotBase(w,cap,i)==LK_TERRA&&City_LotSlot(&w->city[cap],i)<0){lot=i;break;}
+    if(lot<0){printf("FALHA: capital sem lote livre\n");bad=1;lot=0;}
+    Touch(g,CY_MINI_X+(lot%CG_W)*CY_CELL+3,CY_MINI_Y+(lot/CG_W)*CY_CELL+3);
+    if(s->cityLot!=lot){printf("FALHA: toque no minimapa nao escolheu o lote\n");bad=1;}
+    Hold(g,KEY_RIGHT,1);Hold(g,KEY_LEFT,1);
+    if(s->cityLot!=lot){printf("FALHA: setas nao andaram lote a lote (%d)\n",s->cityLot);bad=1;}
+    Touch(g,128,CY_BTN_Y+8);}
+   if(!s->cityPick){printf("FALHA: Construir aqui nao abriu o catalogo\n");bad=1;}
    Shot(g,"23_escolher_obra");
-   for(int k=0;k<11&&!City_CanBuild(w,cap,s->pickK);k++)Touch(g,230,170);
-   u8 want=s->pickK;Touch(g,128,170);
+   for(int k=0;k<BK_COUNT&&!City_CanBuildAt(w,cap,s->cityLot,s->pickK);k++)Touch(g,250,CY_PICK_Y+18);
+   u8 want=s->pickK;Touch(g,CY_OK_X+10,CY_OK_Y+8);
    printf("  obra pedida: %d, em construcao: %d\n",want,w->city[cap].bq);
    if(!w->city[cap].bq){printf("FALHA: obra nao entrou em construcao\n");bad=1;}
    Frames(g,30);Shot(g,"24_cidade_andaime");
@@ -165,8 +182,7 @@ int main(void){
   for(int y=0;y<w->h&&fx<0;y++)for(int x=0;x<w->w;x++)if(City_CanFound(w,s->me,x,y)){fx=x;fy=y;break;}
   if(fx>=0){
    u16 n0=w->nCity;
-   s->curX=(s16)fx;s->curY=(s16)fy;Hold(g,KEY_LEFT,1);Hold(g,KEY_RIGHT,1);
-   if(!City_CanFound(w,s->me,s->curX,s->curY)){s->curX=(s16)fx;s->curY=(s16)fy;}
+   WG_Goto(fx,fy);
    Press(g,KEY_A);                                                    // folha: "Fundar cidade aqui — preco"
    if(s->actKind!=AK_TERRA){printf("FALHA: mira na terra propria nao deu a folha de territorio (%d)\n",s->actKind);bad=1;}
    Shot(g,"26_fundar_preco");
@@ -198,7 +214,7 @@ int main(void){
   World *w=WG_World();WGame *s=WG_Ptr();
   u8 fra=World_CountryOfNat(w,Nat_Find("FRA"));
   if(!fra||!w->c[fra].alive)for(u8 i=1;i<w->nC&&!fra;i++)if(w->c[i].alive&&i!=s->me)fra=i;
-  s->curX=(s16)w->c[fra].capX;s->curY=(s16)w->c[fra].capY;Hold(g,KEY_LEFT,1);Hold(g,KEY_RIGHT,1);
+  WG_Goto(w->c[fra].capX,w->c[fra].capY);
   s->sel=fra;s->selLand=false;s->hcity=-1;
   Touch(g,57,169);   // botao bandeira
   if(!s->dipOpen){printf("FALHA: bandeira nao abriu a folha de acoes\n");bad=1;}
@@ -212,13 +228,15 @@ int main(void){
   if(!s->paused){printf("FALHA: proposta nao pausou o jogo\n");bad=1;}
   Press(g,KEY_A);
   if(!w->prop.kind){printf("FALHA: A respondeu a proposta (o painel e' so' caneta)\n");bad=1;}
-  Answer(g,true);
-  if(w->prop.kind){printf("FALHA: toque em Aceitar nao respondeu a proposta\n");bad=1;}
+  {u32 pd=w->prop.day;Answer(g,true);
+   // depois de aceitar o jogo volta a correr: outra proposta pode chegar no mesmo quadro
+   if(w->prop.kind==PR_ALIANCA&&w->prop.from==fra&&w->prop.day==pd){printf("FALHA: toque em Aceitar nao respondeu a proposta\n");bad=1;}}
   printf("  alianca aceita: %s\n",WDip_Allied(w,s->me,fra)?"sim":"nao (pais cheio de aliados)");
   // decisao de evento (2 opcoes)
   WDip_Propose(w,PR_DECISAO,s->me,0,0,(u16)(Rnd_Count()-3));
   Frames(g,4);Shot(g,"36_decisao");Answer(g,false);
-  // Gabinete: 4 abas
+  // Gabinete: 4 abas (pausado; despacho que chegou no meio e' recusado antes)
+  s->paused=true;for(int k=0;k<4&&w->prop.kind;k++)Answer(g,false);
   Press(g,KEY_X);
   if(g->screen!=SCR_LEDGER){printf("FALHA: X nao abriu o Gabinete\n");bad=1;}
   Shot(g,"30_gabinete_mercado");
@@ -227,8 +245,24 @@ int main(void){
   Press(g,KEY_R);Shot(g,"33_gabinete_politica");
   u8 tax0=w->eco[s->me].tax;Touch(g,LG_ACT_X+20,LG_ACT_Y+10);
   if(w->eco[s->me].tax==tax0){printf("FALHA: toque na acao nao mudou o imposto\n");bad=1;}
+  // Financas: balanco fiscal + 4 politicas por toque
+  Press(g,KEY_R);Shot(g,"37_gabinete_financas");
+  u8 edu0=w->eco[s->me].edu;Touch(g,LG_POL_X0+20,LG_POL_Y+LG_POL_H+4+10);
+  if(w->eco[s->me].edu==edu0){printf("FALHA: toque em Educacao nao mudou a politica\n");bad=1;}
+  printf("  financas: receita %d despesa %d divida %d alf %d%% pop %uk\n",(int)WEco_Revenue(w,s->me),(int)WEco_Expense(w,s->me),(int)w->eco[s->me].debt,w->c[s->me].lit/10,w->c[s->me].popK);
   Press(g,KEY_B);
   if(g->screen!=SCR_WORLD){printf("FALHA: B do Gabinete nao voltou ao mapa\n");bad=1;}
+  // ranking: bolinha no canto do painel
+  Touch(g,12,12);
+  if(g->screen!=SCR_RANK){printf("FALHA: a bolinha nao abriu o ranking\n");bad=1;}
+  Shot(g,"38_ranking");
+  {static u8 o[W_MAXC+1];int n=WRank_Sort(w,RK_GERAL,o);printf("  ranking: %d paises; top 5:",n);
+   for(int k=0;k<5&&k<n;k++)printf(" %s(%d)",NATIONS[w->c[o[k]].nat].tag,(int)WRank_Score(w,o[k],RK_GERAL));
+   printf(" | voce %d\n",WRank_Pos(w,s->me,RK_GERAL)+1);}
+  Touch(g,RK_DN_X+10,RK_BTN_Y+10);Press(g,KEY_R);Shot(g,"39_ranking_economia");
+  Touch(g,RK_ME_X+10,RK_BTN_Y+10);Shot(g,"39b_ranking_minha");
+  Press(g,KEY_B);
+  if(g->screen!=SCR_WORLD){printf("FALHA: B do ranking nao voltou ao mapa\n");bad=1;}
  }
  Press(g,KEY_START);                 Shot(g,"18_pausa");
  Press(g,KEY_DOWN);Press(g,KEY_DOWN);Press(g,KEY_A);Shot(g,"19_opcoes");
@@ -249,7 +283,7 @@ int main(void){
  u32 dd=WG_World()->day-d0;
  printf("  %u dias em %.0f ms (PC, ASan, com render)\n",dd,(double)(clock()-t0)*1000.0/CLOCKS_PER_SEC);
  Shot(g,"20_mundo_10anos");
- WG_Ptr()->mapMode=WMAP_COM;g->dirty=true;Shot(g,"20b_rotas_10anos");WG_Ptr()->mapMode=WMAP_POL;
+ WG_Ptr()->mapMode=WMAP_COM;g->dirty=true;Frames(g,30);Shot(g,"20b_rotas_10anos");WG_Ptr()->mapMode=WMAP_POL;
 
  printf("[classico 32x24]\n");
  Press(g,KEY_START);Press(g,KEY_UP);Press(g,KEY_A);Press(g,KEY_A);

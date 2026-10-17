@@ -1,3 +1,4 @@
+#include <string.h>
 #include "wgame.h"
 #include "px.h"
 #include "pal.h"
@@ -21,7 +22,7 @@
 static u16 LAYER[WG_MAP_H*256];
 static u8 KEY[WG_MAP_H*256];
 enum { K_OUT=0xFE, K_SEA=0xFF };
-static struct { bool ok; s16 camX,camY; u8 zoom,mode,me; u32 sig; } CS;
+static struct { bool ok; s16 camX,camY; u8 subX,subY,zoom,mode,me; u32 sig; } CS;
 void PxM_Invalidate(void){CS.ok=false;}
 u16 *PxM_Scratch(void){CS.ok=false;return LAYER;}   // a cena da cidade reusa os 88KB
 const u8 *PxM_Key(void){return KEY;}
@@ -204,7 +205,7 @@ static void Render(const World *w,const WGame *s,int x0,int y0,int x1,int y1){
  bool z0=s->zoom==0;
  for(int sy=ay0;sy<ay1;sy++){
   int cyz=s->camY+sy*2;
-  int gy=z0?0:s->camY*gPpc+sy;
+  int gy=z0?0:s->camY*gPpc+s->subY+sy;
   bool outY=z0?(cyz<0||cyz>=w->h):(gy<0||gy>=w->h*gPpc);
   bool inB=sy>=by0&&sy<by1;
   for(int sx=ax0;sx<ax1;sx++){
@@ -213,7 +214,7 @@ static void Render(const World *w,const WGame *s,int x0,int y0,int x1,int y1){
    else if(z0&&!w->wrap&&(s->camX+sx*2<0||s->camX+sx*2>=w->w)){key=K_OUT;c=((sx+sy)&7)==0?C_NAVY:C_NAVY_BG;}
    else if(z0)key=PixZ0(s->camX+sx*2,cyz,&c,sx,sy);
    else{
-    int gx=s->camX*gPpc+sx;
+    int gx=s->camX*gPpc+s->subX+sx;
     if(!w->wrap&&(gx<0||gx>=w->w*gPpc)){key=K_OUT;c=((sx+sy)&7)==0?C_NAVY:C_NAVY_BG;}
     else key=Pix(gx,gy,&c,sx,sy);
    }
@@ -242,14 +243,22 @@ static int RelX(const World *w,int a,int b){
  return d;
 }
 static void Shift(int dx,int dy){
- // conteudo anda (-dx,-dy) pixels; o que entra fica sujo p/ o Render
- for(int y0=0;y0<WG_MAP_H;y0++){
-  int y=dy>0?y0:WG_MAP_H-1-y0,sy=y+dy;
-  u16 *L=&LAYER[y*256];u8 *K=&KEY[y*256];
-  if(sy<0||sy>=WG_MAP_H)continue;
-  u16 *LS=&LAYER[sy*256];u8 *KS=&KEY[sy*256];
-  if(dx>=0){for(int x=0;x+dx<256;x++){L[x]=LS[x+dx];K[x]=KS[x+dx];}}
-  else{for(int x=255;x+dx>=0;x--){L[x]=LS[x+dx];K[x]=KS[x+dx];}}
+ // conteudo anda (-dx,-dy) pixels; o que entra fica sujo p/ o Render.
+ // memmove (ldm/stm da newlib) e' ~4x o laco por pixel no ARM9.
+ if(dy){
+  int n=WG_MAP_H-(dy>0?dy:-dy);
+  if(n<=0)return;
+  if(dy>0){memmove(LAYER,LAYER+dy*256,(size_t)n*256*2);memmove(KEY,KEY+dy*256,(size_t)n*256);}
+  else{memmove(LAYER-dy*256,LAYER,(size_t)n*256*2);memmove(KEY-dy*256,KEY,(size_t)n*256);}
+ }
+ if(dx){
+  int n=256-(dx>0?dx:-dx);
+  if(n<=0)return;
+  for(int y=0;y<WG_MAP_H;y++){
+   u16 *L=&LAYER[y*256];u8 *K=&KEY[y*256];
+   if(dx>0){memmove(L,L+dx,(size_t)n*2);memmove(K,K+dx,(size_t)n);}
+   else{memmove(L-dx,L,(size_t)n*2);memmove(K-dx,K,(size_t)n);}
+  }
  }
 }
 void PxM_Update(World *w,const WGame *s){
@@ -265,6 +274,7 @@ void PxM_Update(World *w,const WGame *s){
  int ppcPan=s->zoom?gPpc:1;
  int dx=RelX(w,CS.camX,s->camX)*ppcPan,dy=(s->camY-CS.camY)*ppcPan;
  if(s->zoom==0){dx/=2;dy/=2;}
+ else{dx+=s->subX-CS.subX;dy+=s->subY-CS.subY;}     // rolagem pixel a pixel (ADR-31)
  if(!full&&(dx>=200||dx<=-200||dy>=140||dy<=-140))full=true;
  if(full){
   Render(w,s,0,0,256,WG_MAP_H);
@@ -286,18 +296,15 @@ void PxM_Update(World *w,const WGame *s){
    if(w->wrap){rx%=w->w;if(rx<0)rx+=w->w;if(rx>w->w-16)rx-=w->w;}
    int x0,y0,x1,y1;
    if(s->zoom==0){x0=rx/2-2;y0=(cy-s->camY)/2-2;x1=x0+4+4;y1=y0+4+4;}
-   else{x0=rx*ppc-m;y0=(cy-s->camY)*ppc-m;x1=(rx+8)*ppc+m;y1=(cy+8-s->camY)*ppc+m;}
+   else{x0=rx*ppc-s->subX-m;y0=(cy-s->camY)*ppc-s->subY-m;x1=(rx+8)*ppc-s->subX+m;y1=(cy+8-s->camY)*ppc-s->subY+m;}
    if(x1<=0||y1<=0||x0>=256||y0>=WG_MAP_H)continue;
    Render(w,s,x0<0?0:x0,y0<0?0:y0,x1>256?256:x1,y1>WG_MAP_H?WG_MAP_H:y1);
   }
  }
  for(u32 i=0;i<sizeof w->dirtyBlk;i++)w->dirtyBlk[i]=0;
- CS.ok=true;CS.camX=s->camX;CS.camY=s->camY;CS.zoom=s->zoom;CS.mode=s->mapMode;CS.me=s->me;CS.sig=sig;
+ CS.ok=true;CS.camX=s->camX;CS.camY=s->camY;CS.subX=s->subX;CS.subY=s->subY;CS.zoom=s->zoom;CS.mode=s->mapMode;CS.me=s->me;CS.sig=sig;
 }
-void PxM_Blit(u16 *d){
- u16 *o=d+WG_MAP_Y*256;
- for(int i=0;i<WG_MAP_H*256;i++)o[i]=LAYER[i];
-}
+void PxM_Blit(u16 *d){memcpy(d+WG_MAP_Y*256,LAYER,sizeof LAYER);}
 // frente de guerra (fogo piscando) e contorno do pais sob o cursor
 void PxM_Overlay(u16 *d,const World *w,const WGame *s,int phase){
  bool fronts=false;

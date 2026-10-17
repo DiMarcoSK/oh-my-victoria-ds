@@ -333,6 +333,7 @@ void Menu_DrawTop(GameState *g,u16 *d){
   case SCR_WORLD:  PxW_Map(d);break;
   case SCR_CITY:   PxC_Scene(d,WG_Ptr()->cityIdx);break;
   case SCR_LEDGER: PxL_Top(d);break;
+  case SCR_RANK:   PxR_Top(d);break;
   case SCR_PAUSE:  PauseTop(d);break;
   case SCR_OPTIONS:OptionsTop(d);break;
   case SCR_CREDITS:CreditsTop(d);break;
@@ -346,8 +347,9 @@ void Menu_DrawBot(GameState *g,u16 *d){
   case SCR_SETUP:  SetupBot(d);break;
   case SCR_NATION: NationBot(d);break;
   case SCR_WORLD:  PxW_Panel(d);break;
-  case SCR_CITY:   {WGame *s=WG_Ptr();PxC_Panel(d,s->cityIdx,s->citySlot,s->cityPick,s->pickK);}break;
+  case SCR_CITY:   {WGame *s=WG_Ptr();PxC_Panel(d,s->cityIdx,s->cityLot,s->cityPick,s->pickK);}break;
   case SCR_LEDGER: PxL_Bot(d);break;
+  case SCR_RANK:   PxR_Bot(d);break;
   case SCR_PAUSE:  PauseBot(d);break;
   case SCR_OPTIONS:OptionsBot(d);break;
   case SCR_CREDITS:CreditsBot(d);break;

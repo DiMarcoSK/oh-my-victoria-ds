@@ -301,7 +301,8 @@ void Ui_Icon(u16*d,int x,int y,const char*const*rows,int h,bool dim){
    case 'k':col=C_INK;break; case 'g':col=C_GOLD;break; case 'G':col=C_GOLD_HI;break;
    case 'd':col=C_GOLD_DIM;break; case 'w':col=C_TEXT;break; case 's':col=C_TEXT_DIM;break;
    case 'r':col=C_BRUSH;break; case 'p':col=C_PARCH;break; case 'n':col=C_NAVY_BG;break;
-   case 'v':col=C_PLAYER;break; default:col=C_GOLD;break;
+   case 'v':col=C_PLAYER;break; case 'R':col=C_CRIMSON_HI;break; case 'B':col=PXC(6,10,22);break;
+   default:col=C_GOLD;break;
   }
   if(dim&&ch!='k'&&ch!='n')col=C_GOLD_DIM;
   Px_PSet(d,x+c,y+r,col);
@@ -442,6 +443,50 @@ static const char *const ICO_COIN12[12]={
  "..kkddddkk..",
  "....kkkk....",
 };
+// populacao (3 cabecas) e alfabetizacao (livro aberto), 12x12 p/ a barra
+static const char *const ICO_PEOPLE12[12]={
+ "....kkk.....",
+ "...kGgdk....",
+ ".kkkGgdkkk..",
+ "kGgkkddkGgk.",
+ "kgdk.kk.kgdk",
+ ".kkkwwwwkkk.",
+ "kGgkwssswGgk",
+ "kggkwssswggk",
+ "kgdkwssswgdk",
+ "kgdkwssswgdk",
+ ".kk.kkkk.kk.",
+ "............",
+};
+static const char *const ICO_BOOK12[12]={
+ "............",
+ ".kkkk..kkkk.",
+ "kwwwwkkwwwwk",
+ "kwsswkkwsswk",
+ "kwwwwkkwwwwk",
+ "kwsswkkwsswk",
+ "kwwwwkkwwwwk",
+ "kwsswkkwsswk",
+ "kwwwwkkwwwwk",
+ "kgggkkkkgggk",
+ ".kkk.gg.kkk.",
+ "............",
+};
+// ranking: medalha com fita (botao redondo do painel)
+static const char *const ICO_RANK12[12]={
+ ".kk......kk.",
+ "kRRk....kBBk",
+ ".kRRk..kBBk.",
+ "..kRRkkBBk..",
+ "...kkGGkk...",
+ "..kGGggggk..",
+ ".kGgdddggdk.",
+ ".kGgdGgdgdk.",
+ ".kggdddggdk.",
+ "..kggggddk..",
+ "...kkddkk...",
+ ".....kk.....",
+};
 static const char *const ICO_SWORDS12[12]={
  "w..........w",
  "sw........ws",
@@ -569,6 +614,9 @@ void Ui_IconId(u16*d,int x,int y,u8 id,bool dim){
   case ICO_HOUSE:  Ui_Icon(d,x,y,ICO_HOUSE16,16,dim);break;
   case ICO_BOOK:   Ui_Icon(d,x,y,ICO_BOOK16,16,dim);break;
   case ICO_SHIP:   Ui_Icon(d,x,y,ICO_SHIP16,16,dim);break;
+  case ICO_PEOPLE_S:Ui_Icon(d,x,y,ICO_PEOPLE12,12,dim);break;
+  case ICO_BOOK_S: Ui_Icon(d,x,y,ICO_BOOK12,12,dim);break;
+  case ICO_RANK:   Ui_Icon(d,x,y,ICO_RANK12,12,dim);break;
   default:break;
  }
 }

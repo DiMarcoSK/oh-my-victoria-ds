@@ -16,6 +16,10 @@ void Px_Border(u16 *b,int x,int y,int w,int h,u16 c);
 void Px_Clear(u16 *b,u16 c);
 void Px_FlipTop(void);
 void Px_FlipBot(void);
+// Redesenho so' da tela de cima no proximo quadro (pan do mapa: o painel de
+// baixo fica como esta'). main.c consome com Px_TakeTop.
+void Px_WantTop(void);
+bool Px_TakeTop(void);
 // Telas: Px_Top = HUD (ou arte do menu); Px_Bot = mapa tocavel (ou menu).
 // Px_Tick: continua o "bakery" do buffer-mundo (barato espalhado por frames).
 void Px_Top(GameState *g);

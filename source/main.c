@@ -19,8 +19,9 @@ int main(void){
   Px_Tick(g);
   // RENDER SOB DEMANDA: dirty (tudo), dirtyBot (so mapa, pan da caneta) ou
   // pulso 1x/15 frames p/ animacoes (agua/cursor/menu). Nada a 60Hz parado.
-  if(g->dirty){Px_Top(g);Px_Bot(g);g->dirty=false;g->dirtyBot=false;}
-  else if(g->dirtyBot){Px_Bot(g);g->dirtyBot=false;}
+  if(g->dirty){Px_Top(g);Px_Bot(g);g->dirty=false;g->dirtyBot=false;Px_TakeTop();}
+  else if(g->dirtyBot){Px_Bot(g);g->dirtyBot=false;if(Px_TakeTop())Px_Top(g);}
+  else if(Px_TakeTop())Px_Top(g);
   else if((frame%15)==0){Px_Top(g);Px_Bot(g);}
   frame++;
   swiWaitForVBlank();

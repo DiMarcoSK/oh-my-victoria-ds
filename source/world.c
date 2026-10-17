@@ -79,6 +79,13 @@ void World_DeclareWar(World *w,u8 a,u8 b){
  SetWar(w,a,b,true);
 }
 // guerra de IA/jogador: os aliados de cada lado sao chamados (wdiplo.c)
+// b (e quem e' chamado a defende-lo) passa a pensar todo dia por um tempo:
+// a IA responde a ataque em 1-2 dias, nao no proximo turno de 8 dias.
+static void Alert(World *w,u8 b){
+ if(!b||b>=w->nC)return;
+ w->c[b].alert=20;
+ for(int k=0;k<2;k++){u8 a=w->c[b].ally[k];if(a&&a<w->nC&&w->c[a].alive)w->c[a].alert=20;}
+}
 void World_DeclareWarCall(World *w,u8 a,u8 b){
  if(!a||!b||a==b||!w->c[a].alive||!w->c[b].alive||World_AtWar(w,a,b))return;
  SetWar(w,a,b,true);
@@ -152,13 +159,21 @@ static void InitCountry(World *w,u8 ci,int nat,int cx,int cy){
  c->nat=(u8)nat;c->alive=true;c->kind=d->kind;c->gov=d->gov;
  c->ideo=c->ideo0=WDip_IdeoOfGov(d->gov);c->mood=(u8)(((u32)nat*2654435761u^w->seed)%101u);
  {WEco *e=&w->eco[ci];u8 *q=(u8*)e;for(unsigned i=0;i<sizeof(*e);i++)q[i]=0;
-  e->tax=1;e->life=70;e->ind=100;e->hub=-1;
+  e->tax=1;e->life=70;e->ind=100;e->hub=-1;e->tariff=1;e->edu=1;e->mil=1;e->rate=4;
   for(int g=0;g<GD_COUNT;g++){e->price[g]=GD_BASE[g];e->sat[g]=100;}}
  for(int i=0;i<NAT_TRAITS;i++)c->traits[i]=d->traits[i];
  World_SetTraits(w,ci);
  c->capX=(u16)cx;c->capY=(u16)cy;c->bx0=c->bx1=(u16)cx;c->by0=c->by1=(u16)cy;
  c->happy=(u8)(60+c->m.happy);c->militancy=(u8)(20+(c->m.militancy>-20?c->m.militancy:-20));
  c->prestige=d->kind==NK_ESTADO?20:10;
+ // prestigio de 1800 das potencias (ordem de grandeza do concerto europeu e
+ // dos grandes imperios asiaticos): o ranking comeca com a cara da epoca
+ static const struct { const char *tag; u8 p; } PR[]={
+  {"GBR",100},{"FRA",90},{"RUS",85},{"HAB",80},{"PRU",70},{"QNG",60},{"OTT",55},{"ESP",50},
+  {"MAR",35},{"MUG",30},{"POR",30},{"SWE",30},{"NED",30},{"USA",30},{"DAN",25},{"JAP",25},
+  {"QAJ",25},{"SAR",20},{"NAP",20},{"BAV",20},{"EIC",25},{"KOR",20},{"BRM",20},{"SIA",20}};
+ for(unsigned k=0;k<sizeof PR/sizeof PR[0];k++){const char *t=PR[k].tag;
+  if(t[0]==d->tag[0]&&t[1]==d->tag[1]&&t[2]==d->tag[2]){c->prestige=PR[k].p;break;}}
  w->natToC[nat]=ci;
 }
 static u8 NewSlot(World *w,int nat){
@@ -176,12 +191,16 @@ static void SetOwner(World *w,u32 i,u8 to){
  u8 from=W_OWNER[i];
  if(from==to)return;
  u8 t=W_TERR[i];
- if(from){WCountry *f=&w->c[from];if(f->cells)f->cells--;u32 cw=CellW(w,i,from);f->pop=f->pop>cw?f->pop-cw:0;if(f->terr[t])f->terr[t]--;}
+ u32 moved=0;   // populacao real que muda de dono com a celula (parte proporcional)
+ if(from){WCountry *f=&w->c[from];if(f->cells)f->cells--;u32 cw=CellW(w,i,from);
+  if(f->pop&&f->popK){moved=(u32)((u64)f->popK*cw/f->pop);if(moved>f->popK)moved=f->popK;f->popK-=moved;}
+  f->pop=f->pop>cw?f->pop-cw:0;if(f->terr[t])f->terr[t]--;}
+ else moved=TER_POP[t]*20;   // terra livre: poucos milhares de habitantes
  W_OWNER[i]=to;
  // render incremental: so' o bloco 8x8 desta celula sera redesenhado
  {u32 b=(i/w->w/8)*W_BLK_W+(i%w->w)/8;w->dirtyBlk[b>>3]|=(u8)(1u<<(b&7));}
  if((W_CITYB[i>>3]>>(i&7))&1)City_OnOwner(w,i,to);
- if(to){w->c[to].cells++;w->c[to].pop+=CellW(w,i,to);w->c[to].terr[t]++;Grow(&w->c[to],(int)(i%w->w),(int)(i/w->w));}
+ if(to){w->c[to].cells++;w->c[to].pop+=CellW(w,i,to);w->c[to].terr[t]++;w->c[to].popK+=moved;Grow(&w->c[to],(int)(i%w->w),(int)(i/w->w));}
 }
 static void RecalcAllPop(World *w){
  for(u8 ci=1;ci<w->nC;ci++){w->c[ci].pop=0;for(int t=0;t<WT_COUNT;t++)w->c[ci].terr[t]=0;}
@@ -465,7 +484,7 @@ void World_GenRandom(World *w,u32 seed,u8 size,u8 nNations,u8 diff,int playerNat
  Expand(w,false);
  Settle(w);
  World_Field(w);City_Gen(w);
- WEco_Init(w);WDip_Init(w);WEco_Week(w);
+ WEco_Init(w);WEco_PopInit(w);WDip_Init(w);WEco_Week(w);
  Hist_Init(w);
 }
 
@@ -532,7 +551,7 @@ void World_GenMundi(World *w,u32 seed,u8 hist,u8 diff,int playerNat){
   World_DeclareHistWar(w,World_CountryOfNat(w,Nat_Find(WARS[k][0])),World_CountryOfNat(w,Nat_Find(WARS[k][1])));
  w->nWars=0;
  World_Field(w);City_Gen(w);
- WEco_Init(w);WDip_Init(w);WEco_Week(w);
+ WEco_Init(w);WEco_PopInit(w);WDip_Init(w);WEco_Week(w);
  Hist_Init(w);
 }
 
@@ -590,6 +609,7 @@ bool World_Attack(World *w,u8 from,u8 to,u8 pct){
  s32 send=c->troops*pct/100;
  if(send<10)return false;
  c->troops-=send;c->atkTroops+=send;c->atkOn=true;c->atkTo=to;
+ if(to&&c->player)Alert(w,to);   // so' as acoes do jogador: a historia da IA segue o ritmo dela
  return true;
 }
 
@@ -763,7 +783,7 @@ static void Fronts(World *w){
 }
 
 // ===================== IA =====================
-static void AI(World *w,u8 ci){
+static void AI(World *w,u8 ci,bool declare){
  WCountry *c=&w->c[ci];
  // paz quando a guerra vai mal
  // objetivo de guerra cumprido: a IA assina a paz e fica com o que tomou
@@ -772,7 +792,7 @@ static void AI(World *w,u8 ci){
  }
  bool mundi=w->mode==WM_MUNDI;
  int tiredDays=mundi?1500:720;
- if(c->warN&&(c->troops<c->cap/4||(c->warDays>tiredDays&&World_RngRange(w,100)<10)||(!mundi&&World_RngRange(w,100)<2))){
+ if(declare&&c->warN&&(c->troops<c->cap/4||(c->warDays>tiredDays&&World_RngRange(w,100)<10)||(!mundi&&World_RngRange(w,100)<2))){
   for(u8 j=1;j<w->nC;j++)if(World_AtWar(w,ci,j)&&(!w->c[j].player||World_RngRange(w,3)==0)){
    if(HistWar(w,ci,j)>=0&&(c->warDays<3000||World_RngRange(w,100)!=0))continue;
    if(w->c[j].troops>w->c[j].cap/2&&c->troops<c->cap/4&&World_RngRange(w,2))continue;
@@ -780,6 +800,18 @@ static void AI(World *w,u8 ci){
   }
  }
  if(c->atkOn)return;
+ // alerta: alguem abriu frente contra nos -> contra-ataca ja' (sem esperar
+ // o limiar do arquetipo), contra quem esta' atacando e faz fronteira
+ if(c->alert&&c->warN&&c->troops*100>=c->cap*20){
+  for(u8 j=1;j<w->nC;j++){
+   const WCountry *e=&w->c[j];
+   if(!e->alive||!World_AtWar(w,ci,j))continue;
+   if(!(e->atkOn&&e->atkTo==ci)&&!WDip_Allied(w,ci,e->atkTo))continue;
+   if(!World_Borders(w,ci,j))continue;
+   World_Attack(w,ci,j,c->troops*100>=c->cap*60?60:40);
+   return;
+  }
+ }
  if(c->troops*100<c->cap*ARCH_TH[c->archetype])return;
  // amostra a fronteira: quem sao os vizinhos?
  u8 cand[8];u8 cn=0;
@@ -819,7 +851,8 @@ static void AI(World *w,u8 ci){
     if((c->ideo==ID_COMUNISTA)!=(d->ideo==ID_COMUNISTA))chance*=2;
     chance=chance*(50+c->mood)/100;
     int maxWars=w->mode==WM_MUNDI?0:1;
-    if(!bold||c->warN>maxWars||d->troops*10>c->troops*5||World_RngRange(w,1000)>=chance)continue;
+    // guerra nova so' no turno de 8 dias (a IA reage mais vezes, mas nao declara mais)
+    if(!declare||!bold||c->warN>maxWars||d->troops*10>c->troops*5||World_RngRange(w,1000)>=chance)continue;
     s=40+(int)(myD-dD);
    }
   }
@@ -835,8 +868,20 @@ static void AI(World *w,u8 ci){
 }
 
 // ===================== dia =====================
+// PROF_DAY (so' no host, host/prof_day.c): tempo por subsistema do dia.
+#ifdef PROF_DAY
+#include <time.h>
+double PROF_T[8];
+static double Pnow(void){struct timespec t;clock_gettime(CLOCK_MONOTONIC,&t);return t.tv_sec*1e3+t.tv_nsec/1e6;}
+#define PT(k,stmt) do{double _t=Pnow();stmt;PROF_T[k]+=Pnow()-_t;}while(0)
+#else
+#define PT(k,stmt) stmt
+#endif
 void World_Day(World *w){
  if(w->ended&&!w->eternal)return;
+ for(int ph=0;ph<WD_PHASES;ph++)World_DayPhase(w,ph);
+}
+static void DayBegin(World *w){
  w->day++;Cal_Next(&w->date);
  bool newYear=(w->date.m==1&&w->date.d==1);
  for(u8 ci=1;ci<w->nC;ci++){
@@ -847,24 +892,39 @@ void World_Day(World *w){
   else if(c->warDays)c->warDays=c->warDays>2?c->warDays-2:0;
   s32 tired=c->warDays/20;
   if(tired>50)tired=50;
-  s32 regen=(c->cap/60+1)*(100+c->m.regenPct)/100*(100-tired)/100*WEco_ArmsPct(w,ci)/100;
+  static const u8 MILR[3]={60,100,140};   // gasto militar (balanco fiscal) acelera o recrutamento
+  s32 regen=(c->cap/60+1)*(100+c->m.regenPct)/100*(100-tired)/100*WEco_ArmsPct(w,ci)/100*MILR[w->eco[ci].mil%3]/100;
   if(c->troops<c->cap){s32 g=regen*(c->cap-c->troops)/Max32(1,c->cap);c->troops+=g>0?g:1;}
   else c->troops-=(c->troops-c->cap)/50+1;
-  c->gold+=((s32)c->cells/48+1)*(100+c->m.goldPct)/100;   // renda da terra (o grosso vem da economia)
   if(newYear)c->prestige+=c->m.prestigeYear+(s32)c->cells/200+(c->kind==NK_ESTADO?1:0);
   if(c->rndCd)c->rndCd--;
  }
- City_Day(w);
- if((w->day%7)==0)WEco_Week(w);
- WDip_Day(w);
- for(u8 ci=1;ci<w->nC;ci++)
-  if(w->c[ci].alive&&!w->c[ci].player&&((ci+w->day)&7)==0)AI(w,ci);
- Fronts(w);
- if(w->mode==WM_MUNDI&&w->hist!=WH_DESLIGADA)Hist_Day(w);
- Rnd_Day(w);
- if(!w->eternal&&w->day>=w->endDay){
-  w->ended=true;
-  World_Msg(w,"Fim da história","31 de dezembro de 2025. Continuar jogando?");
+ PT(0,City_Day(w));
+}
+void World_DayPhase(World *w,int ph){
+ switch(ph){
+  case 0:if(w->ended&&!w->eternal)return;DayBegin(w);break;
+  case 1:if((w->day%7)==0)PT(1,WEco_Week(w));break;
+  case 2:
+   PT(2,WDip_Day(w));
+   // IA: cada pais pensa a cada 4 dias (escalonado); em alerta, todo dia
+   PT(3,for(u8 ci=1;ci<w->nC;ci++){
+    WCountry *c=&w->c[ci];
+    if(!c->alive||c->player)continue;
+    bool decl=((ci+w->day)&7)==0;
+    if(c->alert){c->alert--;AI(w,ci,decl);}
+    else if(((ci+w->day)&3)==0)AI(w,ci,decl);
+   });
+   break;
+  default:
+   PT(4,Fronts(w));
+   if(w->mode==WM_MUNDI&&w->hist!=WH_DESLIGADA)PT(5,Hist_Day(w));
+   PT(6,Rnd_Day(w));
+   if(!w->eternal&&w->day>=w->endDay&&!w->ended){
+    w->ended=true;
+    World_Msg(w,"Fim da história","31 de dezembro de 2025. Continuar jogando?");
+   }
+   break;
  }
 }
 void World_Continue(World *w){w->eternal=true;w->ended=false;}

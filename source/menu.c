@@ -130,6 +130,9 @@ void Menu_Input(GameState *g,u32 d,u32 h,bool tDown,bool tUp,bool tHeld,int tx,i
   case SCR_LEDGER:
    WG_LedgerInput(g,d,tDown,tx,ty);
    return;
+  case SCR_RANK:
+   WG_RankInput(g,d,tDown,tx,ty);
+   return;
   case SCR_PAUSE:
    // 0 Continuar, 1 Salvar (F8: em breve), 2 Configuracoes, 3 Sair para o Menu
    if(up){M.sel=(u8)Wrap(M.sel-1,4);M.confirm=0;}

@@ -17,7 +17,7 @@
 #define W_HWMAX 32         // guerras historicas simultaneas (lista, nao matriz: 64B)
 #define W_MAXC 250          // paises simultaneos (dono 1..250; 0 = sem dono)
 #define W_MAXCITY 512       // cidades no mundo (24B cada: 12KB)
-#define CITY_SLOTS 8        // slots de obra (liberados por nivel: 2/3/5/8)
+#define CITY_SLOTS 12       // slots de obra (liberados por nivel: 3/5/8/12)
 #define W_BLK_W (W_MAXW/8)  // blocos 8x8 celulas p/ redesenho incremental do mapa
 #define W_BLK_H (W_MAXH/8)
 
@@ -50,8 +50,18 @@ typedef struct {
  u8 ind, lack;            // industria rodando a ind% (insumo que falta: lack = bem)
  s16 hub;                 // cidade-porto principal (rotas no mapa), -1 = nenhuma
  u8 tax;                  // 0 baixo, 1 medio, 2 alto
- s32 inc, exp;            // receita e despesa da semana (ouro)
- s32 trade;               // saldo do comercio externo da semana (ouro)
+ s32 inc, exp;            // receita interna e despesa total da semana (ouro)
+ s32 trade;               // alfandega da semana (ouro)
+ // balanco fiscal (ADR-32): linhas de receita e despesa da semana
+ s32 rProd, rPop, rCity, rLand, rTariff;         // receita (rPop = imposto per capita)
+ s32 xArmy, xNavy, xAdmin, xEdu, xUpkeep, xDebt, xCorrupt; // despesa (corrupcao: cofre parado)
+ s32 debt;                // divida publica (ouro)
+ s32 gdp;                 // valor produzido na semana (PIB semanal)
+ u8 rate;                 // juros da divida (% ao ano)
+ u8 tariff;               // 0 livre comercio, 1 moderada, 2 protecionista
+ u8 edu;                  // gasto em educacao 0 nenhum, 1 basico, 2 amplo
+ u8 mil;                  // gasto militar 0 reduzido, 1 normal, 2 mobilizado
+ u8 defaults;             // calotes ja dados (sobe os juros para sempre)
  u16 cap, used;           // capacidade maritima de comercio (cargas/semana) e uso
  u8 ports, yards;         // cidades com porto / estaleiro
  u8 route[3], routeG[3];  // rotas: parceiro (pais) e bem
@@ -84,6 +94,9 @@ typedef struct {
  s16 ships;               // navios de guerra
  u16 shipQ;               // dias ate o proximo navio (0 = estaleiro parado)
  u16 terr[WT_COUNT];      // celulas por terreno (producao rural; mantido no SetOwner)
+ u8 alert;               // dias de alerta: atacado/declarado -> a IA pensa todo dia e contra-ataca
+ u32 popK;               // populacao real em milhares (estoque: cresce e muda de dono com as celulas)
+ u16 lit;                // alfabetizacao 0..1000 (decimos de %)
 } WCountry;
 // Proposta/decisao pendente para o jogador (modal no painel).
 enum { PR_NONE=0, PR_ALIANCA, PR_BLOCO, PR_AJUDA, PR_TRIBUTO, PR_PAZ, PR_DECISAO, PR_COUNT };
@@ -95,7 +108,8 @@ enum { CT_POVOADO=0, CT_VILAREJO, CT_CIDADE, CT_METROPOLE, CT_COUNT };
 // Obras da cidade: IDs gravados (save/IA). So' ADICIONE antes de BK_COUNT.
 enum { BK_NONE=0, BK_FAZENDA, BK_MERCADO, BK_OFICINA, BK_QUARTEL, BK_PORTO,
  BK_TEMPLO, BK_MURALHA, BK_UNIVERSIDADE, BK_FABRICA, BK_FERROVIA, BK_PALACIO,
- BK_SERRARIA, BK_MINA, BK_ARSENAL, BK_ESTALEIRO, BK_POCO, BK_COUNT };
+ BK_SERRARIA, BK_MINA, BK_ARSENAL, BK_ESTALEIRO, BK_POCO,
+ BK_ESCOLA, BK_HOSPITAL, BK_BANCO, BK_TEATRO, BK_PARQUE, BK_USINA, BK_COUNT };
 enum { CF_COASTAL=1, CF_HIST=2, CF_FOUNDED=4 };
 typedef struct {
  u16 x, y;               // celula
@@ -110,6 +124,8 @@ typedef struct {
  u8 agri, wood, ore;     // potencial do entorno (raio 3): lavoura, mata, minerio
  u8 res;                 // RS_*: tropical, petroleo
  u8 food;                // % de comida atendida na ultima semana (local)
+ u8 bpos[CITY_SLOTS];    // lote de cada obra no mapa da cidade (CG_W x CG_H), 0xFF = sem lugar
+ u8 bqLot;               // lote da obra em construcao
 } WCity;
 enum { RS_TROPICAL=1, RS_OLEO=2 };
 typedef struct {
@@ -153,6 +169,11 @@ void World_GenBlitz(World *w,u32 seed,u8 diff,int playerNat);
 void World_GenMundi(World *w,u32 seed,u8 hist,u8 diff,int playerNat);
 
 void World_Day(World *w);
+// O dia em 4 fases (0 contas/cidades, 1 economia semanal, 2 diplomacia+IA,
+// 3 frentes+historia). World_Day roda as 4; a tela pode espalhar uma por
+// quadro (mesma ordem = mesmo resultado; o replay nao muda).
+enum { WD_PHASES=4 };
+void World_DayPhase(World *w,int ph);
 void World_Continue(World *w);              // depois de 31/12/2025: Modo Eterno
 
 // Ordem do jogador (ou da IA): manda pct% da reserva contra `to` (0 = terra

@@ -32,7 +32,7 @@ enum {
  UI_SP_IMPT=144, // imposto: 0..2 sequencial (tap cicla)
  UI_SP_SAVE=145, UI_SP_LOAD=146, UI_SP_NEW=147,
  UI_GV_MON=148, UI_GV_DEM=149, UI_GV_TEO=150,
- UI_W_ATK=160, UI_W_PEACE=161, UI_W_REC=162, UI_W_MODE=163, UI_W_PCT=164, UI_W_SPEED=165, UI_W_CITY=166, UI_W_LEDGER=167,
+ UI_W_ATK=160, UI_W_PEACE=161, UI_W_REC=162, UI_W_MODE=163, UI_W_PCT=164, UI_W_SPEED=165, UI_W_CITY=166, UI_W_LEDGER=167, UI_W_RANK=168,
  UI_MN_PREVD=152, UI_MN_NEXTD=153, UI_MN_SEED=154, UI_MN_START=155,
  UI_CLOSE=0xFF
 };
@@ -50,7 +50,7 @@ const Btn *Ui_Ctx(void); // botoes contextuais do tile (faixa acima do dock)
 // ---- v0.9 componentes da concept (SDD sec 14.1), em source/px_ui.c ----
 enum { ICO_NONE=0, ICO_CROWN, ICO_SWORD, ICO_SWORDS, ICO_PEOPLE, ICO_FLAG,
  ICO_SHIELD, ICO_GLOBE, ICO_COIN_S, ICO_SWORDS_S, ICO_CROWN_S, ICO_CAL_S, ICO_LAND_S, ICO_HOUSE,
- ICO_BOOK, ICO_SHIP };
+ ICO_BOOK, ICO_SHIP, ICO_PEOPLE_S, ICO_BOOK_S, ICO_RANK };
 void Ui_Parch(u16*d,int x,int y,int w,int h);   // pergaminho + borda dupla + cantos
 void Ui_ParchOrn(u16*d,int x,int y,int w,int h);  // + filete duplo e cantos da concept (menus)
 void Ui_Navy(u16*d,int x,int y,int w,int h);    // painel navy + borda ouro
