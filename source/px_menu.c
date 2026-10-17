@@ -8,6 +8,7 @@
 #include "settings.h"
 #include "flag.h"
 #include "traits.h"
+#include "px_art.h"
 // px_menu.c — telas da v0.9 (SDD sec 14.4/14.5) com os componentes de
 // px_ui.c. A arte que ainda nao existe em PNG (ADR-14) e' desenhada aqui de
 // forma procedural e sobria (gravura/silhueta), no lugar do placeholder:
@@ -148,19 +149,26 @@ static void Title(u16 *d){
   d[y*256+x]=c;
  }
  const u16 SIL=PXC(4,3,8);
+ // cidade distante (camada mais clara): telhados, cupulas e agulhas goticas
+ {const u16 FAR=PXC(9,6,13);
+  for(int x=0;x<256;){
+   int w=6+Hh(x,3)%10,h=6+Hh(x,5)%16,t=Hh(x,9)%6;
+   Px_Rect(d,x,124-h,w,h,FAR);
+   if(t==0)FillTri(d,x,124-h,x+w-1,124-h,x+w/2,124-h-12,FAR);          // agulha
+   else if(t==1)for(int r=0;r<w/2;r++)Px_Rect(d,x+w/2-(w/2-r),124-h-(w/2)+r*r/(w/2+1)-1,2*(w/2-r),1,FAR); // cupula
+   else if(t==2){Px_Rect(d,x+w/2-1,124-h-8,3,8,FAR);FillTri(d,x+w/2-2,124-h-8,x+w/2+2,124-h-8,x+w/2,124-h-14,FAR);}
+   if(Hh(x,11)%3==0)Px_PSet(d,x+w/2,124-h/2,PXC(28,20,9));
+   x+=w+(int)(Hh(x,13)%3);
+  }}
  Westminster(d,22,124,SIL,PXC(30,23,10),false);
+ // pinaculos goticos ao longo do telhado do Parlamento
+ for(int x=28;x<206;x+=12){Px_Rect(d,x,124-26,2,4,SIL);Px_PSet(d,x,124-28,SIL);}
  // reflexo da silhueta (tremido)
  for(int y=124;y<136;y++)for(int x=22;x<208;x++)if(((x+y)&1)&&Hh(x,y)%4)d[y*256+x]=PXC(3,2,7);
  Sailboat(d,40,160,SIL,false);
- // logo: coroa + "Oh My" + "Victoria" + "DS" com pincelada
- Ui_Crown(d,120,6);
- const char *l1="Oh My",*l2="Victoria";
- int w1=Px_Width2Ex(l1,&F_SERIF12,0,2,0),w2=Px_Width2Ex(l2,&F_SERIF12,0,3,0);
- for(int i=0;i<4;i++)for(int k=0;k<132;k++){int x=64+k,y=73-k/16+i;Px_PSet(d,x,y,C_BRUSH);}
- Px_Text2Out(d,128-w1/2,22,l1,&F_SERIF12,C_PARCH,C_INK,0,2,0);
- Px_Text2Out(d,128-w2/2,42,l2,&F_SERIF12,C_PARCH,C_INK,0,3,0);
- int wd=Px_Width2Ex("DS",&F_SERIF12,1,2,0);
- Px_Text2Out(d,128+w2/2-wd,74,"DS",&F_SERIF12,C_BRUSH,C_INK,1,2,0);
+ // logo da concept (tools/genart.py): coroa + Oh My Victoria DS com pincelada
+ Ui_Crown(d,120,2);
+ Art_Blit(d,&ART_LOGO,20,12);
  // "Aperte A" pulsando (30 frames visivel / 15 apagado)
  if((Menu_Ptr()->tick%45)<30){
   Px_Rect(d,176,164,72,20,C_NAVY);Px_Border(d,176,164,72,20,C_GOLD);
@@ -175,13 +183,14 @@ static void MainBot(u16 *d){
  Menu *m=Menu_Ptr();
  Ui_Backdrop(d);
  Px_Border(d,2,2,252,188,C_GOLD);Px_Border(d,4,4,248,184,C_GOLD_DIM);
- Ui_Parch(d,8,16,88,160);
- Compass(d,52,74,30);
- Ui_TextC(d,52,124,"1800",1,C_INK);
- Ui_Div(d,52,141,C_INK);
- Ui_TextC(d,52,152,"2025",1,C_INK);
+ // retrato do oficial em moldura dourada (concept, menu principal)
+ Px_Rect(d,8,14,88,164,C_NAVY_BG);
+ Px_Border(d,8,14,88,164,C_GOLD);Px_Border(d,10,16,84,160,C_GOLD_DIM);
+ Art_Blit(d,&ART_OFFICER,14,20);
+ Px_Rect(d,14,158,76,16,C_NAVY);Px_Rect(d,14,157,76,1,C_GOLD_DIM);
+ Ui_TextC(d,52,161,"1800 · 2025",0,C_GOLD);
  Ui_Navy(d,104,14,144,162);
- static const u8 IT[4]={STR_NOVO_JOGO,STR_CARREGAR,STR_OPCOES,STR_CREDITOS};
+ static const u16 IT[4]={STR_NOVO_JOGO,STR_CARREGAR,STR_OPCOES,STR_CREDITOS};
  for(int i=0;i<4;i++){
   Ui_Item(d,108,22+i*30,136,Str(IT[i]),m->sel==i,i==1,Pulse(),false);
   if(i<3&&m->sel!=i&&m->sel!=i+1)Px_Rect(d,114,22+i*30+27,124,1,C_GOLD_DIM);
@@ -197,7 +206,7 @@ static void ModeTop(u16 *d){
  for(int y=50;y<150;y+=12){Ui_Div(d,26,y,C_PARCH_SH);}
  Ui_TextC(d,128,16,Str(STR_ESCOLHA_MODO),1,C_INK);
  Ui_Div(d,128,32,C_INK);
- static const u8 IT[3]={STR_CAMPANHA,STR_CONTRA_IA,STR_MULTIJOGADOR};
+ static const u16 IT[3]={STR_CAMPANHA,STR_CONTRA_IA,STR_MULTIJOGADOR};
  static const u8 IC[3]={ICO_CROWN,ICO_SWORDS,ICO_PEOPLE};
  for(int i=0;i<3;i++)Ui_BigBtn(d,40,46+i*36,Str(IT[i]),IC[i],m->sel==i,i==2,Pulse());
 }
@@ -208,12 +217,12 @@ static void ModeBot(u16 *d){
  Px_Rect(d,21,33,82,98,C_GOLD);
  if(m->sel==0)PxW_Earth(d,22,34,80,96,Nat_Find("GBR"),0);
  else{Ui_Parch(d,22,34,80,96);if(m->sel==1)Compass(d,62,86,26);else{Ui_IconId(d,54,74,ICO_PEOPLE,false);}}
- static const u8 DS[3]={STR_DESC_CAMPANHA,STR_DESC_IA,STR_DESC_MULTI};
+ static const u16 DS[3]={STR_DESC_CAMPANHA,STR_DESC_IA,STR_DESC_MULTI};
  int n=Px_WrapN(d,110,40,124,Str(DS[m->sel]),&F_SERIF8,C_INK,6,false);
  if(m->sel==2)Px_Text2(d,110,44+n*11,Str(STR_EM_BREVE),&F_SERIF8,C_GOLD_DIM);
 }
 static const char *MapName(u8 k){
- static const u8 S[MAPK_COUNT]={STR_MAPA_MUNDI,STR_ALEATORIO,STR_BLITZ,STR_CLASSICO};
+ static const u16 S[MAPK_COUNT]={STR_MAPA_MUNDI,STR_ALEATORIO,STR_BLITZ,STR_CLASSICO};
  return Str(S[k%MAPK_COUNT]);
 }
 static void Hex5(u32 v,char *o){
@@ -228,9 +237,9 @@ static void SetupTop(u16 *d){
  Ui_TextC(d,128,16,Str(STR_PREPARAR),1,C_INK);
  Ui_Div(d,128,32,C_INK);
  u8 rows[8];int n=Menu_SetupRows(rows);
- static const u8 HS[3]={STR_LIGADA,STR_FLAVOR,STR_DESLIGADA};
- static const u8 SZ[3]={STR_PEQUENO,STR_MEDIO,STR_GRANDE};
- static const u8 DF[3]={STR_FACIL,STR_NORMAL,STR_DIFICIL};
+ static const u16 HS[3]={STR_LIGADA,STR_FLAVOR,STR_DESLIGADA};
+ static const u16 SZ[3]={STR_PEQUENO,STR_MEDIO,STR_GRANDE};
+ static const u16 DF[3]={STR_FACIL,STR_NORMAL,STR_DIFICIL};
  static const char *const NN[3]={"8","16","32"};
  int y=44;
  for(int i=0;i<n;i++){
@@ -256,7 +265,7 @@ static void SetupBot(u16 *d){
  Ui_Parch(d,8,8,240,176);
  if(m->map==MAPK_MUNDI)PxW_Earth(d,16,18,224,84,-1,0);
  else{Compass(d,128,60,32);}
- static const u8 DS[MAPK_COUNT]={STR_DESC_MUNDI,STR_DESC_ALEAT,STR_DESC_BLITZ,STR_DESC_CLASSICO};
+ static const u16 DS[MAPK_COUNT]={STR_DESC_MUNDI,STR_DESC_ALEAT,STR_DESC_BLITZ,STR_DESC_CLASSICO};
  Ui_Div(d,128,110,C_INK);
  Px_WrapN(d,18,122,220,Str(DS[m->map%MAPK_COUNT]),&F_SERIF8,C_INK,5,true);
 }
@@ -324,7 +333,7 @@ static void PauseTop(u16 *d){
  Menu *m=Menu_Ptr();
  PxW_Map(d);Dim(d);
  Ui_Navy(d,64,30,140,126);
- static const u8 IT[4]={STR_CONTINUAR,STR_SALVAR,STR_CONFIG,STR_SAIR_MENU};
+ static const u16 IT[4]={STR_CONTINUAR,STR_SALVAR,STR_CONFIG,STR_SAIR_MENU};
  for(int i=0;i<4;i++)Ui_Item(d,68,40+i*26,132,Str(IT[i]),m->sel==i,i==1,Pulse(),true);
  Ui_Crown(d,126,140);
 }
@@ -332,7 +341,7 @@ static void PauseBot(u16 *d){
  Menu *m=Menu_Ptr();
  Ui_Backdrop(d);
  Ui_Parch(d,10,10,236,172);
- static const u8 DS[4]={STR_DESC_CONTINUAR,STR_DESC_SALVAR,STR_DESC_CONFIG,STR_DESC_SAIR};
+ static const u16 DS[4]={STR_DESC_CONTINUAR,STR_DESC_SALVAR,STR_DESC_CONFIG,STR_DESC_SAIR};
  const char *s=Str(DS[m->sel&3]);
  if(m->sel==1)s=Str(STR_EM_BREVE);
  if(m->sel==3&&m->confirm)s=Str(STR_CONFIRMA_SAIR);
@@ -350,7 +359,7 @@ static void OptionsTop(u16 *d){
  Ui_Parch(d,10,8,236,176);
  Ui_TextC(d,128,16,Str(STR_CONFIG),1,C_INK);
  Ui_Div(d,128,32,C_INK);
- static const u8 LB[4]={STR_MUSICA,STR_EFEITOS,STR_IDIOMA,STR_TELA};
+ static const u16 LB[4]={STR_MUSICA,STR_EFEITOS,STR_IDIOMA,STR_TELA};
  for(int i=0;i<4;i++){
   int y=46+i*30;bool sel=m->sel==i;
   char pc[8];
@@ -394,7 +403,7 @@ static void CreditsTop(u16 *d){
  Menu *m=Menu_Ptr();
  Ui_Backdrop(d);
  Ui_Parch(d,10,8,236,176);
- static const u8 L[5]={STR_CRED1,STR_CRED2,STR_CRED3,STR_CRED4,STR_CRED5};
+ static const u16 L[5]={STR_CRED1,STR_CRED2,STR_CRED3,STR_CRED4,STR_CRED5};
  int y=184-(m->credY%260);
  for(int i=0;i<5;i++){
   int yy=y+i*34;
@@ -420,6 +429,7 @@ void Menu_DrawTop(GameState *g,u16 *d){
   case SCR_NATION: NationTop(d);break;
   case SCR_WORLD:  PxW_Map(d);break;
   case SCR_CITY:   PxC_Scene(d,WG_Ptr()->cityIdx);break;
+  case SCR_LEDGER: PxL_Top(d);break;
   case SCR_PAUSE:  PauseTop(d);break;
   case SCR_OPTIONS:OptionsTop(d);break;
   case SCR_CREDITS:CreditsTop(d);break;
@@ -434,6 +444,7 @@ void Menu_DrawBot(GameState *g,u16 *d){
   case SCR_NATION: NationBot(d);break;
   case SCR_WORLD:  PxW_Panel(d);break;
   case SCR_CITY:   {WGame *s=WG_Ptr();PxC_Panel(d,s->cityIdx,s->citySlot,s->cityPick,s->pickK);}break;
+  case SCR_LEDGER: PxL_Bot(d);break;
   case SCR_PAUSE:  PauseBot(d);break;
   case SCR_OPTIONS:OptionsBot(d);break;
   case SCR_CREDITS:CreditsBot(d);break;

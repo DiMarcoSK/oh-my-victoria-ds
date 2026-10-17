@@ -23,3 +23,7 @@ void Art_BlitH(u16 *dst,const Art *a,int x,int y);
 // Recorta a arte: desenha so' a sub-janela (sx,sy,sw,sh) da arte em (x,y).
 // Usado p/ faixas de fundo (ex: art_game_bg so' aparece em x>=182).
 void Art_BlitClip(u16 *dst,const Art *a,int x,int y,int sx,int sy,int sw,int sh);
+
+// Arte gerada por tools/genart.py (source/gen/art_data.c): logo da concept e
+// retrato do oficial do menu principal.
+extern const Art ART_LOGO, ART_OFFICER;
