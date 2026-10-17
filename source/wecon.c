@@ -1,6 +1,7 @@
 #include "wecon.h"
 #include "city.h"
 #include "str.h"
+#include "wdiplo.h"
 // wecon.c — economia do mundo (ver wecon.h; DESIGN 4.8; SDD ADR-26).
 // Custo: 1x por semana, O(cidades) + O(paises x bens) + rotas O(portos x 3 x
 // paises). Buffers estaticos (.bss, ~27KB), zero malloc, sem float, sem RNG.
@@ -31,7 +32,9 @@ void WEco_CityFlows(const World *w,int i,s32 prod[GD_COUNT],s32 need[GD_COUNT],s
  prod[GD_GRAOS]+=c->agri/12;
  int ind=y<1880?100:(y<1950?200:300);   // produtividade industrial por era
  int agr=100+(y-1800)*3/5;              // e a do campo
- bool rail=false;
+ bool rail=false;int usina=0,viz=0;
+ for(int s=0;s<CITY_SLOTS;s++){if(c->bld[s]==BK_USINA&&y>=1890)usina=25;viz+=City_IndustryBonus(c,s);}
+ int man=100+usina+(viz>25?25:viz);       // usina e obras coladas na ferrovia/porto
  for(int s=0;s<CITY_SLOTS;s++)switch(c->bld[s]){
   case BK_FAZENDA:prod[GD_GRAOS]+=(c->agri/6+4)*agr/100;
    if(c->res&RS_TROPICAL)prod[GD_LUXO]+=(4+c->agri/10)*agr/100;    // plantacao: cafe, acucar, cha
@@ -49,6 +52,7 @@ void WEco_CityFlows(const World *w,int i,s32 prod[GD_COUNT],s32 need[GD_COUNT],s
   case BK_FERROVIA:rail=true;break;
   default:break;
  }
+ if(man>100){prod[GD_TEXTEIS]=prod[GD_TEXTEIS]*man/100;prod[GD_FERRAMENTAS]=prod[GD_FERRAMENTAS]*man/100;prod[GD_ARMAS]=prod[GD_ARMAS]*man/100;}
  if(rail)for(int g=0;g<GD_COUNT;g++)prod[g]+=prod[g]/5;
 }
 
@@ -77,7 +81,84 @@ bool WEco_Blockaded(const World *w,u8 ci){
  return false;
 }
 
-s32 WEco_GoldWeek(const World *w,u8 ci){const WEco *e=&w->eco[ci];return e->inc+e->trade-e->exp;}
+s32 WEco_Revenue(const World *w,u8 ci){const WEco *e=&w->eco[ci];return e->rProd+e->rPop+e->rCity+e->rLand+e->rTariff;}
+s32 WEco_Expense(const World *w,u8 ci){const WEco *e=&w->eco[ci];return e->xArmy+e->xNavy+e->xAdmin+e->xEdu+e->xUpkeep+e->xDebt+e->xCorrupt;}
+s32 WEco_GoldWeek(const World *w,u8 ci){return WEco_Revenue(w,ci)-WEco_Expense(w,ci);}
+// limite de credito: meio ano de receita (minimo 300); cai a cada calote
+s32 WEco_DebtLimit(const World *w,u8 ci){
+ const WEco *e=&w->eco[ci];
+ s32 r=WEco_Revenue(w,ci);if(r<12)r=12;
+ return r*26/(1+e->defaults);
+}
+
+// ---------------- populacao e alfabetizacao de 1800 ----------------
+// Estimativas historicas (milhares de habitantes; % alfabetizado). Fontes de
+// ordem de grandeza: Maddison (populacao) e Buringh/van Zanden e
+// Our World in Data (alfabetizacao). Quem nao esta' na tabela usa regra por
+// continente e tipo de entidade.
+typedef struct { const char *tag; u32 popK; u8 lit; } PopRow;
+static const PopRow POP1800[]={
+ {"GBR",10900,55},{"IRL",5000,30},{"FRA",29000,37},{"ESP",11000,20},{"POR",3000,18},
+ {"NED",2100,60},{"HEL",1700,60},{"PRU",8700,55},{"HAB",23000,30},{"BAV",3300,45},
+ {"SAX",2000,62},{"WUR",1400,55},{"HAN",1000,50},{"SWE",2400,75},{"DAN",1800,70},
+ {"RUS",37000,8},{"OTT",24000,5},{"SAR",3800,22},{"NAP",5000,14},{"PAP",2500,20},
+ {"MNE",120,5},{"GEO",700,5},{"EGY",4000,4},{"MOR",3000,4},{"ALG",2500,4},{"TUN",1000,4},
+ {"TRP",500,3},{"USA",5300,60},{"HAI",550,2},{"CUB",270,10},{"NSP",6000,10},
+ {"NGR",2000,8},{"VPE",1500,8},{"RDP",1300,10},{"BRA",3300,6},{"BNA",500,40},
+ {"QAJ",6000,5},{"AFG",5000,3},{"BUK",2500,4},{"KHI",800,3},{"KOK",1000,3},{"KAZ",1500,2},
+ {"SIK",3500,5},{"MAR",30000,4},{"MUG",1500,5},{"EIC",45000,4},{"HYD",10000,4},
+ {"NEP",4000,3},{"QNG",320000,20},{"JAP",30000,40},{"KOR",14000,25},{"NGU",4000,12},
+ {"TSN",3000,10},{"SIA",4000,15},{"BRM",4000,15},{"DEI",11000,5},{"PHI",2000,10},
+ {"ETH",3000,5},{"ASH",3000,3},{"OYO",4000,2},{"DAH",300,2},{"KON",1500,2},{"MER",1500,4},
+ {"OMA",500,4},{"YEM",2500,4},{"DRY",1500,6},{"CAP",60,30},{"HAW",250,5},{"NSW",5,40},
+};
+static void PopDefault(const WCountry *c,u32 *p,u8 *l){
+ const NationDef *d=&NATIONS[c->nat];
+ static const u8 DENS[CONT_COUNT]={24,3,6,14,1};   // milhares por unidade de c->pop
+ static const u8 LIT[CONT_COUNT]={20,12,3,8,2};
+ u32 k=DENS[d->cont];if(d->kind==NK_POVO||d->kind==NK_AUTONOMO)k=1;
+ *p=c->pop*k/10+20;*l=d->kind==NK_POVO?2:LIT[d->cont];
+}
+void WEco_PopInit(World *w){
+ for(u8 ci=1;ci<w->nC;ci++){
+  WCountry *c=&w->c[ci];
+  if(!c->alive)continue;
+  u32 p=0;u8 l=0;bool hit=false;
+  const char *t=NATIONS[c->nat].tag;
+  for(unsigned k=0;k<sizeof POP1800/sizeof POP1800[0];k++){const char *q=POP1800[k].tag;
+   if(q[0]==t[0]&&q[1]==t[1]&&q[2]==t[2]){p=POP1800[k].popK;l=POP1800[k].lit;hit=true;break;}}
+  if(!hit)PopDefault(c,&p,&l);
+  c->popK=p;c->lit=(u16)(l*10);
+ }
+}
+// crescimento anual em por mil: transicao demografica (sobe com a era, cai
+// com a alfabetizacao alta depois de 1950), fome e guerra puxam para baixo
+static int GrowthPermil(const World *w,const WCountry *c,const WEco *e){
+ int y=w->date.y;
+ int base=y<1850?5:(y<1900?7:(y<1950?10:(y<1990?19:12)));
+ if(y>=1950&&c->lit>850)base-=(c->lit-850)/30;       // pais rico e letrado cresce menos
+ base+=(e->life-60)/6;
+ if(e->sat[GD_GRAOS]<60)base-=(60-e->sat[GD_GRAOS])/3; // fome
+ if(c->warN)base-=4;
+ if(c->unrestT)base-=3;
+ return base<-30?-30:(base>35?35:base);
+}
+// alfabetizacao (decimos de %): teto possivel na era; a escola (gasto em
+// educacao + universidades) puxa em direcao ao teto, e a difusao do mundo
+// garante um piso que sobe com o tempo. Quase nunca cai.
+static int LitCap(int y){return y<1850?350:(y<1900?350+(y-1850)*6:(y<1950?650+(y-1900)*5:(y<2000?900+(y-1950)*9/5:990)));}
+static int LitFloor(int y){return y<1850?10:(y<1900?10+(y-1850)*2/5:(y<1950?30+(y-1900)*2:(y<2000?130+(y-1950)*8:530+(y-2000)*8)));}
+static void LitWeek(const World *w,WCountry *c,const WEco *e,int unis){
+ int y=w->date.y,l=c->lit,cap=LitCap(y),fl=LitFloor(y);
+ static const u8 PERMIL[3]={0,6,15};           // fracao (por mil) do vao ate' o teto fechada por ano
+ int r=PERMIL[e->edu%3]+unis*3;if(c->m.prestigeYear>=2)r+=5;
+ // ganho do ano em decimos; espalhado nas 52 semanas sem estado (o resto
+ // cai nas primeiras semanas do ano): deterministico, nada fora do World
+ int gy=(cap>l?(cap-l):0)*r/1000,wk=(int)((w->day/7)%52);
+ l+=gy/52+(wk<gy%52?1:0);
+ if(l<fl)l+=(fl-l+49)/50;                       // difusao: o piso alcanca em ~1 ano
+ c->lit=(u16)(l>1000?1000:l);
+}
 int WEco_ArmsPct(const World *w,u8 ci){return 50+w->eco[ci].sat[GD_ARMAS]/2;}
 int WEco_ToolsPct(const World *w,u8 ci){
  if(w->date.y<1830)return 100;
@@ -89,7 +170,7 @@ void WEco_Init(World *w){
  for(u8 ci=0;ci<=W_MAXC;ci++){
   WEco *e=&w->eco[ci];
   u8 *z=(u8*)e;for(unsigned k=0;k<sizeof *e;k++)z[k]=0;
-  e->tax=1;e->life=70;e->ind=100;e->hub=-1;
+  e->tax=1;e->life=70;e->ind=100;e->hub=-1;e->tariff=1;e->edu=1;e->mil=1;e->rate=4;
   for(int g=0;g<GD_COUNT;g++){e->price[g]=GD_BASE[g];e->sat[g]=100;}
  }
 }
@@ -172,7 +253,8 @@ void WEco_Week(World *w){
   s32 sea=e->ports*30+e->yards*10+Mn(c->ships,20)*3;
   if(WEco_Blockaded(w,ci))sea/=3;
   s32 cap=6+(s32)c->cells/50+sea;
-  cap=cap*(100+c->m.tradePct)/100;
+  static const u8 TARC[3]={120,100,80};    // livre comercio abre o porto; protecionismo fecha
+  cap=cap*(100+c->m.tradePct)/100*TARC[e->tariff%3]/100;
   e->cap=(u16)Mn(cap,60000);
   u8 m=MarketOf(w,ci);MCAP[m]+=e->cap;
   for(int g=0;g<GD_COUNT;g++){
@@ -195,7 +277,7 @@ void WEco_Week(World *w){
   if(!c->alive)continue;
   u8 m=MarketOf(w,ci);
   int ef=MIND[m];
-  int bonus=100+c->m.prodPct;if(c->unrestT)bonus=bonus*70/100;
+  int bonus=100+c->m.prodPct+c->lit/40;if(c->unrestT)bonus=bonus*70/100;   // letrados produzem mais (ate' +25%)
   e->ind=(u8)ef;e->lack=MLACK[m];
   for(int g=0;g<GD_COUNT;g++){
    if(Manuf(g)){s32 r=RUR[ci][g];e->sup[g]=r+(e->sup[g]-r)*ef/100*bonus/100;MS[m][g]+=e->sup[g];}
@@ -272,15 +354,50 @@ void WEco_Week(World *w){
   // uso dos portos: a parte deste pais no comercio externo do mercado
   {s32 ext=0;for(int g=0;g<GD_COUNT;g++)ext+=EXP[m][g]+IMP[m][g];
    e->used=(u16)Mn(e->cap,MCAP[m]?(s32)((s64)ext*e->cap/MCAP[m]):0);}
-  // receita: imposto sobre o valor produzido; despesa: soldo e frota
+  // ---- balanco fiscal (ADR-32) ----
   static const u8 RATE[3]={1,2,3};
-  e->inc=val/1000*RATE[e->tax%3]+val%1000*RATE[e->tax%3]/1000;
-  e->inc+=c->cityGold*7/2*(100+c->m.goldPct)/100; // taxas urbanas (City_Day soma por dia)
-  e->trade=trade/100;
-  // soldo, frota e a maquina do Estado (1% do tesouro: cofre parado custa)
-  e->exp=(c->troops+c->atkTroops)/60+c->ships+(c->gold>500?c->gold/100:0);
-  c->gold+=e->inc+e->trade-e->exp;
-  if(c->gold<0){c->gold=0;if(c->troops>c->cap/3)c->troops-=c->troops/12;} // falencia: o exercito deserta
+  static const u8 TARR[3]={1,2,3};          // alfandega por nivel de tarifa
+  static const u8 MILX[3]={60,100,150};     // soldo por nivel de gasto militar
+  static const u8 EDUX[3]={0,3,8};          // por mil habitantes x mil por semana
+  e->gdp=val/100;
+  e->rProd=val/1000*RATE[e->tax%3]+val%1000*RATE[e->tax%3]/1000;
+  e->rCity=c->cityGold*7/2*(100+c->m.goldPct)/100;               // taxas urbanas (City_Day soma por dia)
+  e->rLand=((s32)c->cells/48+1)*7*(100+c->m.goldPct)/100;         // renda da terra
+  // imposto per capita: quem tem mais gente (e mais letrada) arrecada mais
+  e->rPop=(s32)(c->popK/600)*RATE[e->tax%3]*(20+c->lit/10)/40;
+  e->rTariff=trade/200*TARR[e->tariff%3];
+  int unis=0,obras=0,banks=0;
+  for(int i=0;i<w->nCity;i++)if(w->city[i].owner==ci)for(int k=0;k<CITY_SLOTS;k++){u8 b=w->city[i].bld[k];
+   if(b){obras++;if(b==BK_UNIVERSIDADE)unis+=2;if(b==BK_ESCOLA)unis++;if(b==BK_BANCO)banks++;}}
+  e->xArmy=(c->troops+c->atkTroops)/60*MILX[e->mil%3]/100;
+  e->xNavy=c->ships;
+  e->xAdmin=(s32)c->cells/60+c->nCity+(s32)(c->popK/2000);          // maquina do Estado
+  e->xCorrupt=c->gold>2000?(c->gold-2000)/100:0;                     // cofre parado: desvio e corrupcao
+  e->xEdu=(s32)((u64)c->popK*EDUX[e->edu%3]/1000)/(Y<1870?3:1);
+  e->xUpkeep=obras/2;
+  e->xDebt=(s32)((s64)e->debt*e->rate/5200);
+  e->inc=e->rProd+e->rPop+e->rCity+e->rLand;e->trade=e->rTariff;e->exp=WEco_Expense(w,ci);
+  s32 g=c->gold+e->inc+e->trade-e->exp;
+  // deficit: toma emprestado ate' o limite; acima dele, calote
+  if(g<0){
+   s32 lim=WEco_DebtLimit(w,ci);
+   if(e->debt-g<=lim){e->debt-=g;g=0;}
+   else{                                               // calote
+    e->debt/=3;g=0;e->defaults=(u8)(e->defaults<5?e->defaults+1:5);
+    c->prestige-=c->prestige/10+5;
+    if(c->happy>15)c->happy-=15;
+    if(c->troops>c->cap/3)c->troops-=c->troops/8;   // soldo atrasado: deserção
+   }
+  }else if(e->debt>0){s32 pay=g/4;if(pay>e->debt)pay=e->debt;e->debt-=pay;g-=pay;}
+  c->gold=g;
+  // juros: base + risco (divida / limite) + calotes passados
+  {s32 lim=WEco_DebtLimit(w,ci);int risk=lim?(int)((s64)e->debt*8/lim):8;
+   int r=3+risk+e->defaults*2-(banks>4?2:banks/2);e->rate=(u8)(r<1?1:(r>20?20:r));}
+  // populacao e alfabetizacao andam 1x por semana
+  {int gr=GrowthPermil(w,c,e);
+   s64 d=(s64)c->popK*gr/52000;if(!d&&gr>0&&c->popK>500)d=1;
+   s64 np=(s64)c->popK+d;c->popK=(u32)(np<10?10:np);
+   LitWeek(w,c,e,unis);}
   // nivel de vida: comer pesa mais; o resto depende da era
   int lw=e->sat[GD_GRAOS]*40+e->sat[GD_TEXTEIS]*20+e->sat[GD_LUXO]*15;
   int tw=75;
@@ -319,4 +436,21 @@ void WEco_Week(World *w){
    if(best){e->route[nr]=best;e->routeG[nr]=g;e->routeV[nr]=(u16)Mn(60000,Mn(bv,tv[k]));nr++;}
   }
  }
+}
+
+// IA: politica fiscal 1x por mes (chamada pela diplomacia, wdiplo.c)
+void WEco_AiPolicy(World *w,u8 ci){
+ WCountry *c=&w->c[ci];WEco *e=&w->eco[ci];
+ s32 bal=WEco_GoldWeek(w,ci)+e->xCorrupt,rev=WEco_Revenue(w,ci),lim=WEco_DebtLimit(w,ci);
+ e->mil=(u8)(c->warN?2:(c->archetype==WA_EXPANSIONISTA?1:(bal<0?0:1)));
+ e->tariff=(u8)(c->archetype==WA_MERCADOR||c->m.tradePct>=10?0:(c->archetype==WA_ISOLACIONISTA?2:1));
+ if(bal<0||e->debt>lim/2){
+  if(e->tax<2&&WDip_RevoltRisk(w,ci)<40)e->tax++;
+  else if(e->edu>0)e->edu--;
+  else if(e->mil>0&&!c->warN)e->mil=0;
+ }else if(bal>rev/4&&e->debt==0){
+  if(e->edu<2&&w->date.y>=1830)e->edu++;
+  else if(e->tax>0)e->tax--;
+ }
+ if(WDip_RevoltRisk(w,ci)>50&&e->tax>0)e->tax--;
 }

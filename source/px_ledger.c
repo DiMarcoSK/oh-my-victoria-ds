@@ -56,7 +56,7 @@ void PxW_GoodChip(u16 *d,int x,int y,u8 g){
  }
 }
 
-static const u16 TABS[LT_COUNT]={STR_TAB_MERCADO,STR_TAB_COMERCIO,STR_TAB_DIPLO,STR_TAB_POLITICA};
+static const u16 TABS[LT_COUNT]={STR_TAB_MERCADO,STR_TAB_COMERCIO,STR_TAB_DIPLO,STR_TAB_POLITICA,STR_TAB_FINANCAS};
 static void SmallFlag(u16 *d,const World *w,u8 ci,int x,int y,int fw,int fh){
  if(!ci||!w->c[ci].alive)return;
  FlagDef f;WDip_Flag(w,ci,&f);
@@ -215,6 +215,48 @@ static void PgPolitica(u16 *d,const World *w,u8 me){
   Bar(d,12,y+12,232,Obj_Pct(w,me,ob),C_GOLD);
  }
 }
+// Financas (ADR-32): receita e despesa da semana linha a linha, divida com
+// limite e juros, PIB, gente e as 4 politicas em vigor.
+static const u16 POL_TAX[3]={STR_BAIXO,STR_MEDIO,STR_ALTO},POL_TAR[3]={STR_TAR_0,STR_TAR_1,STR_TAR_2},
+ POL_EDU[3]={STR_EDU_0,STR_EDU_1,STR_EDU_2},POL_MIL[3]={STR_MIL_0,STR_MIL_1,STR_MIL_2};
+static void Line(u16 *d,int x,int y,u16 lab,s32 v,bool neg){
+ Px_Text2(d,x,y,Str(lab),&F_SERIF8,C_INK);
+ char t[24]={0};if(v){Cat(t,24,neg?"-":"+");}Num(t,24,v<0?-v:v);
+ RText(d,x+112,y,t,v==0?C_GOLD_DIM:(neg?C_EVENT:C3(4,14,6)));
+}
+static void PgFinancas(u16 *d,const World *w,u8 me){
+ const WEco *e=&w->eco[me];const WCountry *c=&w->c[me];
+ Px_Text2(d,12,26,Str(STR_RECEITA),&F_SERIF8,C_GOLD_DIM);
+ Px_Text2(d,132,26,Str(STR_DESPESA),&F_SERIF8,C_GOLD_DIM);
+ const u16 RL[5]={STR_RC_PROD,STR_RC_POP,STR_RC_CID,STR_RC_TERRA,STR_ALFANDEGA};
+ const s32 RV[5]={e->rProd,e->rPop,e->rCity,e->rLand,e->rTariff};
+ for(int i=0;i<5;i++)Line(d,10,37+i*10,RL[i],RV[i],false);
+ const u16 XL[7]={STR_DP_EXERC,STR_DP_FROTA,STR_DP_ADM,STR_DP_EDU,STR_DP_OBRAS,STR_DP_JUROS,STR_DP_CORR};
+ const s32 XV[7]={e->xArmy,e->xNavy,e->xAdmin,e->xEdu,e->xUpkeep,e->xDebt,e->xCorrupt};
+ for(int i=0;i<7;i++)Line(d,130,37+i*10,XL[i],XV[i],true);
+ Px_Rect(d,10,108,236,1,C_PARCH_SH);
+ s32 bal=WEco_GoldWeek(w,me);
+ char t[96]={0};Cat(t,96,Str(STR_SALDO));Cat(t,96,": ");if(bal>=0)Cat(t,96,"+");Num(t,96,bal);Cat(t,96,Str(STR_POR_SEM));
+ Px_Text2(d,12,112,t,&F_SERIF12,bal<0?C_EVENT:C3(4,14,6));
+ // divida: barra do quanto do limite ja' foi usado
+ s32 lim=WEco_DebtLimit(w,me);
+ t[0]=0;Cat(t,96,Str(STR_DIVIDA));Cat(t,96,": ");{char q[24];Kfmt(q,24,e->debt);Cat(t,96,q);}
+ Cat(t,96," / ");{char q[24];Kfmt(q,24,lim);Cat(t,96,q);}Cat(t,96," ");Cat(t,96,Str(STR_LIMITE));
+ Cat(t,96," · ");Num(t,96,e->rate);Cat(t,96,Str(STR_JUROS_AA));
+ if(e->defaults){Cat(t,96," · ");Num(t,96,e->defaults);Cat(t,96,Str(STR_CALOTES));}
+ Px_Text2(d,12,128,t,&F_SERIF8,e->debt>lim/2?C_EVENT:C_INK);
+ Bar(d,12,140,232,lim?(int)((s64)e->debt*100/lim):0,e->debt>lim/2?C_EVENT:C_GOLD);
+ // PIB, gente e politicas
+ t[0]=0;Cat(t,96,Str(STR_PIB));Cat(t,96," ");{char q[24];Kfmt(q,24,e->gdp);Cat(t,96,q);}Cat(t,96,Str(STR_POR_SEM));
+ Cat(t,96," · ");Cat(t,96,Str(STR_ALFAB));Cat(t,96," ");Num(t,96,c->lit/10);Cat(t,96,"%");
+ Px_Text2(d,12,150,t,&F_SERIF8,C_INK);
+ t[0]=0;Cat(t,96,Str(STR_IMPOSTO));Cat(t,96,": ");Cat(t,96,Str(POL_TAX[e->tax%3]));Cat(t,96," · ");
+ Cat(t,96,Str(STR_TARIFA));Cat(t,96,": ");Cat(t,96,Str(POL_TAR[e->tariff%3]));
+ Px_Text2(d,12,163,t,&F_SERIF8,C_GOLD_DIM);
+ t[0]=0;Cat(t,96,Str(STR_EDUCACAO));Cat(t,96,": ");Cat(t,96,Str(POL_EDU[e->edu%3]));Cat(t,96," · ");
+ Cat(t,96,Str(STR_MILITAR));Cat(t,96,": ");Cat(t,96,Str(POL_MIL[e->mil%3]));
+ Px_Text2(d,12,175,t,&F_SERIF8,C_GOLD_DIM);
+}
 void PxL_Top(u16 *d){
  const World *w=WG_World();const WGame *s=WG_Ptr();u8 me=s->me;
  Ui_Backdrop(d);
@@ -234,6 +276,7 @@ void PxL_Top(u16 *d){
   case LT_MERCADO:PgMercado(d,w,me);break;
   case LT_COMERCIO:PgComercio(d,w,me);break;
   case LT_DIPLO:PgDiplo(d,w,me);break;
+  case LT_FINANCAS:PgFinancas(d,w,me);break;
   default:PgPolitica(d,w,me);break;
  }
 }
@@ -242,15 +285,37 @@ void PxL_Top(u16 *d){
 void PxL_Bot(u16 *d){
  const World *w=WG_World();const WGame *s=WG_Ptr();u8 me=s->me;
  Ui_Backdrop(d);
+ int tw=256/LT_COUNT;
  for(int i=0;i<LT_COUNT;i++){
-  int x=i*64+2;bool sel=i==s->ledTab;
-  Px_Rect(d,x,LG_TAB_Y,60,LG_TAB_H,sel?C_CRIMSON:C_NAVY);
-  Px_Border(d,x,LG_TAB_Y,60,LG_TAB_H,sel?C_GOLD:C_GOLD_DIM);
-  if(sel)for(int k=1;k<59;k++)Px_PSet(d,x+k,LG_TAB_Y+1,C_CRIMSON_HI);
-  Ui_TextC(d,x+30,LG_TAB_Y+10,Str(TABS[i]),0,sel?C_TEXT:C_TEXT_DIM);
+  int x=i*tw+1;bool sel=i==s->ledTab;
+  Px_Rect(d,x,LG_TAB_Y,tw-2,LG_TAB_H,sel?C_CRIMSON:C_NAVY);
+  Px_Border(d,x,LG_TAB_Y,tw-2,LG_TAB_H,sel?C_GOLD:C_GOLD_DIM);
+  if(sel)for(int k=1;k<tw-3;k++)Px_PSet(d,x+k,LG_TAB_Y+1,C_CRIMSON_HI);
+  Ui_TextC(d,x+tw/2-1,LG_TAB_Y+10,Str(TABS[i]),0,sel?C_TEXT:C_TEXT_DIM);
+ }
+ static const u16 HS[LT_COUNT]={STR_H_MERCADO,STR_H_COMERCIO,STR_H_DIPLO,STR_H_POLITICA,STR_H_FINANCAS};
+ if(s->ledTab==LT_FINANCAS){
+  // explicacao curta + 4 politicas tocaveis (wgame.c usa a mesma grade LG_POL_*)
+  Ui_Navy(d,4,36,248,44);
+  Px_WrapN(d,12,42,232,Str(HS[LT_FINANCAS]),&F_SERIF8,C_TEXT,3,false);
+  const WEco *e=&w->eco[me];
+  const u16 LB[4]={STR_IMPOSTO,STR_TARIFA,STR_EDUCACAO,STR_MILITAR};
+  const u16 *VL[4]={POL_TAX,POL_TAR,POL_EDU,POL_MIL};
+  const u8 V[4]={e->tax,e->tariff,e->edu,e->mil};
+  for(int i=0;i<4;i++){
+   int x=(i&1)?LG_POL_X1:LG_POL_X0,y=LG_POL_Y+(i>>1)*(LG_POL_H+4);
+   Px_Rect(d,x,y,LG_POL_W,LG_POL_H,C_NAVY);Px_Border(d,x,y,LG_POL_W,LG_POL_H,C_GOLD);
+   for(int k=0;k<3;k++)Px_Rect(d,x+LG_POL_W-30+k*9,y+LG_POL_H-8,7,4,k<=V[i]%3?C_GOLD:C_NAVY_HI);
+   Px_Text2(d,x+6,y+4,Str(LB[i]),&F_SERIF8,C_TEXT_DIM);
+   Px_Text2(d,x+6,y+16,Str(VL[i][V[i]%3]),&F_SERIF8,C_TEXT);
+  }
+  Px_Rect(d,LG_ACT_X,LG_BACK_Y,LG_ACT_W,LG_ACT_H,C_NAVY);
+  Px_Border(d,LG_ACT_X,LG_BACK_Y,LG_ACT_W,LG_ACT_H,C_GOLD_DIM);
+  Ui_TextC(d,128,LG_BACK_Y+9,Str(STR_VOLTAR),0,C_TEXT);
+  Px_Text2(d,LG_ACT_X+LG_ACT_W-16,LG_BACK_Y+9,"B",&F_SERIF8,C_GOLD_DIM);
+  return;
  }
  Ui_Navy(d,4,36,248,78);
- static const u16 HS[LT_COUNT]={STR_H_MERCADO,STR_H_COMERCIO,STR_H_DIPLO,STR_H_POLITICA};
  Px_WrapN(d,12,44,232,Str(HS[s->ledTab%LT_COUNT]),&F_SERIF8,C_TEXT,6,false);
  // acao da aba
  char t[64]={0};bool en=true;u8 ico=ICO_BOOK;
@@ -260,8 +325,7 @@ void PxL_Bot(u16 *d){
   case LT_COMERCIO:Cat(t,64,Str(STR_LANCAR_NAVIO));Cat(t,64," · ");Num(t,64,WEco_ShipCost(w,me));
    en=e->yards&&!c->shipQ&&c->gold>=WEco_ShipCost(w,me);ico=ICO_SHIP;break;
   case LT_DIPLO:Cat(t,64,Str(c->bloc?STR_SAIR_BLOCO:STR_CRIAR_BLOCO));ico=ICO_FLAG;break;
-  default:{static const u16 TX[3]={STR_BAIXO,STR_MEDIO,STR_ALTO};
-   Cat(t,64,Str(STR_IMPOSTO));Cat(t,64,": ");Cat(t,64,Str(TX[e->tax%3]));ico=ICO_COIN_S;}break;
+  default:Cat(t,64,Str(STR_IMPOSTO));Cat(t,64,": ");Cat(t,64,Str(POL_TAX[e->tax%3]));ico=ICO_COIN_S;break;
  }
  Px_Rect(d,LG_ACT_X,LG_ACT_Y,LG_ACT_W,LG_ACT_H,en?C_CRIMSON:C_NAVY);
  Px_Border(d,LG_ACT_X,LG_ACT_Y,LG_ACT_W,LG_ACT_H,C_GOLD);

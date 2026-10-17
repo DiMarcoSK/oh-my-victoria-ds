@@ -18,11 +18,20 @@ u16 Gd_Str(u8 g);                      // StrId do nome do bem
 u16 Gd_Year(u8 g);                    // ano em que o bem passa a existir
 
 void WEco_Init(World *w);              // depois da geracao (precos, capacidade)
+void WEco_PopInit(World *w);           // populacao e alfabetizacao de 1800 (tabela + regra)
+// Balanco fiscal (ADR-32). Receita - despesa da semana; deficit vira divida
+// com juros pelo risco; divida acima do limite = calote (juros sobem, o
+// exercito deserta, prestigio cai). Politicas: imposto, tarifa, educacao e
+// gasto militar (jogador no Gabinete; IA ajusta 1x por mes).
+s32 WEco_DebtLimit(const World *w,u8 ci);
+s32 WEco_Revenue(const World *w,u8 ci);   // receita total da semana
+s32 WEco_Expense(const World *w,u8 ci);   // despesa total da semana
+void WEco_AiPolicy(World *w,u8 ci);       // IA: imposto/tarifa/educacao/militar
 void WEco_Week(World *w);              // fecha a semana do mundo (World_Day)
 // Producao/consumo de uma cidade numa semana (UI e IA). prod = saida,
 // need = insumo das obras, dem = consumo da populacao.
 void WEco_CityFlows(const World *w,int city,s32 prod[GD_COUNT],s32 need[GD_COUNT],s32 dem[GD_COUNT]);
-s32 WEco_GoldWeek(const World *w,u8 ci);   // saldo da ultima semana (receita - despesa)
+s32 WEco_GoldWeek(const World *w,u8 ci);   // saldo fiscal da ultima semana (receita - despesa)
 int WEco_ArmsPct(const World *w,u8 ci);    // 50..100: regeneracao do exercito pelas armas
 int WEco_ToolsPct(const World *w,u8 ci);   // 50..100: ritmo de obra pelas ferramentas
 

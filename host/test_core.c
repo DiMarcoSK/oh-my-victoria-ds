@@ -235,7 +235,14 @@ static void EcoDiag(const World *w){
   const WCountry *C=&w->c[c];const WEco *e=&w->eco[c];
   printf("     %s ouro %d (+%d imp %d com -%d) vida %d ind %d%% falta %d id %d navios %d bloco %s aliados %s,%s rival %s cap %d/%d portos %d tropas %d/%d\n",
    who[k],(int)C->gold,(int)e->inc,(int)e->trade,(int)e->exp,e->life,e->ind,e->lack,C->ideo,C->ships,Tg(w,C->bloc),Tg(w,C->ally[0]),Tg(w,C->ally[1]),Tg(w,C->rival),e->used,e->cap,e->ports,(int)C->troops,(int)C->cap);
+  printf("        pop %uk alf %d%% | rec prod %d percap %d cid %d terra %d alf %d | desp exerc %d frota %d adm %d edu %d obras %d juros %d corr %d | divida %d (lim %d, %d%%a.a., calotes %d) | pol imp %d tar %d edu %d mil %d\n",
+   C->popK,C->lit/10,(int)e->rProd,(int)e->rPop,(int)e->rCity,(int)e->rLand,(int)e->rTariff,(int)e->xArmy,(int)e->xNavy,(int)e->xAdmin,(int)e->xEdu,(int)e->xUpkeep,(int)e->xDebt,(int)e->xCorrupt,
+   (int)e->debt,(int)WEco_DebtLimit(w,c),e->rate,e->defaults,e->tax,e->tariff,e->edu,e->mil);
  }
+ // populacao e alfabetizacao do mundo
+ {u64 P=0;u64 L=0;for(u8 i=1;i<w->nC;i++)if(w->c[i].alive){P+=w->c[i].popK;L+=(u64)w->c[i].popK*w->c[i].lit;}
+  int nd=0,nb=0;for(u8 i=1;i<w->nC;i++)if(w->c[i].alive){if(w->eco[i].debt>0)nd++;if(w->eco[i].defaults)nb++;}
+  printf("     mundo: %llu milhoes de habitantes, alfabetizacao %llu%%, %d paises endividados, %d ja' deram calote\n",(unsigned long long)(P/1000),(unsigned long long)(P?L/P/10:0),nd,nb);}
 }
 static void Snap(const World *w,int year){
  char p[64];sprintf(p,"host/out/mundi_%d.ppm",year);SaveMap(w,p,2);

@@ -102,7 +102,10 @@ void WDip_FlagIdeo(const FlagDef *base,u8 from,u8 to,bool islam,FlagDef *o){
 }
 void WDip_Flag(const World *w,u8 ci,FlagDef *out){
  const WCountry *c=&w->c[ci];
- WDip_FlagIdeo(&NATIONS[c->nat].flag,c->ideo0,c->ideo,Islamic(c->nat),out);
+ // bandeira historica do ano/regime (hflags.c); senao a do catalogo
+ FlagDef h;int r=HFlag_Find(NATIONS[c->nat].tag,w->date.y,c->ideo,&h);
+ if(r==2){*out=h;return;}
+ WDip_FlagIdeo(r==1?&h:&NATIONS[c->nat].flag,c->ideo0,c->ideo,Islamic(c->nat),out);
 }
 static bool Opposed(u8 a,u8 b){
  if(a==b)return false;
@@ -492,9 +495,8 @@ static void AiNavyArmy(World *w,u8 ci){
  }
  // recrutar quando a guerra aperta e ha ouro
  if(c->warN&&c->troops<c->cap&&c->gold>World_RecruitCost(w,ci)*2)World_Recruit(w,ci);
- // imposto: alto se pobre, baixo se a populacao esta inquieta
- WEco *ew=&w->eco[ci];
- ew->tax=(u8)(c->gold<100?2:(WDip_RevoltRisk(w,ci)>40?0:1));
+ // politica fiscal (imposto, tarifa, educacao, gasto militar): wecon.c
+ WEco_AiPolicy(w,ci);
 }
 // batalhas navais do mes entre paises em guerra
 static void Naval(World *w){
@@ -588,6 +590,10 @@ void WDip_Day(World *w){
   if(((ci+w->day)&7)==0){
    int tgt=30+w->eco[ci].life/2+c->m.happy-(w->eco[ci].tax==2?8:(w->eco[ci].tax==0?-5:0));
    if(c->warDays>360)tgt-=5;
+   // teatros e parques alegram (ate +8); deficit cronico e divida alta irritam
+   {int fun=0;for(int i=0;i<w->nCity;i++)if(w->city[i].owner==ci)for(int k=0;k<CITY_SLOTS;k++){u8 b=w->city[i].bld[k];if(b==BK_TEATRO)fun+=2;else if(b==BK_PARQUE)fun++;}
+    tgt+=fun>8?8:fun;
+    if(w->eco[ci].debt>WEco_DebtLimit(w,ci)*2/3)tgt-=5;}
    if(c->happy<tgt)c->happy++;else if(c->happy>tgt)c->happy--;
    int mt=20+c->m.militancy+(60-(int)c->happy)/2;
    if(mt<0)mt=0;
