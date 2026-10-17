@@ -24,6 +24,24 @@ void Art_BlitH(u16 *dst,const Art *a,int x,int y);
 // Usado p/ faixas de fundo (ex: art_game_bg so' aparece em x>=182).
 void Art_BlitClip(u16 *dst,const Art *a,int x,int y,int sx,int sy,int sw,int sh);
 
-// Arte gerada por tools/genart.py (source/gen/art_data.c): logo da concept e
-// retrato do oficial do menu principal.
-extern const Art ART_LOGO, ART_OFFICER;
+
+// Pintura 8bpp crua (tools/genpics.py, recortada da concept art e reamostrada
+// para o pixel nativo do DS): ate' 255 cores de 15 bits, indice 0 =
+// transparente. Sem RLE: o blit e' uma copia por linha via paleta.
+typedef struct {
+ u16 w,h;
+ const u16 *pal;   // pal[0] nao e' desenhado
+ const u8 *px;     // w*h indices
+} Pic;
+void Pic_Blit(u16 *dst,const Pic *p,int x,int y);
+// So' a janela (sx,sy,sw,sh) da pintura em (x,y) (fundo de pergaminho em
+// sub-retangulos: a textura fica presa a' tela, nao ao painel).
+void Pic_BlitClip(u16 *dst,const Pic *p,int x,int y,int sx,int sy,int sw,int sh);
+extern const Pic PIC_TITLE, PIC_OFFICER, PIC_TOWN, PIC_SKETCH, PIC_CREST, PIC_HARBOR, PIC_PAPER;
+extern const Pic PIC_PC_TL, PIC_PC_TR, PIC_PC_BL, PIC_PC_BR;   // cantos do pergaminho
+extern const Pic PIC_NC_TL, PIC_NC_TR, PIC_NC_BL, PIC_NC_BR;   // cantos da moldura navy
+extern const Pic PIC_CROWN;
+// Bandeira pintada no PIC_HARBOR: caixa (x,y,w,h) e sombra por pixel (0 =
+// nao e' pano, 12 = luz normal, ate' 15 = brilho). O jogo repinta o pano com
+// a bandeira da nacao escolhida mantendo as dobras da pintura.
+extern const u8 HARBOR_FLAG[], HARBOR_FLAG_BOX[4], HARBOR_FLAG_TOP[];  // TOP: 1a linha do pano por coluna

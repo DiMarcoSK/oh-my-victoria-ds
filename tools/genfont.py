@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# genfont.py — gera source/gen/font_data.c (Serifa 12 e 8, 1bpp) a partir de
+# genfont.py — gera source/gen/font_data.c (Serifa 12 2bpp AA, Serifa 8 1bpp) a partir de
 # TTFs do sistema. Ver SDD sec 14.3: bitmap proporcional, Serifa 12 com caixa
 # alta 9px / linha 14px; Serifa 8 com caixa alta 7px / linha 11px.
 #
@@ -73,27 +73,38 @@ def find_size(path, target_caph):
     return best[1]
 
 CANVAS = 40
-def render_glyph(path, size, ch):
+def render_glyph(path, size, ch, aa=False):
     f = ImageFont.truetype(path, size)
     BASE_Y, PEN_X = 28, 6
     img = Image.new("L", (CANVAS, CANVAS), 0)
     d = ImageDraw.Draw(img)
     # hinting monocromatico do FreeType: haste inteira em vez de limiar 50%
     # sobre o antisserrilhado (que comia serifa e haste fina)
-    d.fontmode = "1"
+    if not aa:
+        d.fontmode = "1"
     try:
         d.text((PEN_X, BASE_Y), ch, font=f, fill=255, anchor="ls")
     except Exception:
         d.text((PEN_X, BASE_Y), ch, font=f, fill=255)
     px = img.load()
-    xs = [x for y in range(CANVAS) for x in range(CANVAS) if px[x, y] >= 128]
-    ys = [y for y in range(CANVAS) for x in range(CANVAS) if px[x, y] >= 128]
+    thr = 43 if aa else 128   # aa: 2 bits por pixel (0..3), 43 ~ meio nivel
+    xs = [x for y in range(CANVAS) for x in range(CANVAS) if px[x, y] >= thr]
+    ys = [y for y in range(CANVAS) for x in range(CANVAS) if px[x, y] >= thr]
     adv = int(round(f.getlength(ch)))
     if not xs:  # espaco / sem tinta
         return dict(w=0, h=0, left=0, top=0, adv=adv, bits=b"")
     x0, x1 = min(xs), max(xs) + 1
     y0, y1 = min(ys), max(ys) + 1
     w, h = x1 - x0, y1 - y0
+    if aa:
+        # 2bpp MSB-first (4 px por byte): nivel = cobertura em 1/3
+        stride = (w * 2 + 7) // 8
+        bits = bytearray(stride * h)
+        for yy in range(h):
+            for xx in range(w):
+                q = min(3, (px[x0 + xx, y0 + yy] + 42) // 85)
+                bits[yy * stride + (xx >> 2)] |= q << (6 - 2 * (xx & 3))
+        return dict(w=w, h=h, left=x0 - PEN_X, top=(BASE_Y - y0), adv=adv, bits=bytes(bits))
     stride = (w + 7) // 8
     bits = bytearray(stride * h)
     for yy in range(h):
@@ -108,7 +119,7 @@ def c_bytes(b, per=16):
         out.append(" " + ",".join("0x%02X" % v for v in b[i:i + per]) + ",")
     return "\n".join(out)
 
-def build(paths, target_caph, extra):
+def build(paths, target_caph, extra, aa=False):
     fonts = [(p, cmap_of(p)) for p in paths if os.path.exists(p)]
     fonts = [(p, c) for p, c in fonts if c]
     if not fonts:
@@ -118,7 +129,7 @@ def build(paths, target_caph, extra):
     glyphs = []
     for cp in cps:
         fpath = pick_font(cp, fonts)
-        g = render_glyph(fpath, size, chr(cp))
+        g = render_glyph(fpath, size, chr(cp), aa)
         glyphs.append((cp, g))
     return size, glyphs
 
@@ -134,10 +145,10 @@ def emit(name, font, glyphs, out):
     for cp, off, adv, w, h, left, top in recs:
         lines.append(" {%d,%d,%d,%d,%d,%d,%d}," % (cp, off, adv, w, h, left, top))
     out.append("static const Glyph %s_G[]={\n%s\n};" % (name, "\n".join(lines)))
-    out.append("const Font %s={%s_G,%s_B,%d,%d,%d};" % (name, name, name, len(recs), font["caph"], font["lineh"]))
+    out.append("const Font %s={%s_G,%s_B,%d,%d,%d,%d};" % (name, name, name, len(recs), font["caph"], font["lineh"], font.get("bpp", 1)))
     return recs, bytes(allbits)
 
-def draw_line(px, x, y, s, gl, bits, caph, col):
+def draw_line(px, x, y, s, gl, bits, caph, col, bpp=1):
     # espelha DrawG/Px_Text2 do source/px_font2.c p/ o preview bater 1:1
     bycp = {cp: (off, adv, w, h, left, top) for cp, off, adv, w, h, left, top in gl}
     cx = x
@@ -149,14 +160,19 @@ def draw_line(px, x, y, s, gl, bits, caph, col):
         if cp not in bycp:
             cp = ord('?')
         off, adv, w, h, left, top = bycp[cp]
-        stride = (w + 7) // 8
+        stride = (w * bpp + 7) // 8
         base = y + caph
         for r in range(h):
             for c in range(w):
-                if bits[off + r * stride + (c >> 3)] & (0x80 >> (c & 7)):
+                if bpp == 2:
+                    q = (bits[off + r * stride + (c >> 2)] >> (6 - 2 * (c & 3))) & 3
+                else:
+                    q = 3 if bits[off + r * stride + (c >> 3)] & (0x80 >> (c & 7)) else 0
+                if q:
                     xx, yy2 = cx + left + c, base - top + r
                     if 0 <= xx < px.width and 0 <= yy2 < px.height:
-                        px.putpixel((xx, yy2), col)
+                        bg = px.getpixel((xx, yy2))
+                        px.putpixel((xx, yy2), (bg * (3 - q) + col * q) // 3)
         cx += adv
 
 def make_preview(r12, b12, r8, b8, path):
@@ -165,7 +181,7 @@ def make_preview(r12, b12, r8, b8, path):
     yy = [6]
 
     def line(s, recs, bits, caph):
-        draw_line(img, 6, yy[0], s, recs, bits, caph, 255)
+        draw_line(img, 6, yy[0], s, recs, bits, caph, 255, 2 if caph == 9 else 1)
         yy[0] += 14 if caph == 9 else 11
 
     yy[0] = 6
@@ -208,13 +224,13 @@ def pixel8(extra):
 
 def main():
     extra = EXTRA + SYMBOLS
-    s12, g12 = build([first(PRIMARY), first(FALLBACK)], 9, extra)
+    s12, g12 = build([first(PRIMARY), first(FALLBACK)], 9, extra, aa=True)
     s8, g8 = 0, pixel8(extra)
     out = []
     out.append("// GERADO por tools/genfont.py — NAO EDITE A MAO.")
-    out.append("// Serifa 12 (caixa alta 9px) e Serifa 8 (caixa alta 7px), 1bpp.")
+    out.append("// Serifa 12 (caixa alta 9px, 2bpp antisserrilhada) e Serifa 8 (caixa alta 7px, 1bpp).")
     out.append('#include "font.h"')
-    r12, b12 = emit("F_SERIF12", dict(caph=9, lineh=14), g12, out)
+    r12, b12 = emit("F_SERIF12", dict(caph=9, lineh=14, bpp=2), g12, out)
     r8, b8 = emit("F_SERIF8", dict(caph=7, lineh=11), g8, out)
     path = os.path.join(ROOT, "source", "gen", "font_data.c")
     os.makedirs(os.path.dirname(path), exist_ok=True)

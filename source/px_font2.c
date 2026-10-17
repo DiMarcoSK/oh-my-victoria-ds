@@ -24,14 +24,29 @@ const Glyph *F_Glyph(const Font *f,int cp){
  }
  return 0;
 }
+// cobertura q (1..3) de col sobre o pixel ja' na tela: mistura em terços,
+// so' inteiro (Serifa 12 antisserrilhada). Fora da tela = nada.
+static void Mix(u16 *dst,int x,int y,u16 col,int q){
+ if(x<0||x>255||y<0||y>191)return;
+ if(q>=3){dst[y*256+x]=col;return;}
+ u16 b=dst[y*256+x];
+ int r=((b&31)*(3-q)+(col&31)*q)/3,g=(((b>>5)&31)*(3-q)+((col>>5)&31)*q)/3,bl=(((b>>10)&31)*(3-q)+((col>>10)&31)*q)/3;
+ dst[y*256+x]=(u16)(BIT(15)|(bl<<10)|(g<<5)|r);
+}
+// nivel 0..3 do pixel (c,r) do glifo (1bpp vira 0/3)
+static inline int Lv(const Font *f,const u8 *bits,int stride,int c,int r){
+ const u8 *row=bits+r*stride;
+ if(f->bpp==2)return (row[c>>2]>>(6-2*(c&3)))&3;
+ return (row[c>>3]&(0x80>>(c&7)))?3:0;
+}
+static inline int Stride(const Font *f,const Glyph *g){return (g->w*f->bpp+7)>>3;}
 static void Draw(u16 *dst,int penx,int y,const Font *f,const Glyph *g,u16 col){
  if(!g||!g->w||!g->h)return;
- const u8 *bits=f->bits+g->off; int stride=(g->w+7)>>3;
+ const u8 *bits=f->bits+g->off; int stride=Stride(f,g);
  int x0=penx+g->left, y0=y+f->caph-g->top; // y = topo da caixa alta -> baseline
- for(int r=0;r<g->h;r++){
-  const u8 *row=bits+r*stride;
-  for(int c=0;c<g->w;c++)
-   if(row[c>>3]&(0x80>>(c&7)))Px_PSet(dst,x0+c,y0+r,col);
+ for(int r=0;r<g->h;r++)for(int c=0;c<g->w;c++){
+  int q=Lv(f,bits,stride,c,r);
+  if(q)Mix(dst,x0+c,y0+r,col,q);
  }
 }
 // Caixa alta p/ nomes no mapa (Victoria): ASCII, Latin-1 e Latin Extended-A.
@@ -47,13 +62,12 @@ static int Up(const Font *f,int cp){
 // Glifo ampliado (sc>1: cada pixel vira sc x sc). Usado no logo e titulos.
 static void DrawSc(u16 *dst,int penx,int y,const Font *f,const Glyph *g,u16 col,int sc){
  if(!g||!g->w||!g->h)return;
- const u8 *bits=f->bits+g->off; int stride=(g->w+7)>>3;
+ if(sc==1){Draw(dst,penx,y,f,g,col);return;}
+ const u8 *bits=f->bits+g->off; int stride=Stride(f,g);
  int x0=penx+g->left*sc, y0=y+(f->caph-g->top)*sc;
- for(int r=0;r<g->h;r++){
-  const u8 *row=bits+r*stride;
-  for(int c=0;c<g->w;c++)
-   if(row[c>>3]&(0x80>>(c&7)))
-    for(int j=0;j<sc;j++)for(int i=0;i<sc;i++)Px_PSet(dst,x0+c*sc+i,y0+r*sc+j,col);
+ for(int r=0;r<g->h;r++)for(int c=0;c<g->w;c++){
+  int q=Lv(f,bits,stride,c,r);
+  if(q)for(int j=0;j<sc;j++)for(int i=0;i<sc;i++)Mix(dst,x0+c*sc+i,y0+r*sc+j,col,q);
  }
 }
 void Px_Text2Ex(u16 *dst,int x,int y,const char *s,const Font *f,u16 col,int sp,int sc,int flags){

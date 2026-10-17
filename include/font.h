@@ -1,6 +1,7 @@
 #pragma once
 #include <nds.h>
-// font.h — Serifa 8/12 proporcional 1bpp (SDD sec 14.3). Os DADOS moram em
+// font.h — Serifa 8 (1bpp, desenhada a mao) e Serifa 12 (2bpp antisserrilhada:
+// 4 niveis de cobertura misturados com o fundo) proporcionais (SDD sec 14.3). Os DADOS moram em
 // source/gen/font_data.c (gerado por tools/genfont.py e commitado: o build nao
 // roda Python, ADR-14). Aqui mora so' a API.
 //
@@ -9,7 +10,7 @@
 // zero malloc. Se faltar glifo, desenha '?'; tools/font_check.py falha o build
 // se algum caractere usado nas strings/nomes ficar de fora.
 typedef struct { u16 cp, off; u8 adv, w, h; s8 left, top; } Glyph;
-typedef struct { const Glyph *gl; const u8 *bits; u16 n; u8 caph, lineh; } Font;
+typedef struct { const Glyph *gl; const u8 *bits; u16 n; u8 caph, lineh, bpp; } Font;
 
 extern const Font F_SERIF12; // titulos e itens: caixa alta 9px, linha 14px
 extern const Font F_SERIF8;  // descricoes/rotulos/numeros: caixa alta 7px, linha 11px

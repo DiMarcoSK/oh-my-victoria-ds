@@ -42,3 +42,22 @@ void Art_BlitClip(u16 *dst,const Art *a,int x,int y,int sx,int sy,int sw,int sh)
  if(!a||sw<=0||sh<=0)return;
  Win(dst,a,x,y,sx,sy,sw,sh,0);
 }
+
+// ---- Pic (8bpp cru) ----
+void Pic_BlitClip(u16 *dst,const Pic *p,int x,int y,int sx,int sy,int sw,int sh){
+ if(!p)return;
+ if(sx<0){sw+=sx;x-=sx;sx=0;}
+ if(sy<0){sh+=sy;y-=sy;sy=0;}
+ if(sx+sw>p->w)sw=p->w-sx;
+ if(sy+sh>p->h)sh=p->h-sy;
+ if(x<0){sw+=x;sx-=x;x=0;}
+ if(y<0){sh+=y;sy-=y;y=0;}
+ if(x+sw>256)sw=256-x;
+ if(y+sh>192)sh=192-y;
+ if(sw<=0||sh<=0)return;
+ for(int j=0;j<sh;j++){
+  const u8 *s=p->px+(sy+j)*p->w+sx;u16 *o=dst+(y+j)*256+x;
+  for(int i=0;i<sw;i++){u8 v=s[i];if(v)o[i]=p->pal[v];}
+ }
+}
+void Pic_Blit(u16 *dst,const Pic *p,int x,int y){if(p)Pic_BlitClip(dst,p,x,y,0,0,p->w,p->h);}

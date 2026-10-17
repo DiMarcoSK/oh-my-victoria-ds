@@ -52,7 +52,9 @@ enum { ICO_NONE=0, ICO_CROWN, ICO_SWORD, ICO_SWORDS, ICO_PEOPLE, ICO_FLAG,
  ICO_SHIELD, ICO_GLOBE, ICO_COIN_S, ICO_SWORDS_S, ICO_CROWN_S, ICO_CAL_S, ICO_LAND_S, ICO_HOUSE,
  ICO_BOOK, ICO_SHIP };
 void Ui_Parch(u16*d,int x,int y,int w,int h);   // pergaminho + borda dupla + cantos
+void Ui_ParchOrn(u16*d,int x,int y,int w,int h);  // + filete duplo e cantos da concept (menus)
 void Ui_Navy(u16*d,int x,int y,int w,int h);    // painel navy + borda ouro
+void Ui_NavyOrn(u16*d,int x,int y,int w,int h);   // + cantos dourados da concept (menus)
 void Ui_Backdrop(u16*d);                        // fundo navy com grao
 void Ui_TextC(u16*d,int cx,int y,const char*s,int big,u16 col); // Serifa centrada
 void Ui_Div(u16*d,int cx,int y,u16 col);        // divisor 48x5

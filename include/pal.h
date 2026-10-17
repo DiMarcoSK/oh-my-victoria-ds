@@ -15,8 +15,8 @@
 #define C_NAVY_BG    PXC(2,3,4)     // fundo de tela, moldura externa
 #define C_NAVY       PXC(3,4,7)     // paineis e botoes escuros, barra do HUD
 #define C_NAVY_HI    PXC(5,7,10)    // botao pressionado, placeholder de arte
-#define C_PARCH      PXC(28,26,20)  // pergaminho (conteudo)
-#define C_PARCH_SH   PXC(24,21,15)  // manchas/gravuras do pergaminho
+#define C_PARCH      PXC(27,23,18)  // pergaminho (conteudo; papel da concept 217,186,144)
+#define C_PARCH_SH   PXC(22,18,13)  // manchas/gravuras do pergaminho
 #define C_INK        PXC(5,4,3)     // texto e tracos sobre pergaminho
 #define C_CRIMSON    PXC(19,3,3)    // item selecionado
 #define C_CRIMSON_HI PXC(24,6,5)    // brilho de 1px no topo da selecao

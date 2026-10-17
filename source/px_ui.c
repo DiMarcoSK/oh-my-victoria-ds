@@ -4,6 +4,7 @@
 // tambem aqui (pagina UI_MENU) com alvos grandes para toque.
 #include "px.h"
 #include "ui.h"
+#include "px_art.h"
 #include "map.h"
 #include "market.h"
 #include "economy.h"
@@ -215,49 +216,65 @@ void Ui_DrawMenu(GameState*g,u16 *d){
 // texto Serifa (font.h). As telas (px_menu.c, px_world.c) so' chamam isto.
 // ======================================================================
 
-// Pergaminho: manchas em blocos de 8px (baixa frequencia) + poeira esparsa.
-// Hash deterministico por pixel, nunca o RNG do jogo.
-void Ui_Parch(u16*d,int x,int y,int w,int h){
+// Pergaminho da concept: papel pintado (PIC_PAPER, preso a' tela: paineis
+// vizinhos casam a textura), borda queimada e filete de tinta. Ui_ParchOrn
+// (telas de menu) acrescenta o 2o filete e os 4 cantos ornamentados
+// recortados da concept; no jogo o conteudo encosta na borda e o ornamento
+// cobriria texto.
+static inline u16 Darken(u16 c,int k){ // k/16 de escurecimento
+ int r=(c&31)*(16-k)/16,g=((c>>5)&31)*(16-k)/16,b=((c>>10)&31)*(16-k)/16;
+ return (u16)(BIT(15)|(b<<10)|(g<<5)|r);
+}
+static void Burn(u16*d,int x,int y,int w,int h,int e0){
  for(int j=0;j<h;j++){
   int py=y+j;if(py<0||py>191)continue;
+  int ey=j<h-1-j?j:h-1-j;
   for(int i=0;i<w;i++){
+   int ex=i<w-1-i?i:w-1-i;
+   int e=ex<ey?ex:ey;if(e>=e0)continue;
    int px=x+i;if(px<0||px>255)continue;
-   // mancha redonda e rala (pontilhado que some do centro p/ fora)
-   int blot=H2p(px>>4,py>>4)%7==0, n=H2p(px,py);
-   int dd=(px&15)-8,de=(py&15)-8;if(dd<0)dd=-dd;if(de<0)de=-de;
-   u16 c=C_PARCH;
-   if(blot&&dd+de<7&&(n&3)==0)c=C_PARCH_SH;
-   else if(n%97==0)c=C_PARCH_SH;
-   d[py*256+px]=c;
+   int k=(e0-e)*(e0-e)*9/(e0*e0);if(ex<e0&&ey<e0)k+=1;
+   d[py*256+px]=Darken(d[py*256+px],k>9?9:k);
   }
  }
- // borda dupla: tinta, respiro, ouro velho
- Px_Border(d,x,y,w,h,C_INK);
- Px_Border(d,x+2,y+2,w-4,h-4,C_GOLD_DIM);
- // cantos: colchete dourado + losango de tinta (espelhado nos 4 cantos)
- static const char *const CORNER[9]={
-  "gggggggg",
-  "g.......",
-  "g.dddd..",
-  "g.d.....",
-  "g.d..k..",
-  "g.d.kkk.",
-  "g.d..k..",
-  "g.......",
-  "g.......",
- };
- for(int r=0;r<9;r++)for(int c=0;CORNER[r][c];c++){
-  char ch=CORNER[r][c];if(ch=='.')continue;
-  u16 col=ch=='g'?C_GOLD:ch=='d'?C_GOLD_DIM:C_INK;
-  Px_PSet(d,x+4+c,y+4+r,col);Px_PSet(d,x+w-5-c,y+4+r,col);
-  Px_PSet(d,x+4+c,y+h-5-r,col);Px_PSet(d,x+w-5-c,y+h-5-r,col);
- }
 }
-// Painel navy: fill + borda ouro + filete interno ouro velho.
+void Ui_Parch(u16*d,int x,int y,int w,int h){
+ Pic_BlitClip(d,&PIC_PAPER,x,y,x,y,w,h);
+ Burn(d,x,y,w,h,4);
+ Px_Border(d,x,y,w,h,PXC(9,7,5));
+}
+void Ui_ParchOrn(u16*d,int x,int y,int w,int h){
+ Pic_BlitClip(d,&PIC_PAPER,x,y,x,y,w,h);
+ Burn(d,x,y,w,h,6);
+ Px_Border(d,x,y,w,h,PXC(9,7,5));
+ Px_Border(d,x+5,y+5,w-10,h-10,PXC(12,9,6));
+ Pic_Blit(d,&PIC_PC_TL,x+3,y+3);
+ Pic_Blit(d,&PIC_PC_TR,x+w-3-PIC_PC_TR.w,y+3);
+ Pic_Blit(d,&PIC_PC_BL,x+3,y+h-3-PIC_PC_BL.h);
+ Pic_Blit(d,&PIC_PC_BR,x+w-3-PIC_PC_BR.w,y+h-3-PIC_PC_BR.h);
+}
+// Painel navy da concept: ardosia com degrade suave e borda ouro dupla.
+// Ui_NavyOrn acrescenta os cantos dourados (telas de menu; no jogo o painel
+// tem conteudo encostado nas bordas).
 void Ui_Navy(u16*d,int x,int y,int w,int h){
- Px_Rect(d,x,y,w,h,C_NAVY);
+ for(int j=0;j<h;j++){
+  int py=y+j;if(py<0||py>191)continue;
+  int t=j*6/(h?h:1);
+  u16 c=PXC(4-t/3,5-t/3,7-t/3+0);
+  int x0=x<0?0:x,x1=x+w>256?256:x+w;
+  for(int px=x0;px<x1;px++)d[py*256+px]=((H2p(px,py)&15)==0)?PXC(5,6,8):c;
+ }
  Px_Border(d,x,y,w,h,C_GOLD);
- Px_Border(d,x+1,y+1,w-2,h-2,C_GOLD_DIM);
+ Px_Border(d,x+2,y+2,w-4,h-4,C_GOLD_DIM);
+}
+void Ui_NavyOrn(u16*d,int x,int y,int w,int h){
+ Ui_Navy(d,x,y,w,h);
+ {
+  Pic_Blit(d,&PIC_NC_TL,x+1,y+1);
+  Pic_Blit(d,&PIC_NC_TR,x+w-1-PIC_NC_TR.w,y+1);
+  Pic_Blit(d,&PIC_NC_BL,x+1,y+h-1-PIC_NC_BL.h);
+  Pic_Blit(d,&PIC_NC_BR,x+w-1-PIC_NC_BR.w,y+h-1-PIC_NC_BR.h);
+ }
 }
 // Fundo de tela navy com grao de 1 passo (couro da mesa do ministro).
 void Ui_Backdrop(u16*d){
@@ -565,34 +582,49 @@ static void TriL(u16*d,int x,int y,u16 c){
  for(int k=0;k<4;k++)for(int j=k;j<7-k;j++)Px_PSet(d,x+3-k,y+j,c);
 }
 void Ui_Arrows(u16*d,int xl,int xr,int y,u16 c){TriL(d,xl,y,c);Tri(d,xr,y,c);}
-// Item de lista sobre navy (h=24): selecionado = barra crimson + brilho no
-// topo + borda ouro + ▶ branca; pulse liga/desliga o brilho (SDD 14.1).
+// Faixa crimson da concept: degrade vertical, brilho no topo, borda ouro e
+// pontas em "fita" (recorte em V na direita). Compartilhada por Item/BigBtn.
+static void Ribbon(u16*d,int x,int y,int w,int h,bool pulse){
+ for(int j=0;j<h;j++){
+  int t=j*8/h;u16 c=PXC(21-t,4-t/4,4-t/4);
+  int cut=j<h/2?j:h-1-j;cut=(h/2-cut)/3;   // V raso na ponta direita
+  Px_Rect(d,x,y+j,w-cut,1,c);
+ }
+ if(pulse)Px_Rect(d,x+1,y+1,w-4,1,C_CRIMSON_HI);
+ Px_Rect(d,x,y,w-2,1,C_GOLD);Px_Rect(d,x,y+h-1,w-2,1,C_GOLD);Px_Rect(d,x,y,1,h,C_GOLD);
+ for(int j=0;j<h;j++){int cut=j<h/2?j:h-1-j;cut=(h/2-cut)/3;Px_PSet(d,x+w-1-cut,y+j,C_GOLD);}
+}
+// Botao navy da concept: degrade, borda ouro com cantos chanfrados.
+static void NavyBtn(u16*d,int x,int y,int w,int h,bool hi){
+ for(int j=0;j<h;j++){int t=j*6/h;Px_Rect(d,x+1,y+j,w-2,1,hi?PXC(7-t/2,9-t/2,13-t/2):PXC(5-t/2,6-t/2,9-t/2));}
+ Px_Rect(d,x+1,y,w-2,1,C_GOLD);Px_Rect(d,x+1,y+h-1,w-2,1,C_GOLD);
+ Px_Rect(d,x,y+1,1,h-2,C_GOLD);Px_Rect(d,x+w-1,y+1,1,h-2,C_GOLD);
+ Px_Rect(d,x+2,y+2,w-4,1,C_GOLD_DIM);
+}
+// Item de lista sobre navy (h=24): selecionado = fita crimson + ▶ ouro;
+// pulse liga/desliga o brilho (SDD 14.1). star = ✦ nos nao selecionados.
 void Ui_Item(u16*d,int x,int y,int w,const char*s,bool sel,bool dim,bool pulse,bool star){
  if(sel){
-  Px_Rect(d,x,y,w,24,C_CRIMSON);
-  Px_Border(d,x,y,w,24,C_GOLD);
-  if(pulse)for(int i=1;i<w-1;i++)Px_PSet(d,x+i,y+1,C_CRIMSON_HI);
-  Tri(d,x+6,y+8,C_TEXT);
+  Ribbon(d,x,y,w,24,pulse);
+  Tri(d,x+6,y+8,C_GOLD_HI);
  }else if(star){
-  // ✦ dourado a esquerda dos nao selecionados (pausa, como na concept)
   Px_Text2(d,x+5,y+7,"✦",&F_SERIF8,C_GOLD);
  }
  u16 col=dim?C_TEXT_DIM:C_TEXT;
- Px_Text2(d,x+19,y+8,s,&F_SERIF12,C_NAVY_BG);
- Px_Text2(d,x+18,y+7,s,&F_SERIF12,col);
+ Px_Text2(d,x+19,y+7,s,&F_SERIF12,PXC(1,1,2));
+ Px_Text2(d,x+18,y+6,s,&F_SERIF12,col);
 }
 // Botao grande (Selecao de Modo): 176x26, icone 16x16 a x+10, texto a x+44.
 void Ui_BigBtn(u16*d,int x,int y,const char*s,u8 icon,bool sel,bool dim,bool pulse){
- Px_Rect(d,x,y,176,26,sel?C_CRIMSON:C_NAVY);
- Px_Border(d,x,y,176,26,C_GOLD);
- if(sel&&pulse)for(int i=1;i<175;i++)Px_PSet(d,x+i,y+1,C_CRIMSON_HI);
+ if(sel)Ribbon(d,x,y,176,26,pulse);else NavyBtn(d,x,y,176,26,false);
  Ui_IconId(d,x+10,y+5,icon,dim);
- Px_Text2(d,x+44,y+8,s,&F_SERIF12,dim?C_TEXT_DIM:C_TEXT);
+ Px_Text2(d,x+45,y+8,s,&F_SERIF12,PXC(1,1,2));
+ Px_Text2(d,x+44,y+7,s,&F_SERIF12,dim?C_TEXT_DIM:C_TEXT);
 }
 // Botao icone do HUD: 34x34; pressionado afunda 1px; desabilitado em ouro velho.
 void Ui_IconBtn(u16*d,int x,int y,u8 icon,bool pressed,bool dim){
- Px_Rect(d,x,y,34,34,pressed?C_NAVY_HI:C_NAVY);
- Px_Border(d,x,y,34,34,dim?C_GOLD_DIM:C_GOLD);
+ NavyBtn(d,x,y,34,34,pressed);
+ if(dim){Px_Rect(d,x+1,y,32,1,C_GOLD_DIM);Px_Rect(d,x+1,y+33,32,1,C_GOLD_DIM);Px_Rect(d,x,y+1,1,32,C_GOLD_DIM);Px_Rect(d,x+33,y+1,1,32,C_GOLD_DIM);}
  Ui_IconId(d,x+9,y+9+(pressed?1:0),icon,dim);
 }
 // Linha "rotulo  ◂ valor ▸" (Configuracoes/Preparar): rotulo Serifa 8 em
