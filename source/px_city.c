@@ -341,6 +341,60 @@ static u32 SceneSig(const World *w,int ci){
  for(int s=0;s<CITY_SLOTS;s++)h=h*31+c->bld[s];
  return h^((u32)c->owner<<24);
 }
+// ---- pintura da cena: helpers (so' inteiro; tudo cai no LAYER em cache) ----
+static const u8 B4[4][4]={{0,8,2,10},{12,4,14,6},{3,11,1,9},{15,7,13,5}};
+// cor em 1/16 de passo por canal + Bayer 4x4: degrade liso em 15 bits
+static u16 Dth(int r16,int g16,int b16,int x,int y){
+ int t=B4[y&3][x&3];
+ return C3((r16+t)>>4,(g16+t)>>4,(b16+t)>>4);
+}
+// mistura a->b em t/n (canais 0..31) devolvida em 1/16 de passo
+static void Mix16(const u8 *a,const u8 *b,int t,int n,int *o){
+ for(int k=0;k<3;k++)o[k]=(a[k]*16*(n-t)+b[k]*16*t)/(n?n:1);
+}
+static u16 Get(int x,int y){if(x<0||x>255||y<CY0||y>=CY1)return 0;return D[(y-YOFF)*256+x];}
+static void Darken(int x,int y,int num,int den){u16 c=Get(x,y);if(c)Put(x,y,Dk(c,num,den));}
+// arvore por clima: 0 copa redonda, 1 conifera, 2 palmeira, 3 choupo
+static void Tree(int x,int yb,int sz,int kind,u32 h){
+ u16 trunk=C3(10,7,4);
+ if(kind==2){                                   // palmeira: tronco curvo + leque
+  sz+=3;
+  for(int k=0;k<sz*2;k++){Put(x+(k*k)/(sz*6),yb-k,trunk);Put(x+1+(k*k)/(sz*6),yb-k,C3(14,10,6));}
+  int tx=x+(4*sz*sz)/(sz*6),ty=yb-sz*2;
+  static const s8 FX[6]={-5,-3,0,3,5,1},FY[6]={2,-2,-3,-2,2,3};
+  for(int f=0;f<6;f++)for(int k=0;k<=sz;k++)Put(tx+FX[f]*k/5,ty+FY[f]*k/5+(k*k)/(sz*3),k<2?C3(6,13,5):C3(8,17,6));
+  return;
+ }
+ if(kind==1){                                   // conifera: triangulos empilhados
+  for(int y=0;y<sz*2;y++){int hw=1+(y%(sz/2+1))*sz/(sz/2+2)/2+y/4;
+   for(int i=-hw;i<=hw;i++)Put(x+i,yb-sz*2-1+y,i<0?C3(5,11,7):C3(3,8,5));}
+  Put(x,yb,trunk);Put(x,yb-1,trunk);return;
+ }
+ if(kind==3){                                   // choupo: elipse alta
+  for(int y=-sz*2;y<=0;y++){int hw=(sz*(sz*2-(y<0?-y:y)/1))/(sz*2)/2+1;if(y<-sz*2+2)hw=1;
+   for(int i=-hw;i<=hw;i++)Put(x+i,yb-3+y,i<0?C3(9,17,7):C3(6,12,5));}
+  Put(x,yb-1,trunk);Put(x,yb-2,trunk);return;
+ }
+ for(int k=0;k<3;k++)Put(x,yb-k,trunk);       // copa redonda: 3 bolas com luz NO
+ int r=sz;
+ static const s8 OX[3]={-1,1,0},OY[3]={0,0,-1};
+ for(int b=0;b<3;b++){int cx=x+OX[b]*r*2/3,cy=yb-2-r+OY[b]*r*2/3;
+  for(int y=-r;y<=r;y++)for(int i=-r;i<=r;i++){int q=i*i+y*y;if(q>r*r)continue;
+   int lit=(i+y)<-r/2,dark=(i+y)>r/2;
+   u16 c=lit?C3(11,20,8):dark?C3(5,11,4):C3(8,16,6);
+   if(((h>>(b*3+(i&3)))&5)==0&&q<r*r-r)c=C3(10,18,7);
+   Put(cx+i,cy+y,c);}}
+}
+static void Cloud(int cx,int cy,int w,u32 h){
+ int n=3+(int)(h%3);
+ for(int k=0;k<n;k++){
+  int r=4+(int)((h>>(k*3))%5)+(k==n/2?3:0),x=cx-w/2+k*w/(n-1?n-1:1),y=cy-(k==n/2?2:0);
+  for(int j=-r;j<=r/2;j++)for(int i=-r;i<=r;i++){if(i*i+j*j>r*r)continue;
+   int sh=j>r/4?2:(j>-r/3?1:0);
+   u16 c=sh==0?C3(31,31,30):sh==1?C3(28,28,29):C3(23,24,27);
+   Put(x+i,y+j,c);}
+ }
+}
 static void SceneBg(u16 *L,const World *w,int ci){
  // L e' um buffer 256x172 = linhas 20..191 da tela; desenhamos num alvo
  // de tela "virtual": D aponta 20 linhas antes p/ usar coordenadas de tela
@@ -349,51 +403,88 @@ static void SceneBg(u16 *L,const World *w,int ci){
  u8 st=City_Style(w,ci);u16 year=w->date.y;u32 seed=Hh(c->x,c->y);
  CY0=20;CY1=192;D=d;
  u8 t=W_TERR[World_Idx(w,c->x,c->y)];
- // ceu em gradiente pontilhado (Bayer) — dia claro
- static const u8 B4[4][4]={{0,8,2,10},{12,4,14,6},{3,11,1,9},{15,7,13,5}};
- for(int y=20;y<HORIZ;y++){
-  int f=(y-20)*16*16/(HORIZ-20);
-  for(int x=0;x<256;x++){
-   int k=f+B4[y&3][x&3];int lv=k>>4;if(lv>15)lv=15;
-   Put(x,y,C3(11+lv*11/15,16+lv*10/15,24+lv*3/15));
-  }
- }
- // nuvens macias
- for(int n=0;n<5;n++){u32 h=Hh(seed,n);int cx=(int)(h%256),cy=26+(int)((h>>8)%30),rw=10+(int)((h>>16)%14);
-  for(int y=-4;y<=4;y++)for(int x=-rw;x<=rw;x++)if(x*x*16/(rw*rw)+y*y<16&&B4[(cy+y)&3][(cx+x)&3]<12)Put(cx+x,cy+y,C3(29,30,30));}
- // relevo distante conforme o terreno em volta
- bool mount=false,hills=false,forest=false,desert=t==WT_DESERT;
+ bool mount=false,hills=false,forest=false,desert=t==WT_DESERT,cold=t==WT_TUNDRA||t==WT_ICE,jungle=t==WT_JUNGLE;
  for(int dy=-6;dy<=6;dy++)for(int dx=-6;dx<=6;dx++){
   int x=c->x+dx,y=c->y+dy;if(y<0||y>=w->h)continue;if(x<0||x>=w->w){if(!w->wrap)continue;x=(x+w->w)%w->w;}
   u8 q=W_TERR[World_Idx(w,x,y)];if(q==WT_MOUNTAIN)mount=true;if(q==WT_HILLS)hills=true;if(q==WT_FOREST||q==WT_JUNGLE)forest=true;}
- for(int x=0;x<256;x++){
-  // montanha: picos com neve; colina: ondulado suave (seno inteiro por tabela)
-  static const s8 WAVE[16]={0,2,4,5,6,5,4,2,0,-2,-4,-5,-6,-5,-4,-2};
-  int h1=mount?(int)(14+((Hh(x/18,seed)%22))*(1+(x%18<9?x%18:18-x%18))/9)
-        :hills?12+WAVE[(x/5+(int)(seed%16))&15]+WAVE[(x/13)&15]/2:6+WAVE[(x/9)&15]/2;
-  for(int y=HORIZ-h1;y<HORIZ;y++){
-   u16 col=mount?(y<HORIZ-h1+3&&h1>20?C3(28,29,30):C3(15,17,21)):(hills?C3(12,17,13):C3(16,20,18));
-   Put(x,y,col);
+ // ceu: azul fundo -> azul claro -> bruma quente no horizonte (Bayer em 1/16)
+ static const u8 SK0[3]={7,12,23},SK1[3]={15,21,29},SK2[3]={27,26,23};
+ const u8 *HZ=desert?(const u8[3]){29,25,19}:SK2;
+ int o[3];
+ for(int y=20;y<HORIZ;y++){
+  int f=y-20,n=HORIZ-20;
+  if(f<n*2/3)Mix16(SK0,SK1,f,n*2/3,o);else Mix16(SK1,HZ,f-n*2/3,n-n*2/3,o);
+  for(int x=0;x<256;x++)Put(x,y,Dth(o[0],o[1],o[2],x,y));
+ }
+ // sol com halo (mistura com o ceu por distancia)
+ int sx=150+(int)(seed%80),sy=34+(int)((seed>>8)%10);
+ for(int y=sy-22;y<sy+22&&y<HORIZ;y++)for(int x=sx-22;x<sx+22;x++){
+  int q=(x-sx)*(x-sx)+(y-sy)*(y-sy);if(q>22*22)continue;
+  if(q<=36){Put(x,y,C3(31,31,26));continue;}
+  u16 cc=Get(x,y);int k=(22*22-q)*6/(22*22);
+  int r=(cc&31)*16+k*((31-(cc&31))*16)/8,g=((cc>>5)&31)*16+k*((30-((cc>>5)&31))*16)/8,b=((cc>>10)&31)*16+k*((22-((cc>>10)&31))*16)/8;
+  Put(x,y,Dth(r<0?0:r,g<0?0:g,b<0?0:b,x,y));
+ }
+ // nuvens fofas (3 tons, luz de cima)
+ for(int n=0;n<4;n++){u32 h=Hh(seed,n);Cloud((int)(h%256),30+(int)((h>>8)%22),20+(int)((h>>16)%20),h>>4);}
+ // 2 camadas de relevo: a distante some na bruma (perspectiva aerea)
+ static const s8 WAVE[16]={0,2,4,5,6,5,4,2,0,-2,-4,-5,-6,-5,-4,-2};
+ for(int layer=0;layer<2;layer++){
+  int haze=layer?5:10;   // de 16
+  u8 base[3];
+  if(mount){base[0]=13;base[1]=15;base[2]=20;}
+  else if(desert){base[0]=24;base[1]=19;base[2]=13;}
+  else if(cold){base[0]=22;base[1]=24;base[2]=26;}
+  else{base[0]=10;base[1]=16;base[2]=12;}
+  for(int x=0;x<256;x++){
+   int hh;
+   if(layer==0)hh=mount?(int)(16+((Hh(x/22,seed)%24))*(1+(x%22<11?x%22:22-x%22))/11):(hills?13:8)+WAVE[(x/9+(int)(seed%16))&15]+WAVE[(x/23)&15]/2;
+   else hh=(hills||mount?8:4)+WAVE[(x/6+(int)(seed>>4)%16)&15]/2+WAVE[(x/17+3)&15]/2;
+   if(hh<1)hh=1;
+   for(int y=HORIZ-hh;y<HORIZ;y++){
+    int m[3];Mix16(base,HZ,haze,16,m);
+    // sombra no lado direito das encostas + neve no pico das montanhas
+    int slope=layer==0&&mount&&(x%22)>=11;
+    if(slope){m[0]=m[0]*13/16;m[1]=m[1]*13/16;m[2]=m[2]*14/16;}
+    if(layer==0&&mount&&y<HORIZ-hh+3&&hh>22){m[0]=29*16;m[1]=30*16;m[2]=31*16;}
+    Put(x,y,Dth(m[0],m[1],m[2],x,y));
+   }
+   // fileira de mata na camada da frente
+   if(layer==1&&(forest||jungle)&&!desert&&(Hh(x,seed+3)&3)==0){int r=2+(int)(Hh(x,seed)%2);
+    for(int j=-r;j<=0;j++)for(int i=-r;i<=r;i++)if(i*i+j*j<=r*r)Put(x+i,HORIZ-hh+j,cold?C3(6,12,9):C3(7,13,7));}
   }
  }
- // chao
- int gr=13,gg=19,gb=8;
- if(desert){gr=27;gg=23;gb=14;}else if(t==WT_TUNDRA||t==WT_ICE){gr=22;gg=24;gb=22;}
- else if(t==WT_JUNGLE){gr=8;gg=16;gb=6;}else if(t==WT_STEPPE){gr=16;gg=19;gb=8;}
- for(int y=HORIZ;y<192;y++)for(int x=0;x<256;x++){
-  u32 h=Hh(x*7+y,seed);int v=(h&7)==0?2:((h&15)==1?-2:0);
-  Put(x,y,C3(gr+v,gg+v,gb+v));
+ // chao: bruma clara no horizonte -> cor cheia na frente, tufos de grama
+ u8 g0[3],g1[3];
+ if(desert){g0[0]=28;g0[1]=24;g0[2]=17;g1[0]=26;g1[1]=20;g1[2]=12;}
+ else if(cold){g0[0]=25;g0[1]=27;g0[2]=27;g1[0]=21;g1[1]=24;g1[2]=24;}
+ else if(jungle){g0[0]=12;g0[1]=19;g0[2]=10;g1[0]=6;g1[1]=14;g1[2]=5;}
+ else if(t==WT_STEPPE){g0[0]=20;g0[1]=21;g0[2]=12;g1[0]=16;g1[1]=17;g1[2]=7;}
+ else{g0[0]=16;g0[1]=22;g0[2]=12;g1[0]=9;g1[1]=17;g1[2]=6;}
+ for(int y=HORIZ;y<192;y++){
+  Mix16(g0,g1,y-HORIZ,192-HORIZ,o);
+  for(int x=0;x<256;x++){
+   u32 h=Hh(x*7+y*131,seed);int v=0;
+   if((h&15)==0)v=-24;else if((h&15)==1)v=20;           // tufo escuro / folha clara
+   else if((h&511)==2&&y>150&&!desert&&!cold){Put(x,y,(h>>8)&1?C3(30,28,10):C3(30,30,28));continue;}  // florzinha
+   Put(x,y,Dth(o[0]+v,o[1]+v,o[2]+v,x,y));
+  }
  }
- if(forest&&!desert)for(int i=0;i<40;i++){u32 h=Hh(seed,i+500);int x=(int)(h%256),y=HORIZ-2+(int)((h>>8)%8);
-  for(int k=0;k<6;k++)for(int j=-k/2;j<=k/2;j++)Put(x+j,y-6+k,C3(6,12,6));}
- // mar (cidade costeira): metade direita ate a estrada
+ // mar (cidade costeira): agua com reflexo do ceu, cintilacao e o sol na agua
  if(c->flags&CF_COASTAL){
+  static const u8 W0[3]={17,22,27},W1[3]={6,12,21};
   for(int y=HORIZ-1;y<ROAD_Y0-2;y++){
    int x0=180-(y-HORIZ)/2;
-   for(int x=x0;x<256;x++){int d2=(y-HORIZ);u16 col=C3(8+d2/8,15+d2/6,22+d2/10);
-    if(((x+y*3)&15)==0){col=C3(24,28,28);}
-    Put(x,y,col);}
-   Put(x0,y,C3(26,24,18));
+   Mix16(W0,W1,y-HORIZ+1,ROAD_Y0-1-HORIZ,o);
+   for(int x=x0;x<256;x++){
+    u32 h=Hh(x/3+y*977,seed);
+    u16 col=Dth(o[0],o[1],o[2],x,y);
+    if((h&31)==0)col=C3(27,29,30);                     // crista
+    int ds=x-sx;if(ds<0)ds=-ds;
+    if(ds<6+(y-HORIZ)/3&&((h>>5)&3)==0)col=C3(31,29,20);  // reflexo do sol
+    Put(x,y,col);
+   }
+   Put(x0,y,C3(28,25,18));Put(x0+1,y,C3(26,23,16));    // praia
   }
  }
  // casario ao fundo (cidade grande): fileira de predios menores, mais densa
@@ -404,6 +495,11 @@ static void SceneBg(u16 *L,const World *w,int ci){
    if((c->flags&CF_COASTAL)&&x>165)x-=100;
    OX=x;OY=y;UW=9+(int)((h>>16)%4)+c->tier;D=d;House(st,year,c->tier,h);}
  }
+ int tk=desert||st==ST_ISLAM?2:(jungle||st==ST_AFRICA?2:(cold?1:((seed&1)?0:3)));
+ // arvores entre as casas (atras)
+ for(int i=0;i<6;i++){u32 h=Hh(seed,i+40);int x=(int)(h%250);
+  if((c->flags&CF_COASTAL)&&x>165)x-=110;
+  Tree(x,HOUSE_Y-2-(int)((h>>8)%6),3,tk,h);}
  // casario: quantidade e altura seguem a populacao e o nivel
  int nh=4+c->pop/6;if(nh>34)nh=34;
  for(int i=0;i<nh;i++){
@@ -411,25 +507,56 @@ static void SceneBg(u16 *L,const World *w,int ci){
   int x=(int)(h%240),y=HOUSE_Y-(int)((h>>8)%14);
   if((c->flags&CF_COASTAL)&&x>165)x-=90;
   OX=x;OY=y;UW=12+(int)((h>>16)%6)+c->tier*2;D=d;
+  // sombra curta no chao a' direita (sol a oeste/alto)
+  for(int k=0;k<UW*28/32;k++){Darken(x+4+k,y,13,16);Darken(x+5+k,y+1,14,16);}
   House(st,year,c->tier,h);
  }
- // estrada (paralelepipedo; asfalto apos 1910) e trilho
+ // calcadas + rua (paralelepipedo em fiadas; asfalto com faixa apos 1910)
+ for(int x=0;x<256;x++){Put(x,ROAD_Y0-2,C3(24,23,20));Put(x,ROAD_Y0-1,C3(19,18,16));Put(x,ROAD_Y1,C3(24,23,20));Put(x,ROAD_Y1+1,C3(17,16,14));}
  for(int y=ROAD_Y0;y<ROAD_Y1;y++)for(int x=0;x<256;x++){
-  u16 col=year>=1910?C3(9,9,10):(((x>>2)+(y>>1))&1?C3(19,17,14):C3(16,14,12));
-  if(year>=1910&&y==(ROAD_Y0+ROAD_Y1)/2&&(x&8))col=C3(26,24,14);
+  u16 col;
+  if(year>=1910){u32 h=Hh(x+y*256,seed);int v=(h&7)==0?1:0;col=C3(9+v,9+v,10+v);
+   if(y==(ROAD_Y0+ROAD_Y1)/2&&(x&8))col=C3(27,25,15);}
+  else{
+   int row=(y-ROAD_Y0)/3,off=(row&1)*3,sx2=(x+off)%6;
+   if((y-ROAD_Y0)%3==2||sx2==5)col=C3(12,11,10);          // rejunte
+   else{u32 h=Hh((x+off)/6+row*61,seed);int v=(int)(h%4);col=C3(17+v,15+v,12+v);}
+   if(sx2==0&&(y-ROAD_Y0)%3==0)col=C3(22,20,17);           // brilho na quina
+  }
   Put(x,y,col);
  }
+ // lampioes na calcada de tras (gas ate' 1900, eletricos depois)
+ if(year>=1820)for(int x=10+(int)(seed%20);x<256;x+=52){
+  if((c->flags&CF_COASTAL)&&x>176)break;
+  for(int y=ROAD_Y0-13;y<ROAD_Y0-1;y++)Put(x,y,C3(5,5,6));
+  Put(x-1,ROAD_Y0-2,C3(5,5,6));Put(x+1,ROAD_Y0-2,C3(5,5,6));
+  Fill(x-1,ROAD_Y0-16,x+2,ROAD_Y0-13,year>=1900?C3(31,31,26):C3(31,27,14));
+  Put(x-1,ROAD_Y0-17,C3(5,5,6));Put(x,ROAD_Y0-17,C3(5,5,6));Put(x+1,ROAD_Y0-17,C3(5,5,6));
+ }
  bool rail=false;for(int s=0;s<CITY_SLOTS;s++)if(c->bld[s]==BK_FERROVIA)rail=true;
- if(rail)for(int x=0;x<256;x++){Put(x,RAIL_Y,C3(14,14,15));Put(x,RAIL_Y+3,C3(14,14,15));if((x&3)==0)for(int y=RAIL_Y;y<=RAIL_Y+3;y++)Put(x,y,C3(14,10,6));}
- // obras: fileira de tras primeiro, depois a da frente (profundidade)
+ if(rail){
+  for(int x=0;x<256;x++){for(int y=RAIL_Y-1;y<=RAIL_Y+4;y++)Put(x,y,((x+y)&3)?C3(14,13,12):C3(17,16,14));}  // brita
+  for(int x=0;x<256;x++){if((x&3)==0)for(int y=RAIL_Y;y<=RAIL_Y+3;y++)Put(x,y,C3(14,10,6));
+   Put(x,RAIL_Y,C3(20,20,22));Put(x,RAIL_Y+3,C3(20,20,22));}
+ }
+ // arvores nos vaos entre os lotes de tras
+ static const u8 GAP[5]={6,66,124,182,244};
+ for(int i=0;i<5;i++){u32 h=Hh(seed,i+90);if((h&3)==0)continue;Tree(GAP[i],BACK_Y,4,tk,h);}
+ // obras: fileira de tras primeiro, depois a da frente (profundidade); cada
+ // obra projeta uma sombra no chao antes de ser pintada
  u8 nat=c->owner?w->c[c->owner].nat:255;
  for(int pass=0;pass<2;pass++)for(int s=pass?0:4;s<(pass?4:8);s++){
   if(s>=City_Slots(c->tier)&&!(c->bq&&c->bqSlot==s))continue;
   int x=SLOT_X[s],wid=SLOT_W[s],yb=SlotBase(s);
+  D=d;
+  if(c->bld[s]||(c->bq&&c->bqSlot==s))for(int k=2;k<wid-2;k++)for(int j=0;j<3;j++)Darken(x+k+j+2,yb-1+j,11+j,16);
   if(c->bq&&c->bqSlot==s)Scaffold(d,x,yb,wid,100-c->bqDays*100/(BLD[c->bq].days?BLD[c->bq].days:1));
   else if(c->bld[s])PxC_Building(d,x,yb,wid,c->bld[s],st,year,seed+s,-1,nat);
-  else{ // lote vazio: cerquinha
-   D=d;for(int xx=x+4;xx<x+wid-4;xx+=3)for(int y=yb-4;y<yb;y++)Put(xx,y,C3(18,13,8));
+  else{ // lote vazio: cerquinha + terra batida
+   D=d;
+   for(int y=yb-3;y<yb;y++)for(int xx=x+5;xx<x+wid-5;xx++)if(Hh(xx,y)&1)Put(xx,y,C3(16,13,8));
+   for(int xx=x+4;xx<x+wid-4;xx+=3)for(int y=yb-6;y<yb;y++)Put(xx,y,C3(18,13,8));
+   for(int xx=x+4;xx<x+wid-4;xx++)Put(xx,yb-5,C3(20,15,9));
   }
  }
  CY0=0;CY1=192;YOFF=0;
@@ -467,22 +594,42 @@ static void SceneLive(u16 *d,const World *w,int ci,int tick){
    if(k==0){Fill(wx+14,RAIL_Y-12,wx+17,RAIL_Y-8,C3(6,6,8));OX=wx;OY=RAIL_Y-12;UW=32;Smoke(16,0,tick,seed);}
   }
  }
- // pessoas (e uma carroca ou carro) na estrada: a sociedade em movimento
+ // pessoas (e uma carroca ou carro) na estrada: a sociedade em movimento.
+ // 9px de altura, sombra no chao, chapeu/vestido; desenhadas de tras p/ frente
  int np=3+c->pop/12;if(np>22)np=22;
  static const u8 SKIN[4][3]={{28,22,16},{24,17,11},{18,12,8},{12,8,5}};
  int sk0=st==ST_AFRICA?2:(st==ST_ASIA||st==ST_NATIVE||st==ST_ISLAM?1:0);
+ s16 px[22],py[22];u8 ord[22];
  for(int i=0;i<np;i++){
   u32 h=Hh(seed,i+1000);
   int dir=(h&1)?1:-1,sp=1+(int)((h>>1)%2);
   int x=(int)((h>>3)%300)+dir*(tick*sp/3);x=((x%300)+300)%300-20;
-  int y=ROAD_Y0+2+(int)((h>>12)%9);
+  px[i]=(s16)x;py[i]=(s16)(ROAD_Y0+3+(int)((h>>12)%9));ord[i]=(u8)i;
+ }
+ for(int i=1;i<np;i++){u8 k=ord[i];int j=i;while(j>0&&py[ord[j-1]]>py[k]){ord[j]=ord[j-1];j--;}ord[j]=k;}
+ for(int n=0;n<np;n++){
+  int i=ord[n];u32 h=Hh(seed,i+1000);
+  int x=px[i],y=py[i];
   const u8 *skc=SKIN[(sk0+(int)((h>>16)%2))&3];
   u16 skin=C3(skc[0],skc[1],skc[2]);
-  u16 cloth=C3(6+(int)((h>>18)%20),6+(int)((h>>22)%14),6+(int)((h>>26)%18));
+  int cr=6+(int)((h>>18)%20),cg=6+(int)((h>>22)%14),cb=6+(int)((h>>26)%18);
+  u16 cloth=C3(cr,cg,cb),clothL=C3(cr+4,cg+4,cb+4),clothD=C3(cr*3/4,cg*3/4,cb*3/4);
+  bool dress=(h>>5)&1,hat=!dress&&((h>>6)&1);
   int fr=((tick/6)+i)&1;
-  Put(x+1,y-6,skin);Put(x+1,y-5,skin);
-  Fill(x,y-4,x+3,y-1,cloth);
-  Put(x+(fr?0:1),y-1,C3(6,5,4));Put(x+(fr?2:1),y-1,C3(6,5,4));Put(x+(fr?0:1),y,C3(6,5,4));Put(x+(fr?2:1),y,C3(6,5,4));
+  for(int k=-1;k<=3;k++)Darken(x+k,y+1,10,16);          // sombra
+  if(dress){
+   for(int r=0;r<4;r++)for(int k=-r/2;k<3+r/2;k++)Put(x+k,y-1-3+r,k<=0?clothL:(k>=2+r/2?clothD:cloth));
+   Put(x+(fr?0:2),y,C3(6,5,4));
+   Fill(x,y-7,x+3,y-4,cloth);Put(x,y-6,clothL);
+  }else{
+   u16 leg=C3(6,6,8);
+   Put(x+(fr?0:1),y-1,leg);Put(x+(fr?2:1),y-1,leg);Put(x+(fr?0:1),y,leg);Put(x+(fr?2:1),y,leg);
+   Fill(x,y-6,x+3,y-2,cloth);for(int r=y-6;r<y-2;r++){Put(x,r,clothL);Put(x+2,r,clothD);}
+   Put(x+(fr?-1:3),y-4,skin);                         // mao balancando
+  }
+  Put(x+1,y-8,skin);Put(x+2,y-8,skin);Put(x+1,y-7,skin);Put(x+2,y-7,Dk(skin,13,16));
+  if(hat){Fill(x,y-9,x+4,y-8,C3(4,4,5));Put(x+1,y-10,C3(4,4,5));Put(x+2,y-10,C3(4,4,5));}
+  else Put(x+1,y-9,(h>>7)&1?C3(6,4,3):C3(18,14,6));    // cabelo
  }
  if(c->tier>=CT_VILAREJO){
   int x=(tick+(int)(seed%200))%320-30,y=ROAD_Y0+8;

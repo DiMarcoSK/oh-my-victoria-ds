@@ -254,6 +254,10 @@ static void Shift(int dx,int dy){
 }
 void PxM_Update(World *w,const WGame *s){
  if(!nzOk)NoiseInit();
+ // o LAYER e' emprestado pela cena da cidade (PxM_Scratch): se o mapa o
+ // repinta, o fundo da cena em cache deixou de existir. Sem isso, voltar a'
+ // mesma cidade mostrava o mapa com os pedestres da cena por cima.
+ PxC_SceneReset();
  gSh=s->zoom?s->zoom-1:0;gPpc=1<<gSh;gW=w->w;gH=w->h;gWrap=w->wrap;gMode=s->mapMode;
  u32 sig=Sig(w,s);
  Palette(w,s);
