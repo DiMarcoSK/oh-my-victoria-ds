@@ -25,13 +25,12 @@ void Art_BlitH(u16 *dst,const Art *a,int x,int y);
 void Art_BlitClip(u16 *dst,const Art *a,int x,int y,int sx,int sy,int sw,int sh);
 
 
-// Pintura 8bpp crua (tools/genpics.py, recortada da concept art e reamostrada
-// para o pixel nativo do DS): ate' 255 cores de 15 bits, indice 0 =
-// transparente. Sem RLE: o blit e' uma copia por linha via paleta.
+// Pintura em cor direta (tools/genpics.py, recortada da concept art e
+// reamostrada p/ o pixel nativo do DS): u16 ja' com BIT(15); 0 = transparente.
+// Sem paleta e sem RLE: o blit e' uma copia por linha.
 typedef struct {
  u16 w,h;
- const u16 *pal;   // pal[0] nao e' desenhado
- const u8 *px;     // w*h indices
+ const u16 *px;    // w*h pixels (0 = nao desenha)
 } Pic;
 void Pic_Blit(u16 *dst,const Pic *p,int x,int y);
 // So' a janela (sx,sy,sw,sh) da pintura em (x,y) (fundo de pergaminho em

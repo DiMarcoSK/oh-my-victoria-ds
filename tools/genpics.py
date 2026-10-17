@@ -2,49 +2,45 @@
 # genpics.py — gera source/gen/pic_data.c: as PINTURAS dos menus tiradas da
 # propria concept art (concept_arts/image.png), em resolucao nativa do DS.
 # Cada tela da concept tem ~290x200 px (1,13x a do DS): recortamos a regiao,
-# reamostramos com Lanczos (suave, sem bloco duplicado) e quantizamos para
-# ate 255 cores de 15 bits (indice 0 = transparente). Saida 8bpp crua (Pic):
-# blit por linha, sem RLE — pintura com degrade comprime mal e o DS copia
-# 256x192 em ~1 ms assim. O arquivo gerado e' COMMITADO (build sem Python).
+# reamostramos com Lanczos, devolvemos o contorno com um unsharp leve e
+# gravamos em COR DIRETA de 15 bits (u16 com BIT(15); 0 = transparente) com
+# pontilhado Bayer 4x4 na passagem de 8 p/ 5 bits por canal: nada de paleta
+# de 255 cores (que fazia degrau no ceu do por do sol). Blit por linha, sem
+# RLE. O arquivo gerado e' COMMITADO (build sem Python).
 #   python tools/genpics.py      (preview em docs/pics_preview.png)
 import os
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFilter
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = Image.open(os.path.join(ROOT, "concept_arts", "image.png")).convert("RGB")
 K = 256 / 290  # escala concept -> DS (uma tela da concept tem ~290 px de largura)
 
-def crop(box, size=None, scale=K):
+def crop(box, size=None, scale=K, sharp=True):
     c = SRC.crop(box)
     if size is None:
         size = (max(1, round(c.width * scale)), max(1, round(c.height * scale)))
-    return c.resize(size, Image.LANCZOS)
+    r = c.resize(size, Image.LANCZOS)
+    # a reducao amacia o pixel art da concept: devolve o contorno sem halo
+    return r.filter(ImageFilter.UnsharpMask(radius=1.0, percent=70, threshold=2)) if sharp else r
 
 def lum(a):
     return a[..., 0] * 0.3 + a[..., 1] * 0.59 + a[..., 2] * 0.11
 
 # ---------------------------------------------------------------- quantizacao
-def to_pic(img, mask=None, colors=255):
-    """img RGB -> (w,h,pal15,idx). mask True = transparente (indice 0)."""
+BAYER = np.array([[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]])
+def to_pic(img, mask=None, colors=None):
+    """img RGB -> (w,h,px15): u16 aBBBBBGGGGGRRRRR com BIT(15); mask -> 0."""
     a = np.array(img).astype(int)
-    a5 = (a + 4) // 8
-    a5[a5 > 31] = 31
-    q = Image.fromarray((a5 * 8).astype(np.uint8), "RGB")
-    n = colors if mask is None else colors
-    p = q.quantize(colors=n, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
-    pal = p.getpalette()[: 3 * n]
-    idx = np.array(p).astype(int) + 1          # 0 fica reservado
+    h, w = a.shape[:2]
+    t = BAYER[np.arange(h)[:, None] % 4, np.arange(w)[None, :] % 4]
+    # 8 -> 5 bits com limiar ordenado (degrade liso no hardware de 15 bits)
+    q = (a * 31 + (t[..., None] * 255) // 16) // 255
+    q = np.clip(q, 0, 31)
+    px = 0x8000 | (q[..., 2] << 10) | (q[..., 1] << 5) | q[..., 0]
     if mask is not None:
-        idx[mask] = 0
-    used = sorted(set(idx.flatten().tolist()))
-    remap = {u: k for k, u in enumerate([0] + [u for u in used if u])}
-    idx = np.vectorize(remap.get)(idx)
-    pal15 = [(0, 0, 0)]
-    for u in [u for u in used if u]:
-        r, g, b = pal[3 * (u - 1): 3 * (u - 1) + 3]
-        pal15.append((r // 8, g // 8, b // 8))
-    return img.width, img.height, pal15, idx
+        px = np.where(mask, 0, px)
+    return w, h, px
 
 def ink_mask(img, keep=0.86):
     """gravura sobre papel: papel claro vira transparente (desenha so' a tinta)."""
@@ -140,7 +136,7 @@ FTOP = [max(0, int(round(top_at(x))) - FY) for x in range(FW)]
 FLAGMAP = (FX, FY, FW, FH, shade)
 add("PIC_HARBOR", to_pic(hb), "porto com estandarte")
 # 7) papel (fundo de todos os pergaminhos)
-add("PIC_PAPER", to_pic(paper(), None, 64), "papel da concept, sem moldura")
+add("PIC_PAPER", to_pic(paper()), "papel da concept, sem moldura")
 # 8) cantos do pergaminho (ornamento de tinta) e da moldura navy (ouro)
 for nm, box in (("PIC_PC_TL", (479, 784, 503, 806)), ("PIC_PC_TR", (726, 784, 750, 806)),
                 ("PIC_PC_BL", (479, 923, 503, 945)), ("PIC_PC_BR", (726, 923, 750, 945))):
@@ -163,16 +159,18 @@ def c_arr(vals, per=24):
 
 def main():
     out = ["// GERADO por tools/genpics.py — NAO EDITE A MAO.",
-           "// Pinturas dos menus recortadas da concept art (8bpp, indice 0 = transparente).",
-           '#include "px_art.h"', '#include "pal.h"']
+           "// Pinturas dos menus recortadas da concept art (cor direta 15 bits, 0 = transparente).",
+           '#include "px_art.h"']
     total = 0
-    for name, (w, h, pal, idx), desc in PICS:
-        out.append("// %s: %s (%dx%d, %d cores)" % (name, desc, w, h, len(pal) - 1))
-        out.append("static const u16 %s_P[%d]={%s};" % (name, len(pal), ",".join("PXC(%d,%d,%d)" % c for c in pal)))
-        flat = idx.flatten().tolist()
-        out.append("static const u8 %s_D[%d]={\n%s\n};" % (name, len(flat), c_arr(flat)))
-        out.append("const Pic %s={%d,%d,%s_P,%s_D};" % (name, w, h, name, name))
-        total += len(flat) + 2 * len(pal)
+    for name, (w, h, px), desc in PICS:
+        out.append("// %s: %s (%dx%d)" % (name, desc, w, h))
+        flat = px.flatten().tolist()
+        lines = []
+        for i in range(0, len(flat), 16):
+            lines.append(",".join("0x%04X" % v for v in flat[i:i + 16]) + ",")
+        out.append("static const u16 %s_D[%d]={\n%s\n};" % (name, len(flat), "\n".join(lines)))
+        out.append("const Pic %s={%d,%d,%s_D};" % (name, w, h, name))
+        total += 2 * len(flat)
     fx, fy, fw, fh, sh = FLAGMAP
     out.append("// sombra da bandeira pintada no PIC_HARBOR (0 = nao e' pano; 12 = luz normal)")
     out.append("const u8 HARBOR_FLAG[%d]={\n%s\n};" % (fw * fh, c_arr(sh.flatten().tolist())))
@@ -185,11 +183,12 @@ def main():
     W = 4 + sum(p[1][0] + 4 for p in PICS[:7])
     sheet = Image.new("RGB", (W, 200 + 40), (255, 0, 255))
     x = 4
-    for i, (name, (w, h, pal, idx), _) in enumerate(PICS):
+    for i, (name, (w, h, px), _) in enumerate(PICS):
         rgb = np.zeros((h, w, 3), np.uint8)
-        for k, (r, g, b) in enumerate(pal):
-            m = idx == k
-            rgb[m] = (255, 0, 255) if k == 0 else (r * 8, g * 8, b * 8)
+        rgb[..., 0] = (px & 31) << 3
+        rgb[..., 1] = ((px >> 5) & 31) << 3
+        rgb[..., 2] = ((px >> 10) & 31) << 3
+        rgb[px == 0] = (255, 0, 255)
         im = Image.fromarray(rgb, "RGB")
         if i < 7:
             sheet.paste(im, (x, 4)); x += w + 4
