@@ -234,6 +234,18 @@ O território é célula; a **vida** está nas cidades. Cada país começa com a
 
 **IA:** constrói seguindo o caminho de nível e funda quando sobra ouro e terra — o mundo inteiro se urbaniza ao longo de 225 anos.
 
+### 4.8 Economia, comércio marítimo e o Gabinete
+
+O dinheiro vem do que o país **produz e vende**, não do tamanho do mapa.
+
+- **9 bens:** grãos, madeira, fibra, minério, luxo (café, açúcar, chá, especiarias — só nos trópicos), têxteis, ferramentas, armas e petróleo (a partir de 1860). O campo produz pelo terreno; as cidades, pelas obras: Fazenda, Serraria, Mina (só com mata/serra por perto), Oficina e Fábrica (têxteis e ferramentas, consomem fibra, minério e madeira), Arsenal (armas) e Poço (só sobre jazida).
+- **Quatro mercados:** a cidade come primeiro do próprio entorno (**local**); o resto vai ao **mercado nacional**; países de um **mercado comum** somam tudo e dividem o preço; o que sobra ou falta cruza o mar para o **mercado mundial** — só até a capacidade dos **portos**.
+- **Preço** sobe com a falta e cai com a sobra. Falta de comida faz a cidade encolher; falta de têxteis e luxo derruba o nível de vida e a felicidade; falta de armas trava o exército; falta de ferramentas atrasa as obras e encarece a construção.
+- **Tesouro:** imposto sobre o que se produz (baixo/médio/alto), taxas das cidades e **alfândega** sobre o comércio externo. Gastos: soldo, frota e a máquina do Estado (1% do tesouro por semana — cofre parado custa).
+- **Portos e rotas:** cada porto dá capacidade de comércio; as 3 maiores rotas de cada país aparecem no **mapa comercial** como arcos tracejados com navios mercantes andando.
+- **Marinha:** o Estaleiro (precisa de porto) lança navios de guerra. Frota protege as rotas, **bloqueia** os portos inimigos (o comércio deles cai a 1/3), garante desembarques e trava batalhas navais.
+- **Gabinete (X):** Mercado (tabela dos 9 bens), Comércio e Frota (finanças, portos, rotas, lançar navio), Diplomacia (aliados, rival, mercado comum, guerras, quem gosta de você) e Política (ideologia, felicidade, risco de revolução, imposto e ambições).
+
 ## 5. Linha do tempo de jogo e eras
 
 O mapa-múndi é dividido em eras. A era muda música, molduras de evento, tecnologias liberadas e a **variante das bandeiras**.
@@ -367,6 +379,12 @@ Mínimo por país. Os de destaque passam muito do mínimo.
 | Governantes datados | — | lista com anos |
 | Bandeira | 1 descritor | + variantes por era/evento |
 | Cena de seleção | regional | própria |
+
+### 6.5.1 Ideologias e bandeiras que mudam
+
+Todo país tem uma **ideologia**: tradicionalista, liberal, conservador, comunista, autoritário ou teocrático. Ela mexe em ataque, defesa, renda, comércio, produção e felicidade — e **muda a bandeira**: a França comunista é a tricolor em vermelho com a estrela dourada; um golpe autoritário pinta de preto e põe a águia; a república liberal tira a coroa; a restauração a devolve. Vale para todos os países, sem desenhar bandeira nova.
+
+Revoluções nascem da miséria, da militância, de guerras longas, do imposto alto e do espírito da época (o velho regime envelhece depois de 1848; o partido único cansa no fim do século XX). O vizinho rival pode aproveitar o caos. Às vezes o descontentamento vira **separatismo**: uma nação do catálogo renasce dentro do império e luta pela independência.
 
 ### 6.6 Povos indígenas — princípios de representação
 
@@ -645,6 +663,12 @@ Eventos aleatórios dão textura ao dia a dia e são os mesmos no mapa-múndi e 
 - O jogador também pode escolher **"Continuar jogando"** depois de perder seu país em qualquer ano (sec 2.1, item 7).
 
 ---
+
+### 7.7 O mundo que conversa (diplomacia da IA)
+
+Cada país tem um **rival**, até **dois aliados** e às vezes um **mercado comum**. Quem ataca um aliado chama o outro para a guerra. Grandes potências mercantis formam blocos regionais. O temperamento de cada governo muda a cada década — o vizinho calmo de hoje pode ser o agressor de amanhã.
+
+O jogador recebe **despachos** (o jogo pausa): propostas de aliança, convites ao mercado comum, pedidos de ajuda, exigências de tributo ("pague ou é guerra"), ofertas de paz e **decisões** com duas saídas (greve: negociar ou reprimir; barricadas: ceder ao povo ou esmagar a revolta). No mapa, a **bandeira** abre a diplomacia com o país selecionado. **Ambições** (3 por vez, com recompensa) apontam o próximo passo: fundar uma cidade, abrir uma mina, formar uma aliança, lucrar com o comércio.
 
 ## 8. Como seguir os padrões (checklists)
 

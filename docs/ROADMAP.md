@@ -98,7 +98,7 @@ corpo da sec 9 (render) e os `docs/diagramas/*.mmd` (ainda descrevem o `px_tiles
 
 Fonte: SDD sec 14 (contrato visual). A concept `concept_arts/image.png` é o alvo.
 
-**Status (2026-10-17): F1 fechada no código; F2 em andamento** — todas as telas da concept desenhadas com os componentes (`px_menu.c`) e navegáveis; o mapa-múndi já é jogável (`SCR_WORLD`, SDD ADR-23), com mapa suave em cache (ADR-24) e cidades com obras, níveis, fundação e cena viva (ADR-25, DESIGN 4.7) — adiantando parte do M1/M2/M4. Falta: screenshot melonDS (F2), arte PNG (F4), save (F8). **Status anterior (2026-10-16): F1 em andamento.** Já entregue: `include/pal.h` (tokens `PXC`),
+**Status (2026-10-17): F1 fechada no código; F2 em andamento** — todas as telas da concept desenhadas com os componentes (`px_menu.c`) e navegáveis; o mapa-múndi já é jogável (`SCR_WORLD`, SDD ADR-23), com mapa suave em cache (ADR-24) e cidades com obras, níveis, fundação e cena viva (ADR-25, DESIGN 4.7), economia em 4 mercados com portos e marinha (ADR-26) e ideologias/diplomacia da IA (ADR-27) — adiantando parte do M1/M2/M4/M5. Falta: screenshot melonDS (F2), arte PNG (F4), save (F8). **Status anterior (2026-10-16): F1 em andamento.** Já entregue: `include/pal.h` (tokens `PXC`),
 `source/settings.c` + `include/settings.h` (aplicado no boot), `source/str.c` +
 `include/str.h` (PT/EN), `source/px_art.c` + `include/px_art.h` (placeholder de arte),
 `source/px_font2.c` + `source/gen/font_data.c` (Serifa 8/12 com acento; gerada por
