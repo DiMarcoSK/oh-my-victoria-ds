@@ -34,6 +34,29 @@ typedef enum {
  WA_DIPLOMATA, WA_OPORTUNISTA, WA_COUNT
 } WArchetype;
 
+// Bens do mercado mundial (DESIGN 4.8). IDs gravados: so' ADICIONE antes de GD_COUNT.
+enum { GD_GRAOS=0, GD_MADEIRA, GD_FIBRA, GD_MINERIO, GD_LUXO, GD_TEXTEIS,
+ GD_FERRAMENTAS, GD_ARMAS, GD_PETROLEO, GD_COUNT };
+// Ideologias (DESIGN 6.5): mudam bandeira, governo e modificadores. IDs gravados.
+enum { ID_TRADICIONAL=0, ID_LIBERAL, ID_CONSERVADOR, ID_COMUNISTA, ID_AUTORITARIO,
+ ID_TEOCRATICO, ID_COUNT };
+// Economia de um pais (wecon.c), fechada 1x por semana. Unidades = cargas/semana.
+typedef struct {
+ s32 sup[GD_COUNT], dem[GD_COUNT]; // oferta e demanda da semana
+ s16 net[GD_COUNT];       // + importou / - exportou (mercado mundial ou bloco)
+ u16 price[GD_COUNT];     // preco no mercado do pais (ou do bloco)
+ u8 sat[GD_COUNT];        // % da demanda atendida
+ u8 life;                 // nivel de vida 0..100 (media ponderada das necessidades)
+ u8 ind, lack;            // industria rodando a ind% (insumo que falta: lack = bem)
+ s16 hub;                 // cidade-porto principal (rotas no mapa), -1 = nenhuma
+ u8 tax;                  // 0 baixo, 1 medio, 2 alto
+ s32 inc, exp;            // receita e despesa da semana (ouro)
+ s32 trade;               // saldo do comercio externo da semana (ouro)
+ u16 cap, used;           // capacidade maritima de comercio (cargas/semana) e uso
+ u8 ports, yards;         // cidades com porto / estaleiro
+ u8 route[3], routeG[3];  // rotas: parceiro (pais) e bem
+ u16 routeV[3];           // volume da rota
+} WEco;
 typedef struct {
  u8 nat;                 // indice em NATIONS
  bool alive, player, coastal, capLost;
@@ -52,14 +75,27 @@ typedef struct {
  s32 cityGold, cityCap;   // somas das cidades (City_Day): ouro/dia e teto de tropas
  u16 nCity;               // cidades do pais
  bool atkOn; u8 atkTo; s32 atkTroops; // frente ativa (1 por pais)
+ // diplomacia, ideologia e marinha (wdiplo.c)
+ u8 ideo, ideo0;          // ideologia atual / da bandeira de base (catalogo)
+ u8 ally[2], rival, bloc; // aliados, rival, lider do bloco (mercado comum; 0 = nenhum)
+ u8 mood;                 // temperamento 0..100 (sorteado a cada decada): imprevisibilidade
+ s8 opin;                 // opiniao sobre o jogador -100..100
+ u16 unrestT;             // dias de turbulencia pos-revolucao (producao cai)
+ s16 ships;               // navios de guerra
+ u16 shipQ;               // dias ate o proximo navio (0 = estaleiro parado)
+ u16 terr[WT_COUNT];      // celulas por terreno (producao rural; mantido no SetOwner)
 } WCountry;
+// Proposta/decisao pendente para o jogador (modal no painel).
+enum { PR_NONE=0, PR_ALIANCA, PR_BLOCO, PR_AJUDA, PR_TRIBUTO, PR_PAZ, PR_DECISAO, PR_COUNT };
+typedef struct { u8 kind, from, about; u16 idx; s32 gold; u32 day; } WProp;
 
 // Cidade (DESIGN 4.7: Victoria 3 + Imperator). Nivel sobe com populacao e
 // obras: povoado -> vilarejo -> cidade -> metropole. Obras em slots.
 enum { CT_POVOADO=0, CT_VILAREJO, CT_CIDADE, CT_METROPOLE, CT_COUNT };
 // Obras da cidade: IDs gravados (save/IA). So' ADICIONE antes de BK_COUNT.
 enum { BK_NONE=0, BK_FAZENDA, BK_MERCADO, BK_OFICINA, BK_QUARTEL, BK_PORTO,
- BK_TEMPLO, BK_MURALHA, BK_UNIVERSIDADE, BK_FABRICA, BK_FERROVIA, BK_PALACIO, BK_COUNT };
+ BK_TEMPLO, BK_MURALHA, BK_UNIVERSIDADE, BK_FABRICA, BK_FERROVIA, BK_PALACIO,
+ BK_SERRARIA, BK_MINA, BK_ARSENAL, BK_ESTALEIRO, BK_POCO, BK_COUNT };
 enum { CF_COASTAL=1, CF_HIST=2, CF_FOUNDED=4 };
 typedef struct {
  u16 x, y;               // celula
@@ -71,7 +107,11 @@ typedef struct {
  u16 name;               // CF_HIST: indice da tabela; senao semente do nome
  u8 bld[CITY_SLOTS];     // obra por slot (BK_*)
  u8 bqSlot;              // slot reservado p/ a obra
+ u8 agri, wood, ore;     // potencial do entorno (raio 3): lavoura, mata, minerio
+ u8 res;                 // RS_*: tropical, petroleo
+ u8 food;                // % de comida atendida na ultima semana (local)
 } WCity;
+enum { RS_TROPICAL=1, RS_OLEO=2 };
 typedef struct {
  u16 w, h; u8 mode, hist, diff; bool wrap;
  u32 seed, rng;
@@ -87,6 +127,13 @@ typedef struct {
  char msg[128]; u32 msgDay;
  u16 nCity;                // cidades em city[0..nCity)
  WCity city[W_MAXCITY];
+ WEco eco[W_MAXC+1];       // economia por pais (wecon.c)
+ u16 wprice[GD_COUNT];     // preco mundial
+ s32 wvol[GD_COUNT];       // volume negociado no mundo na semana
+ WProp prop;               // proposta/decisao esperando o jogador
+ u8 obj[3]; u8 objDone;    // ambicoes do jogador (wdiplo.c) e quantas cumpriu
+ u16 objMask;              // ambicoes ja cumpridas (bit por OB_*)
+ u32 nRevol, nAlliances, nNaval; // contadores (testes/Gazeta)
  u8 dirtyBlk[(W_BLK_W*W_BLK_H+7)/8]; // bloco 8x8 mudou de dono (px_world limpa)
 } World;
 
@@ -120,6 +167,7 @@ void World_SetPlayer(World *w,u8 ci);
 void World_Field(World *w);   // campo de relevo/profundidade (W_LIM) p/ o render
 bool World_Landing(World *w,u8 a,u8 b,s32 *cost); // praia do alvo (sem fronteira terrestre)
 void World_DeclareWar(World *w,u8 a,u8 b);
+void World_DeclareWarCall(World *w,u8 a,u8 b); // + chama aliados (guerras nao historicas)
 void World_DeclareHistWar(World *w,u8 a,u8 b); // guerra de evento: IA nao assina paz
 void World_Peace(World *w,u8 a,u8 b);
 bool World_AtWar(const World *w,u8 a,u8 b);
@@ -139,6 +187,7 @@ void World_LatLonPos(const World *w,int lat,int lon,int *x,int *y);
 void World_Msg(World *w,const char *a,const char *b);
 
 s32 World_Score(const World *w,u8 ci);
+void World_RecountTerr(World *w); // recontagem das celulas por terreno
 u32 World_Hash(const World *w);
 u32 World_Rng(World *w);
 int World_RngRange(World *w,int n);

@@ -40,6 +40,10 @@ typedef enum {
  HE_WORLD_HAPPY, // todo pais: felicidade += v
  HE_DECOLONIZE,  // todo sudito do continente v fica independente
  HE_POVOS_PRESTIGE, // todo pais do tipo POVO: prestigio += v
+ HE_IDEO,        // a muda de ideologia: v = ID_* (transicao) | v+16 = revolucao | -1 = sorteio
+ HE_SHIPS,       // a ganha/perde v navios
+ HE_SEPARA,      // a sofre um movimento separatista (wdiplo.c)
+ HE_WORLD_MILIT, // todo pais: militancia += v
 } HEffOp;
 
 // a/b/c: TAG de nacao (ou de local, p/ c); NULL = "o proprio" nos aleatorios.
@@ -58,3 +62,9 @@ int Hist_Count(void);
 const HistEvent *Hist_Get(int i);
 u8 Hist_State(const World *w,int i);  // 0 pendente, 1 disparou, 2 falhou
 int Rnd_Count(void);
+int Rnd_DecisionCount(void);
+// decisao do jogador (PR_DECISAO): opcao A ou B do evento idx
+void Rnd_Decide(World *w,u8 ci,int idx,bool optA);
+const char *Rnd_Title(int idx);
+const char *Rnd_Body(int idx);
+const char *Rnd_Opt(int idx,bool optA);

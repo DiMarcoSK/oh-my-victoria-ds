@@ -13,6 +13,8 @@
 #include "px.h"
 #include "world.h"
 #include "city.h"
+#include "wecon.h"
+#include "wdiplo.h"
 #include "history.h"
 
 static int fails=0, warns=0;
@@ -214,6 +216,27 @@ static void TestRandom(void){
  CHECK(W1.c[me].cells>before,"jogador expandiu (%u -> %u)",before,W1.c[me].cells);
  Invariants(&W1,"blitz");
 }
+// economia/diplomacia: diagnostico por ano (calibrar wecon.c / wdiplo.c)
+static const char *Tg(const World *w,u8 c){return c&&w->c[c].alive?NATIONS[w->c[c].nat].tag:"-";}
+static void EcoDiag(const World *w){
+ static const char *who[]={"GBR","FRA","RUS","USA","BRA","QNG","JAP","PRU","GER","OTT","ESP","URS","PRC"};
+ printf("  -- %d: precos mundo",w->date.y);
+ for(int g=0;g<GD_COUNT;g++)printf(" %d",w->wprice[g]);
+ int blocs=0,allied=0;s32 lifeS=0,ln=0;
+ for(u8 i=1;i<w->nC;i++)if(w->c[i].alive){if(w->c[i].bloc==i)blocs++;if(w->c[i].ally[0]||w->c[i].ally[1])allied++;lifeS+=w->eco[i].life;ln++;}
+ printf(" | blocos %d, paises com alianca %d, vida media %d, revol %u, aliancas %u, navais %u\n",blocs,allied,(int)(lifeS/(ln?ln:1)),w->nRevol,w->nAlliances,w->nNaval);
+ {s32 S[GD_COUNT]={0},D[GD_COUNT]={0};int risky=0,rs=0,rn=0;
+  for(u8 i=1;i<w->nC;i++)if(w->c[i].alive){for(int g=0;g<GD_COUNT;g++){S[g]+=w->eco[i].sup[g];D[g]+=w->eco[i].dem[g];}
+   int r=WDip_RevoltRisk(w,i);rs+=r;rn++;if(r>45)risky++;}
+  printf("     oferta/demanda:");for(int g=0;g<GD_COUNT;g++)printf(" %d/%d",(int)S[g],(int)D[g]);
+  printf(" | risco medio %d, %d paises >45\n",rn?rs/rn:0,risky);}
+ for(unsigned k=0;k<sizeof who/sizeof who[0];k++){
+  u8 c=World_CountryOfNat(w,Nat_Find(who[k]));if(!c)continue;
+  const WCountry *C=&w->c[c];const WEco *e=&w->eco[c];
+  printf("     %s ouro %d (+%d imp %d com -%d) vida %d ind %d%% falta %d id %d navios %d bloco %s aliados %s,%s rival %s cap %d/%d portos %d tropas %d/%d\n",
+   who[k],(int)C->gold,(int)e->inc,(int)e->trade,(int)e->exp,e->life,e->ind,e->lack,C->ideo,C->ships,Tg(w,C->bloc),Tg(w,C->ally[0]),Tg(w,C->ally[1]),Tg(w,C->rival),e->used,e->cap,e->ports,(int)C->troops,(int)C->cap);
+ }
+}
 static void Snap(const World *w,int year){
  char p[64];sprintf(p,"host/out/mundi_%d.ppm",year);SaveMap(w,p,2);
 }
@@ -253,7 +276,7 @@ static void TestMundi(void){
     for(u32 i=0;i<nn;i++)if(W_CORE[i]==nt+1&&W_OWNER[i]){cnt[W_OWNER[i]]++;if(cnt[W_OWNER[i]]>cnt[top])top=W_OWNER[i];}
     printf("  morte: %s em %d/%d/%d -> nucleo com %s (%u) | msg: %s\n",watch[k],W1.date.d,W1.date.m,W1.date.y,
      top?NATIONS[W1.c[top].nat].tag:"-",cnt[top],W1.msg);}}
-  if(si<6&&W1.date.y==snaps[si]&&W1.date.m==1&&W1.date.d==1){Snap(&W1,snaps[si]);si++;
+  if(si<6&&W1.date.y==snaps[si]&&W1.date.m==1&&W1.date.d==1){Snap(&W1,snaps[si]);si++;EcoDiag(&W1);
    if(snaps[si-1]==1850)Invariants(&W1,"1850");}
  }
  double ms=(double)(clock()-t0)*1000.0/CLOCKS_PER_SEC/days;
@@ -268,6 +291,12 @@ static void TestMundi(void){
  {int t[CT_COUNT]={0},b=0;for(int i=0;i<W1.nCity;i++){t[W1.city[i].tier]++;for(int k=0;k<CITY_SLOTS;k++)if(W1.city[i].bld[k])b++;}
   printf("  2025: %u cidades (%d/%d/%d/%d por nivel), %d obras\n",W1.nCity,t[0],t[1],t[2],t[3],b);
   CHECK(t[CT_METROPOLE]>40,"cidades cresceram ate 2025 (%d metropoles)",t[CT_METROPOLE]);}
+ EcoDiag(&W1);
+ CHECK(W1.nRevol>=5&&W1.nRevol<400,"revolucoes/separatismos acontecem mas nao sem parar (%u)",W1.nRevol);
+ CHECK(W1.nAlliances>=10,"a IA forma aliancas (%u)",W1.nAlliances);
+ {s32 mx=0;for(u8 i=1;i<W1.nC;i++)if(W1.c[i].alive&&W1.c[i].gold>mx)mx=W1.c[i].gold;
+  CHECK(mx<5000000,"ouro sem inflacao absurda (max %d)",(int)mx);}
+ for(int g=0;g<GD_COUNT;g++)CHECK(W1.wprice[g]>=GD_BASE[g]/3&&W1.wprice[g]<=GD_BASE[g]*3,"preco mundial do bem %d no intervalo (%d)",g,W1.wprice[g]);
  printf("  ultima mensagem: %s\n",W1.msg);
  CHECK(fired>=Hist_Count()/3,"pelo menos 1/3 dos eventos historicos aconteceu (%d)",fired);
  // quem falhou (historia divergiu) — informativo

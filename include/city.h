@@ -7,7 +7,7 @@
 // por um preco claro (City_FoundCost). Tudo inteiro, sem RNG do jogo
 // (hash deterministico): o replay da historia nao muda por causa das cidades.
 typedef struct {
- u8 nameStr;      // StrId do nome
+ u16 nameStr;     // StrId do nome
  u16 cost, days;  // ouro e dias de obra
  u8 minTier;      // nivel minimo da cidade
  u16 minYear;     // ano minimo (industria/ferrovia)
@@ -17,9 +17,9 @@ typedef struct {
  u8 def;          // defesa % da celula da cidade
  u8 need;         // obra exigida (BK_*), 0 = nenhuma
  u8 flags;        // BF_COAST (so' cidade costeira), BF_CAPITAL (so' capital)
- u8 descStr;      // StrId do efeito (1 linha)
+ u16 descStr;     // StrId do efeito (1 linha)
 } BldDef;
-enum { BF_COAST=1, BF_CAPITAL=2 };
+enum { BF_COAST=1, BF_CAPITAL=2, BF_WOOD=4, BF_ORE=8, BF_OIL=16 };
 extern const BldDef BLD[BK_COUNT];
 
 void City_Gen(World *w);                  // fim da geracao (historicas + vilas)
@@ -34,6 +34,7 @@ int City_Found(World *w,u8 ci,int x,int y); // indice da nova cidade, -1
 // Pode construir a obra k no slot s? (ouro nao entra: e' checado no Build)
 bool City_CanBuild(const World *w,int city,u8 k);
 bool City_Build(World *w,int city,int slot,u8 k); // paga e enfileira
+s32 City_Cost(const World *w,int city,u8 k);      // preco da obra (sobe com madeira/ferramentas caras)
 bool City_IsCapital(const World *w,int city);
 int City_PopCap(const WCity *c);
 int City_NextPop(u8 tier);                // populacao p/ o proximo nivel (0 = topo)

@@ -1,4 +1,6 @@
 #include "history.h"
+#include "wdiplo.h"
+#include "str.h"
 // history.c — linha do tempo 1801-2025 (DESIGN.md sec 7.2) e eventos
 // aleatorios por era (sec 7.5). Datas verificadas; efeitos sao proposta de
 // design. Regras de texto: DESIGN.md sec 3.4 e 6.6 (tom sobrio, sem
@@ -35,9 +37,14 @@
 #define EWHA(v) {HE_WORLD_HAPPY,0,0,0,v}
 #define EDECOL(v) {HE_DECOLONIZE,0,0,0,v}
 #define EPOVOS(v) {HE_POVOS_PRESTIGE,0,0,0,v}
+#define EIDEO(a,v) {HE_IDEO,a,0,0,v}
+#define EWMI(v) {HE_WORLD_MILIT,0,0,0,v}
 #define MON NG_MONARQUIA
 #define REP NG_REPUBLICA
 #define TEO NG_TEOCRACIA
+#define COMU ID_COMUNISTA
+#define AUTO ID_AUTORITARIO
+#define LIBE ID_LIBERAL
 
 static const HistEvent HIST[]={
 // ---- Era Napoleonica ----
@@ -117,10 +124,12 @@ static const HistEvent HIST[]={
 {1847,7,26,5,"liberia","Independência da Libéria","Colonos afro-americanos fundam a primeira república da África.",{CN("LIB")},{ESPN("LIB",0,3)}},
 {1847,7,30,4,"castas","Guerra de Castas","Os maias do Yucatán se levantam e fundam seu próprio Estado.",{CX("MEX")},{ESPN("MAY","MEX",3)}},
 {1848,2,2,3,"guadalupe","Tratado de Guadalupe Hidalgo","O México perde metade do território para os Estados Unidos.",{CWAR("USA","MEX"),CSTR("USA","MEX",120)},{EPAZ("USA","MEX"),ECED("USA","MEX","CAL",18),ECED("USA","MEX","NMX",10)}},
+{1848,2,21,1,"manifesto","Manifesto Comunista","Marx e Engels publicam um panfleto que vai assombrar o século.",{{0,0,0,0,0}},{EWMI(5)}},
 {1848,2,22,1,"1848","Primavera dos Povos","Revoluções sacodem Paris, Viena, Berlim, Milão e Budapeste.",{{0,0,0,0,0}},{EWHA(-10),EGOV("FRA",REP),EMI("HAB",20)}},
 {1849,3,29,4,"punjab","Anexação do Punjab","A Companhia anexa o Império Sikh.",{CX("SIK"),CSTR("EIC","SIK",150)},{EANX("EIC","SIK")}},
 {1850,12,11,2,"taiping","Rebelião Taiping","A guerra civil mais sangrenta do século devasta a China.",{CX("QNG")},{ETR("QNG",-30),EGO("QNG",-200),EMI("QNG",20)}},
 {1852,1,17,4,"transvaal","República do Transvaal","Bôeres fundam a República Sul-Africana além do rio Vaal.",{CN("TRV")},{ESPN("TRV",0,6)}},
+{1852,12,2,2,"segundo_imperio","Segundo Império","Luís Napoleão se proclama imperador dos franceses.",{CX("FRA")},{EGOV("FRA",MON),EPR("FRA",10)}},
 {1853,7,8,2,"perry","Os navios negros","O comodoro Perry exige que o Japão abra seus portos.",{CX("JAP")},{EDEL("JAP",TR_ISOLAMENTO),EGO("JAP",100),EMI("JAP",15)}},
 {1853,10,16,1,"crimeia","Guerra da Crimeia","Rússia contra Otomanos, Grã-Bretanha e França.",{CX("RUS"),CX("OTT")},{EWAR("RUS","OTT"),EWAR("GBR","RUS"),EWAR("FRA","RUS")}},
 {1854,2,23,4,"orange","Estado Livre de Orange","Bôeres fundam uma república entre os rios Orange e Vaal.",{CN("ORA")},{ESPN("ORA",0,5)}},
@@ -150,6 +159,7 @@ static const HistEvent HIST[]={
 {1870,9,20,5,"roma","Roma capital","As tropas italianas entram em Roma; fim dos Estados Papais.",{CX("ITA"),CX("PAP")},{EUNI("ITA","PAP")}},
 // ---- Imperialismo ----
 {1871,1,18,5,"alemanha","Império Alemão","Guilherme I é proclamado imperador em Versalhes.",{CX("PRU")},{EBEC("PRU","GER"),EUNI("GER","BAV"),EUNI("GER","SAX"),EUNI("GER","WUR"),EUNI("GER","HAN"),EPR("GER",20)}},
+{1871,3,18,1,"comuna","Comuna de Paris","Operários governam Paris por dois meses antes de serem esmagados.",{CX("FRA")},{EMI("FRA",15),ETR("FRA",-10),EWMI(3)}},
 {1871,5,10,2,"frankfurt","Tratado de Frankfurt","A França perde a Alsácia-Lorena e vira república.",{CWAR("GER","FRA")},{EPAZ("GER","FRA"),EGO("FRA",-300),ECED("GER","FRA","ALS",3),EGOV("FRA",REP)}},
 {1873,3,26,2,"aceh","Guerra de Aceh","Os Países Baixos atacam o sultanato de Aceh.",{CX("NED"),CX("ACE")},{EWAR("NED","ACE")}},
 {1876,2,26,2,"ganghwa","Tratado de Ganghwa","O Japão força a Coreia a abrir seus portos.",{CX("KOR")},{EDEL("KOR",TR_ISOLAMENTO),EMI("KOR",10)}},
@@ -185,23 +195,29 @@ static const HistEvent HIST[]={
 {1905,9,5,2,"portsmouth","Tratado de Portsmouth","Pela primeira vez uma potência asiática vence uma europeia.",{CWAR("JAP","RUS")},{EPAZ("JAP","RUS"),EPR("JAP",30),EPR("RUS",-20),EMI("RUS",20)}},
 {1910,5,31,3,"uniao_sul","União Sul-Africana","Os territórios do sul se unem sob a coroa.",{CX("CAP")},{EBEC("CAP","ZAF")}},
 {1910,8,29,5,"coreia","Anexação da Coreia","O Japão anexa a Coreia.",{CX("KOR"),CSTR("JAP","KOR",300)},{EANX("JAP","KOR")}},
+{1910,10,5,1,"rep_portugal","República Portuguesa","A monarquia cai em Lisboa depois de dois dias de revolta.",{CX("POR")},{EGOV("POR",REP)}},
 {1910,11,20,1,"rev_mexicana","Revolução Mexicana","Uma década de revolução sacode o México.",{CX("MEX")},{ETR("MEX",-30),EMI("MEX",20)}},
 {1911,10,10,2,"xinhai","Revolução Xinhai","Cai a dinastia Qing; nasce a República da China.",{CX("QNG")},{EBEC("QNG","CHN"),EPR("CHN",10)}},
 {1912,10,8,1,"balcas","Guerras Balcânicas","Os Estados balcânicos atacam os Otomanos.",{CX("OTT")},{EWAR("SRB","OTT"),EWAR("GRE","OTT"),ETR("OTT",-20)}},
 // ---- Guerras Mundiais ----
 {1914,7,28,1,"grande_guerra","A Grande Guerra","Um tiro em Sarajevo arrasta as potências para a guerra.",{{0,0,0,0,0}},{EWAR("AUH","SRB"),EWAR("GER","RUS"),EWAR("GER","FRA"),EWAR("GBR","GER"),EWAR("OTT","RUS")}},
-{1917,11,7,1,"outubro","Revolução de Outubro","Os bolcheviques tomam o poder em Petrogrado.",{CX("RUS")},{EGOV("RUS",REP),EPAZ("RUS","GER"),ETR("RUS",-40),ESPN("FIN","RUS",12),EMI("RUS",20)}},
+{1917,11,7,1,"outubro","Revolução de Outubro","Os bolcheviques tomam o poder em Petrogrado.",{CX("RUS")},{EIDEO("RUS",COMU),EPAZ("RUS","GER"),ETR("RUS",-40),ESPN("FIN","RUS",12),EWMI(8)}},
 {1918,11,11,1,"armisticio","Armistício","Termina a Grande Guerra; impérios desabam.",{{0,0,0,0,0}},{EPAZALL,ESPN("POL",0,8),ESPN("CZE","AUH",5),ESPN("YUG","AUH",6),EGOV("GER",REP),EBEC("AUH","AUT")}},
 {1918,11,16,2,"hungria","Hungria independente","A Hungria se separa da Áustria.",{CX("AUT")},{ESPN("HUN","AUT",5)}},
 {1919,6,28,1,"versalhes","Tratado de Versalhes","A Alemanha paga reparações e perde territórios.",{CX("GER")},{EGO("GER",-400),ETR("GER",-40),EPR("FRA",10)}},
+{1922,10,28,2,"marcha_roma","Marcha sobre Roma","Mussolini toma o poder; nasce o primeiro regime fascista.",{CX("ITA")},{EIDEO("ITA",AUTO),ETR("ITA",15)}},
 {1922,12,6,3,"irlanda","Estado Livre Irlandês","Depois de séculos, a Irlanda se governa.",{CN("IRF")},{ESPN("IRF","GBR",4)}},
 {1922,12,30,2,"urss","União Soviética","Os bolcheviques fundam a URSS.",{CX("RUS")},{EBEC("RUS","URS")}},
 {1923,10,29,2,"turquia","República da Turquia","Atatürk funda uma república nas ruínas do império.",{CX("OTT")},{EBEC("OTT","TUR"),EGOV("TUR",REP)}},
 {1929,10,24,1,"depressao","Grande Depressão","A quebra da bolsa de Nova York arrasta o mundo.",{{0,0,0,0,0}},{EWGO(-30),EWHA(-10)}},
+{1931,4,14,1,"rep_espanha","Segunda República Espanhola","O rei parte para o exílio; a Espanha vira república.",{CX("ESP")},{EGOV("ESP",REP)}},
+{1933,1,30,1,"nazismo","O nazismo no poder","Hitler é nomeado chanceler; a democracia alemã desmorona em semanas.",{CX("GER")},{EIDEO("GER",AUTO),ETR("GER",20),EMI("GER",-15)}},
+{1933,3,19,2,"estado_novo","Estado Novo","Salazar impõe uma ditadura corporativa em Portugal.",{CX("POR")},{EIDEO("POR",AUTO)}},
 {1935,10,3,1,"etiopia_italia","Itália invade a Etiópia","A Itália fascista ataca o último império africano livre.",{CX("ITA"),CX("ETH")},{EWAR("ITA","ETH")}},
 {1936,5,5,2,"adis","Ocupação de Adis Abeba","A Itália ocupa a capital etíope; Hailé Selassié vai ao exílio.",{CWAR("ITA","ETH"),CSTR("ITA","ETH",200)},{ESUB("ETH","ITA"),EPAZ("ITA","ETH")}},
 {1936,7,17,1,"espanha_civil","Guerra Civil Espanhola","Um golpe militar mergulha a Espanha em guerra civil.",{CX("ESP")},{ETR("ESP",-40),EGO("ESP",-200),EMI("ESP",20)}},
 {1937,7,7,1,"china_japao","Japão invade a China","Começa a guerra sino-japonesa.",{CX("JAP"),CX("CHN")},{EWAR("JAP","CHN")}},
+{1939,4,1,1,"franco","Fim da Guerra Civil Espanhola","Franco vence e instala uma ditadura que vai durar 36 anos.",{CX("ESP")},{EIDEO("ESP",AUTO),EHA("ESP",-10)}},
 {1939,9,1,1,"ww2","Segunda Guerra Mundial","A Alemanha invade a Polônia.",{CX("GER")},{EWAR("GER","POL"),EWAR("GBR","GER"),EWAR("FRA","GER")}},
 {1941,5,5,2,"haile","Hailé Selassié volta","A Etiópia recupera a independência.",{CSUB("ETH","ITA")},{EIND("ETH"),EPR("ETH",15)}},
 {1941,6,22,1,"barbarossa","Operação Barbarossa","A Alemanha invade a União Soviética.",{CX("GER"),CX("URS")},{EWAR("GER","URS")}},
@@ -210,27 +226,35 @@ static const HistEvent HIST[]={
 // ---- Guerra Fria ----
 {1945,8,15,1,"fim_pacifico","Rendição do Japão","Depois de Hiroshima e Nagasaki, o Japão se rende.",{CX("JAP")},{EPAZ("JAP","USA"),EPAZ("JAP","CHN"),ETR("JAP",-80),ECED("CHN","JAP","TWN",3),ESPN("KOR","JAP",7)}},
 {1945,10,24,1,"onu","Nações Unidas","51 países fundam a ONU para evitar outra guerra mundial.",{{0,0,0,0,0}},{EWHA(5)}},
+{1946,6,2,1,"rep_italia","República Italiana","Um plebiscito acaba com a monarquia de Saboia.",{CX("ITA")},{EGOV("ITA",REP),EIDEO("ITA",LIBE)}},
 {1947,8,15,3,"india","Independência da Índia","À meia-noite, a Índia desperta para a liberdade; a partição cria o Paquistão.",{CX("RAJ")},{EBEC("RAJ","IND"),EIND("IND"),ESPN("PAK","IND",8)}},
 {1948,5,14,2,"israel","Criação de Israel","O Estado de Israel é proclamado; começa a guerra com os vizinhos árabes.",{CN("ISR")},{ESPN("ISR",0,2)}},
-{1949,10,1,2,"prc","República Popular da China","Mao Zedong proclama a república em Pequim.",{CX("CHN")},{EBEC("CHN","PRC")}},
+{1949,10,1,2,"prc","República Popular da China","Mao Zedong proclama a república em Pequim.",{CX("CHN")},{EBEC("CHN","PRC"),EIDEO("PRC",COMU)}},
 {1949,12,27,3,"indonesia","Independência da Indonésia","Os Países Baixos reconhecem a Indonésia.",{CX("DEI")},{EBEC("DEI","IDN"),EIND("IDN")}},
 {1957,3,6,3,"gana","Independência de Gana","Kwame Nkrumah proclama a independência.",{CN("GHA")},{ESPN("GHA",0,4)}},
 {1957,10,4,1,"sputnik","Sputnik","O primeiro satélite artificial orbita a Terra.",{CX("URS")},{EPR("URS",25)}},
+{1959,1,1,1,"rev_cubana","Revolução Cubana","Os barbudos de Sierra Maestra entram em Havana.",{CX("CUB")},{EIND("CUB"),EIDEO("CUB",COMU),EPR("CUB",10)}},
 {1960,6,30,1,"ano_africa","O Ano da África","Dezessete países africanos conquistam a independência.",{{0,0,0,0,0}},{EDECOL(CONT_AFRICA)}},
 {1962,7,5,3,"argelia","Independência da Argélia","Depois de oito anos de guerra, a Argélia é livre.",{CN("DZA")},{ESPN("DZA",0,8)}},
 {1962,10,16,1,"misseis","Crise dos Mísseis","O mundo passa treze dias à beira da guerra nuclear.",{{0,0,0,0,0}},{EWHA(-5)}},
 {1963,12,12,3,"quenia","Independência do Quênia","Uhuru: o Quênia é livre.",{CN("KEN")},{ESPN("KEN",0,6)}},
+{1964,4,1,1,"golpe64","Golpe de 1964","Militares derrubam o governo e instalam uma ditadura no Brasil.",{CX("BRA")},{EIDEO("BRA",AUTO),EHA("BRA",-8)}},
 {1969,7,20,1,"lua","Pessoa na Lua","Neil Armstrong pisa na Lua.",{CX("USA")},{EPR("USA",40)}},
+{1973,9,11,1,"golpe_chile","Golpe no Chile","Tanques cercam o Palácio de La Moneda.",{CX("CHL")},{EIDEO("CHL",AUTO),EHA("CHL",-10)}},
 {1973,10,17,1,"petroleo73","Crise do petróleo","O preço do petróleo quadruplica.",{{0,0,0,0,0}},{EWGO(-15)}},
-{1974,4,25,1,"cravos","Revolução dos Cravos","Uma revolução sem sangue derruba a ditadura portuguesa.",{CX("POR")},{EGOV("POR",REP),EHA("POR",10)}},
+{1974,4,25,1,"cravos","Revolução dos Cravos","Uma revolução sem sangue derruba a ditadura portuguesa.",{CX("POR")},{EGOV("POR",REP),EIDEO("POR",LIBE),EHA("POR",10)}},
 {1975,6,25,3,"mocambique","Independência de Moçambique","Moçambique é livre depois de cinco séculos.",{CN("MOZ")},{ESPN("MOZ",0,7)}},
 {1975,11,11,3,"angola","Independência de Angola","Angola é livre; começa uma longa guerra civil.",{CN("AGO")},{ESPN("AGO",0,8)}},
+{1976,3,24,1,"golpe_arg","Golpe na Argentina","Uma junta militar toma o poder em Buenos Aires.",{CX("ARG")},{EIDEO("ARG",AUTO)}},
 {1979,2,11,1,"ira","Revolução Iraniana","Uma revolução derruba o xá e funda uma república islâmica.",{CX("QAJ")},{EGOV("QAJ",TEO)}},
-{1985,3,15,2,"redemocratizacao","Redemocratização do Brasil","Termina a ditadura militar.",{CX("BRA")},{EGOV("BRA",REP),EHA("BRA",10)}},
+{1983,12,10,1,"dem_arg","Democracia na Argentina","Depois da junta, os argentinos voltam às urnas.",{CX("ARG")},{EIDEO("ARG",LIBE),EHA("ARG",8)}},
+{1985,3,15,2,"redemocratizacao","Redemocratização do Brasil","Termina a ditadura militar.",{CX("BRA")},{EGOV("BRA",REP),EIDEO("BRA",LIBE),EHA("BRA",10)}},
 {1988,10,5,1,"constituicao88","Constituição de 1988","O Brasil reconhece os direitos originários dos povos indígenas.",{CX("BRA")},{EPR("BRA",10),EPR("MDK",10),EPR("KAY",10),EPR("YAN",10)}},
 {1989,11,9,1,"muro","Queda do Muro de Berlim","O muro que dividia a Europa cai.",{{0,0,0,0,0}},{EWHA(5)}},
 // ---- Globalizacao ----
-{1991,12,26,2,"fim_urss","Fim da União Soviética","A URSS se dissolve em quinze países.",{CX("URS")},{EBEC("URS","RUS"),EGOV("RUS",REP),ESPN("UKR","RUS",8),ESPN("KAZ","RUS",14)}},
+{1989,12,1,1,"leste","Outono das Nações","Polônia, Hungria e Tchecoslováquia derrubam seus regimes de partido único.",{{0,0,0,0,0}},{EIDEO("POL",LIBE),EIDEO("HUN",LIBE),EIDEO("CZE",LIBE)}},
+{1990,3,11,1,"dem_chile","Fim da ditadura no Chile","Pinochet deixa o poder depois do plebiscito.",{CX("CHL")},{EIDEO("CHL",LIBE),EHA("CHL",8)}},
+{1991,12,26,2,"fim_urss","Fim da União Soviética","A URSS se dissolve em quinze países.",{CX("URS")},{EBEC("URS","RUS"),EIDEO("RUS",LIBE),ESPN("UKR","RUS",8),ESPN("KAZ","RUS",14)}},
 {1992,2,7,1,"maastricht","Tratado de Maastricht","Nasce a União Europeia.",{{0,0,0,0,0}},{EPR("FRA",5),EPR("GER",5)}},
 {1994,5,10,2,"mandela","Mandela presidente","Fim do apartheid: Nelson Mandela assume a presidência.",{CX("ZAF")},{EIND("ZAF"),EPR("ZAF",30),EHA("ZAF",15)}},
 {1997,7,1,1,"hong_kong","Hong Kong volta à China","Termina o domínio britânico em Hong Kong.",{CX("PRC")},{ECED("PRC","GBR","HKG",1)}},
@@ -255,13 +279,16 @@ static const HLoc LOC[]={
 enum {
  RQ_COAST=1, RQ_WAR=2, RQ_PEACE=4, RQ_MON=8, RQ_REP=16, RQ_POVO=32,
  RQ_TROPICS=64, RQ_NORTH=128, RQ_FAITH=256, RQ_SEA=512, RQ_POOR=1024,
- RQ_RICH=2048,
+ RQ_RICH=2048, RQ_UNSTABLE=4096,
 };
 typedef struct {
  const char *title, *body;
  u8 eraMin, eraMax; u16 req;
- HOp eff[3];   // a = NULL: o proprio pais
+ HOp eff[3];   // a = NULL: o proprio pais (decisao: opcao A)
 } RndEvent;
+// Decisao: evento com 2 opcoes (o jogador escolhe no despacho; a IA decide
+// pelo temperamento). Indice global = RND_N + k.
+typedef struct { RndEvent e; const char *optA, *optB; HOp effB[3]; } RndDecision;
 #define S(op,v) {op,0,0,0,v}
 #define E0 ERA_NAPOLEONICA
 #define E1 ERA_RESTAURACAO
@@ -344,15 +371,57 @@ static const RndEvent RND[]={
  {"Energia de fusão","Um reator de fusão acende pela primeira vez.",E7,E7,RQ_RICH,{S(HE_PRESTIGE,20),S(HE_GOLD,200)}},
  {"Base lunar","Uma base permanente é inaugurada na Lua.",E7,E7,RQ_RICH,{S(HE_PRESTIGE,15)}},
  {"Colônia em Marte","Os primeiros colonos pousam em Marte.",E7,E7,RQ_RICH,{S(HE_PRESTIGE,25)}},
+ // ideologia e separatismo (v1.0)
+ {"Agitação revolucionária","Clubes secretos pregam a derrubada do regime.",E2,E6,0,{S(HE_MILIT,12),S(HE_HAPPY,-3)}},
+ {"Golpe de Estado","Generais cercam o palácio e assumem o governo.",E1,E6,RQ_UNSTABLE,{S(HE_IDEO,ID_AUTORITARIO+16)}},
+ {"Revolução vermelha","Sovietes de operários e soldados tomam a capital.",E4,E6,RQ_POOR|RQ_UNSTABLE,{S(HE_IDEO,ID_COMUNISTA+16)}},
+ {"Restauração da coroa","Monarquistas trazem de volta um herdeiro do trono.",E1,E4,RQ_REP|RQ_UNSTABLE,{S(HE_IDEO,ID_TRADICIONAL+16)}},
+ {"Reforma liberal","Uma constituição limita o poder do trono.",E2,E7,RQ_MON|RQ_UNSTABLE,{S(HE_IDEO,ID_LIBERAL),S(HE_HAPPY,5)}},
+ {"Reavivamento religioso","Pregadores enchem as praças; a fé volta ao governo.",E0,E7,RQ_FAITH|RQ_UNSTABLE,{S(HE_HAPPY,5),S(HE_IDEO,ID_TEOCRATICO)}},
+ {"Movimento separatista","Uma província pega em armas pela independência.",E1,E7,RQ_UNSTABLE,{S(HE_SEPARA,0),S(HE_MILIT,5)}},
+ {"Piratas","Corsários saqueiam navios mercantes.",E0,E3,RQ_COAST,{S(HE_SHIPS,-1),S(HE_GOLD,-30)}},
+ {"Novo navio de linha","O estaleiro lança um navio com orgulho.",E0,E7,RQ_SEA,{S(HE_SHIPS,2),S(HE_PRESTIGE,2)}},
+ {"Boom do algodão","As fiações pagam qualquer preço pela fibra.",E1,E3,0,{S(HE_GOLD,60)}},
+ {"Febre do café","O mundo inteiro quer o nosso café.",E1,E5,RQ_TROPICS,{S(HE_GOLD,80)}},
+ {"Peste bovina","O gado morre aos milhares.",E0,E5,0,{S(HE_GOLD,-40),S(HE_HAPPY,-3)}},
+ {"Telégrafo","Mensagens cruzam o país em minutos.",E2,E3,0,{S(HE_PRESTIGE,4),S(HE_GOLD,20)}},
+ {"Eletrificação","Lâmpadas acendem nas cidades.",E3,E5,0,{S(HE_GOLD,50),S(HE_HAPPY,4)}},
+ {"Rádio nacional","A voz do governo chega a todas as casas.",E4,E5,0,{S(HE_HAPPY,4),S(HE_MILIT,-3)}},
+ {"Internet","Uma rede liga o país ao mundo.",E6,E7,0,{S(HE_GOLD,80),S(HE_PRESTIGE,3)}},
 };
 #define RND_N ((int)(sizeof(RND)/sizeof(RND[0])))
+static const RndDecision DEC[]={
+ {{"Greve nas fábricas","Operários param as máquinas por salários melhores.",E3,E7,0,{S(HE_GOLD,-40),S(HE_HAPPY,8),S(HE_MILIT,-8)}},"Negociar","Reprimir",{S(HE_MILIT,12),S(HE_HAPPY,-6),S(HE_TROOPS,-3)}},
+ {{"Ferrovia transcontinental","Engenheiros propõem trilhos de costa a costa.",E2,E4,0,{S(HE_GOLD,-80),S(HE_PRESTIGE,8),S(HE_HAPPY,4)}},"Construir","Adiar",{S(HE_GOLD,20)}},
+ {{"Refugiados na fronteira","Milhares fogem de uma guerra vizinha.",E0,E7,0,{S(HE_TROOPS,3),S(HE_HAPPY,-3),S(HE_PRESTIGE,5)}},"Acolher","Fechar a fronteira",{S(HE_PRESTIGE,-3),S(HE_MILIT,3)}},
+ {{"Reforma eleitoral","A burguesia exige o direito de votar.",E1,E5,0,{S(HE_HAPPY,8),S(HE_MILIT,-10)}},"Conceder","Negar",{S(HE_MILIT,12),S(HE_PRESTIGE,2)}},
+ {{"Minas do Estado","Ministros propõem estatizar as minas.",E3,E6,0,{S(HE_GOLD,60),S(HE_HAPPY,-4)}},"Estatizar","Manter privadas",{S(HE_GOLD,20)}},
+ {{"Conselho de guerra","Os generais pedem mais recrutas.",E0,E7,RQ_WAR,{S(HE_TROOPS,12),S(HE_HAPPY,-6)}},"Convocar","Poupar o povo",{S(HE_MILIT,-5),S(HE_PRESTIGE,-3)}},
+ {{"Expedição científica","Exploradores pedem patrocínio para mapear terras distantes.",E1,E7,0,{S(HE_GOLD,-40),S(HE_PRESTIGE,10)}},"Patrocinar","Recusar",{S(HE_HAPPY,-1)}},
+ {{"Panfletos vermelhos","Ideias socialistas circulam nas fábricas.",E2,E6,0,{S(HE_GOLD,-50),S(HE_MILIT,-12),S(HE_HAPPY,6)}},"Leis trabalhistas","Proibir",{S(HE_MILIT,10),S(HE_PRESTIGE,1)}},
+ {{"Nacionalismo nas ruas","Multidões pedem glória e territórios.",E2,E5,0,{S(HE_PRESTIGE,6),S(HE_MILIT,6),S(HE_TROOPS,5)}},"Abraçar a causa","Pedir calma",{S(HE_PRESTIGE,-2),S(HE_MILIT,-4)}},
+ {{"Fome no interior","A colheita falhou em várias províncias.",E0,E5,0,{S(HE_GOLD,-60),S(HE_HAPPY,6)}},"Abrir os celeiros","Deixar o mercado agir",{S(HE_HAPPY,-10),S(HE_MILIT,8)}},
+ {{"Corsários na costa","Navios piratas atacam nossos mercadores.",E0,E4,RQ_COAST,{S(HE_SHIPS,-1),S(HE_PRESTIGE,5),S(HE_GOLD,40)}},"Mandar a frota","Pagar proteção",{S(HE_GOLD,-50)}},
+ {{"Proposta de casamento","Uma casa estrangeira oferece uma aliança de sangue.",E0,E4,RQ_MON,{S(HE_PRESTIGE,6),S(HE_GOLD,40)}},"Aceitar","Recusar",{S(HE_HAPPY,2)}},
+ {{"Escândalo de corrupção","Um ministro desviou o tesouro.",E1,E7,0,{S(HE_PRESTIGE,-4),S(HE_MILIT,-6),S(HE_HAPPY,4)}},"Julgamento público","Abafar o caso",{S(HE_GOLD,40),S(HE_MILIT,8)}},
+ {{"Imigrantes no porto","Navios trazem trabalhadores do outro lado do mar.",E2,E7,RQ_COAST,{S(HE_TROOPS,4),S(HE_GOLD,40),S(HE_HAPPY,-2)}},"Receber","Restringir",{S(HE_HAPPY,3)}},
+ {{"O clero e as escolas","Os religiosos querem a educação nas mãos da fé.",E0,E4,0,{S(HE_HAPPY,6),S(HE_PRESTIGE,-2)}},"Ceder","Laicizar",{S(HE_MILIT,6),S(HE_PRESTIGE,4)}},
+ {{"Conspiração nos quartéis","Oficiais tramam contra o governo.",E1,E6,0,{S(HE_TROOPS,-6),S(HE_MILIT,-6)}},"Prender os conspiradores","Comprar a lealdade",{S(HE_GOLD,-80)}},
+ {{"Corrida naval","Um rival dobrou a frota.",E3,E5,RQ_COAST,{S(HE_GOLD,-100),S(HE_SHIPS,3)}},"Construir navios","Apostar na diplomacia",{S(HE_PRESTIGE,-2),S(HE_HAPPY,2)}},
+ {{"Jazida de carvão e ferro","Geólogos encontram um veio enorme.",E1,E7,0,{S(HE_GOLD,100),S(HE_HAPPY,-3)}},"Explorar já","Explorar com calma",{S(HE_GOLD,40)}},
+ {{"Sufrágio feminino","Sufragistas enchem as praças.",E3,E5,0,{S(HE_HAPPY,8),S(HE_PRESTIGE,6)}},"Aprovar","Adiar",{S(HE_MILIT,8)}},
+ {{"Credores à porta","Bancos estrangeiros exigem o pagamento da dívida.",E2,E7,RQ_POOR,{S(HE_GOLD,-60),S(HE_HAPPY,-8)}},"Pagar com austeridade","Dar o calote",{S(HE_PRESTIGE,-8),S(HE_MILIT,4)}},
+ {{"Barricadas na capital","O povo ergue barricadas e exige um novo regime.",E2,E6,RQ_UNSTABLE,{S(HE_IDEO,-1),S(HE_HAPPY,10)}},"Ceder ao povo","Esmagar a revolta",{S(HE_TROOPS,-10),S(HE_MILIT,10),S(HE_PRESTIGE,-4)}},
+ {{"Ameaça de bloqueio","Um rival ameaça fechar nossos portos.",E1,E7,RQ_COAST,{S(HE_GOLD,-40),S(HE_SHIPS,1)}},"Escoltar os mercadores","Aceitar as perdas",{S(HE_GOLD,-60)}},
+};
+#define DEC_N ((int)(sizeof(DEC)/sizeof(DEC[0])))
 
 static u32 ANCH[HIST_N];
 static bool anchOk=false;
 
 int Hist_Count(void){return HIST_N;}
 const HistEvent *Hist_Get(int i){return (i>=0&&i<HIST_N)?&HIST[i]:0;}
-int Rnd_Count(void){return RND_N;}
+int Rnd_Count(void){return RND_N+DEC_N;}
 u8 Hist_State(const World *w,int i){return (u8)((w->hState[i>>2]>>((i&3)*2))&3);}
 static void SetState(World *w,int i,u8 s){
  w->hState[i>>2]=(u8)((w->hState[i>>2]&~(3<<((i&3)*2)))|(s<<((i&3)*2)));
@@ -422,7 +491,27 @@ static void Apply(World *w,const HOp *o,u8 self){
  case HE_WAR:if(a&&b)World_DeclareHistWar(w,a,b);break;
  case HE_PEACE:if(a&&b)World_Peace(w,a,b);break;
  case HE_PEACEALL:for(u8 i=1;i<w->nC;i++)for(u8 j=(u8)(i+1);j<w->nC;j++)if(World_AtWar(w,i,j))World_Peace(w,i,j);break;
- case HE_GOV:if(ca)ca->gov=(u8)o->v;break;
+ case HE_GOV:if(ca){ca->gov=(u8)o->v;
+  // a ideologia acompanha a forma de governo (sem revolucao)
+  if(o->v==NG_MONARQUIA)WDip_SetIdeo(w,a,ID_TRADICIONAL,false);
+  else if(o->v==NG_TEOCRACIA)WDip_SetIdeo(w,a,ID_TEOCRATICO,false);
+  else if(o->v==NG_REPUBLICA&&(ca->ideo==ID_TRADICIONAL||ca->ideo==ID_TEOCRATICO))WDip_SetIdeo(w,a,ID_LIBERAL,false);
+ }break;
+ case HE_IDEO:if(ca){
+  bool rev=o->v<0||o->v>=16;
+  u8 to=o->v<0?WDip_RandomIdeo(w,a):(u8)(o->v&15);
+  if(to!=ca->ideo){
+   WDip_SetIdeo(w,a,to,rev);
+   if(!o->a&&!ca->player&&ca->cells>=150){
+    char b[96];int n=0;const char *p=NATIONS[ca->nat].name;while(*p&&n<40)b[n++]=*p++;
+    p=Str(STR_D_AGORA);while(*p&&n<70)b[n++]=*p++;p=Str((u16)(STR_ID_0+to));while(*p&&n<94)b[n++]=*p++;b[n]=0;
+    World_Msg(w,Str(STR_D_REVOL),b);
+   }
+  }
+ }break;
+ case HE_SHIPS:if(ca){ca->ships=(s16)(ca->ships+o->v);if(ca->ships<0)ca->ships=0;}break;
+ case HE_SEPARA:if(a)WDip_Separatism(w,a);break;
+ case HE_WORLD_MILIT:for(u8 i=1;i<w->nC;i++)if(w->c[i].alive)w->c[i].militancy=(u8)Clamp100(w->c[i].militancy+o->v);break;
  case HE_ADDTRAIT:if(ca){bool has=false;for(int i=0;i<NAT_TRAITS;i++)if(ca->traits[i]==o->v)has=true;
   if(!has)for(int i=0;i<NAT_TRAITS;i++)if(!ca->traits[i]){ca->traits[i]=(u8)o->v;break;}
   World_SetTraits(w,a);}break;
@@ -469,9 +558,21 @@ static bool Eligible(const World *w,u8 ci,const RndEvent *r,Era era){
  if(q&RQ_SEA){bool f=false;for(int i=0;i<NAT_TRAITS;i++)if(c->traits[i]==TR_MARES)f=true;if(!f)return false;}
  if((q&RQ_POOR)&&c->gold>(s32)c->cells)return false;
  if((q&RQ_RICH)&&c->gold<(s32)c->cells*20)return false;
+ if((q&RQ_UNSTABLE)&&WDip_RevoltRisk(w,ci)<15)return false;
  return true;
 }
 
+int Rnd_DecisionCount(void){return DEC_N;}
+static const RndDecision *Dec(int i){return (i>=RND_N&&i<RND_N+DEC_N)?&DEC[i-RND_N]:0;}
+const char *Rnd_Title(int i){const RndDecision *d=Dec(i);return d?d->e.title:"";}
+const char *Rnd_Body(int i){const RndDecision *d=Dec(i);return d?d->e.body:"";}
+const char *Rnd_Opt(int i,bool a){const RndDecision *d=Dec(i);if(!d)return "";return a?d->optA:d->optB;}
+void Rnd_Decide(World *w,u8 ci,int idx,bool optA){
+ const RndDecision *d=Dec(idx);
+ if(!d||!w->c[ci].alive)return;
+ const HOp *e=optA?d->e.eff:d->effB;
+ for(int k=0;k<3;k++)if(e[k].op)Apply(w,&e[k],ci);
+}
 void Rnd_Day(World *w){
  Era era=Cal_Era(w->date.y);
  for(u8 ci=1;ci<w->nC;ci++){
@@ -479,12 +580,23 @@ void Rnd_Day(World *w){
   if(!c->alive||c->rndCd||((ci+w->day)%30)!=0)continue;
   if(World_RngRange(w,100)>=45)continue;
   for(int t=0;t<6;t++){
-   const RndEvent *r=&RND[World_RngRange(w,RND_N)];
+   int idx=World_RngRange(w,RND_N+DEC_N);
+   const RndEvent *r=idx<RND_N?&RND[idx]:&DEC[idx-RND_N].e;
+   bool dec=idx>=RND_N;
    if(!Eligible(w,ci,r,era))continue;
-   for(int k=0;k<3;k++)if(r->eff[k].op)Apply(w,&r->eff[k],ci);
+   if(dec&&c->player){
+    // decisao do jogador: vira um despacho com Aceitar/Recusar (wgame pausa)
+    if(!WDip_Propose(w,PR_DECISAO,ci,0,0,(u16)idx))continue;
+   }else if(dec){
+    // IA: temperamento e arquetipo decidem (sem RNG extra)
+    bool a=((c->mood+(int)(w->day%41u)+c->archetype*13)%100)<55;
+    Rnd_Decide(w,ci,idx,a);
+   }else{
+    for(int k=0;k<3;k++)if(r->eff[k].op)Apply(w,&r->eff[k],ci);
+    if(c->player)World_Msg(w,r->title,r->body);
+   }
    c->rndCd=(u8)(20+World_RngRange(w,20));
    w->nEvents++;
-   if(c->player)World_Msg(w,r->title,r->body);
    break;
   }
  }

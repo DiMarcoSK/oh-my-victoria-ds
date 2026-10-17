@@ -1,0 +1,322 @@
+#include "wecon.h"
+#include "city.h"
+#include "str.h"
+// wecon.c — economia do mundo (ver wecon.h; DESIGN 4.8; SDD ADR-26).
+// Custo: 1x por semana, O(cidades) + O(paises x bens) + rotas O(portos x 3 x
+// paises). Buffers estaticos (.bss, ~27KB), zero malloc, sem float, sem RNG.
+
+//                              graos madeira fibra minerio luxo texteis ferram. armas petroleo
+const u16 GD_BASE[GD_COUNT]={  10,   12,     14,   16,     30,  26,     34,     44,   40};
+static const u16 GD_YEAR[GD_COUNT]={0,0,0,0,0,0,0,0,1860};
+u16 Gd_Str(u8 g){return (u16)(STR_GD_GRAOS+(g<GD_COUNT?g:0));}
+u16 Gd_Year(u8 g){return g<GD_COUNT?GD_YEAR[g]:0;}
+static inline bool Manuf(int g){return g>=GD_TEXTEIS&&g<=GD_ARMAS;}
+static inline s32 Mn(s32 a,s32 b){return a<b?a:b;}
+static inline s32 Mx(s32 a,s32 b){return a>b?a:b;}
+
+// ---------------- cidade: producao, insumo e consumo ----------------
+void WEco_CityFlows(const World *w,int i,s32 prod[GD_COUNT],s32 need[GD_COUNT],s32 dem[GD_COUNT]){
+ for(int g=0;g<GD_COUNT;g++)prod[g]=need[g]=dem[g]=0;
+ const WCity *c=&w->city[i];
+ int y=w->date.y,pop=c->pop;
+ // consumo da populacao (milhares): comer, vestir, luxo; a cidade grande
+ // da era industrial pede ferramentas e, no seculo XX, petroleo
+ dem[GD_GRAOS]+=pop/10+1;
+ dem[GD_TEXTEIS]+=pop/80;
+ dem[GD_MADEIRA]+=pop/60;                       // lenha e construcao
+ if(c->tier>=CT_VILAREJO)dem[GD_LUXO]+=pop/150;
+ if(c->tier>=CT_CIDADE&&y>=1830){dem[GD_FERRAMENTAS]+=pop/80;dem[GD_MINERIO]+=pop/120;} // carvao das casas
+ if(c->tier>=CT_CIDADE&&y>=1900)dem[GD_PETROLEO]+=pop/200;
+ // subsistencia: a lavoura em volta alimenta a vila mesmo sem obra
+ prod[GD_GRAOS]+=c->agri/12;
+ int ind=y<1880?100:(y<1950?200:300);   // produtividade industrial por era
+ int agr=100+(y-1800)*3/5;              // e a do campo
+ bool rail=false;
+ for(int s=0;s<CITY_SLOTS;s++)switch(c->bld[s]){
+  case BK_FAZENDA:prod[GD_GRAOS]+=(c->agri/6+4)*agr/100;
+   if(c->res&RS_TROPICAL)prod[GD_LUXO]+=(4+c->agri/10)*agr/100;    // plantacao: cafe, acucar, cha
+   else prod[GD_FIBRA]+=(2+c->agri/16)*agr/100;                     // la e algodao
+   break;
+  case BK_SERRARIA:prod[GD_MADEIRA]+=(c->wood/4+5)*agr/100;break;
+  case BK_MINA:prod[GD_MINERIO]+=(c->ore/3+8)*ind/100;break;
+  case BK_PORTO:prod[GD_GRAOS]+=4;break;                   // pesca
+  case BK_OFICINA:need[GD_MADEIRA]+=3;need[GD_MINERIO]+=3;need[GD_FIBRA]+=4;
+   prod[GD_FERRAMENTAS]+=5*ind/100;prod[GD_TEXTEIS]+=6*ind/100;break;
+  case BK_FABRICA:need[GD_FIBRA]+=10;need[GD_MINERIO]+=8;need[GD_MADEIRA]+=2;
+   prod[GD_TEXTEIS]+=20*ind/100;prod[GD_FERRAMENTAS]+=14*ind/100;break;
+  case BK_ARSENAL:need[GD_MINERIO]+=4;need[GD_FERRAMENTAS]+=3;prod[GD_ARMAS]+=10*ind/100;break;
+  case BK_POCO:if(y>=1860)prod[GD_PETROLEO]+=(10+((c->res&RS_OLEO)?20:0))*ind/100;break;
+  case BK_FERROVIA:rail=true;break;
+  default:break;
+ }
+ if(rail)for(int g=0;g<GD_COUNT;g++)prod[g]+=prod[g]/5;
+}
+
+// ---------------- marinha ----------------
+s32 WEco_ShipCost(const World *w,u8 ci){
+ const WEco *e=&w->eco[ci];
+ u8 g=w->date.y>=1860?GD_MINERIO:GD_MADEIRA;   // vela de madeira -> couracado de ferro
+ return 60+(s32)e->price[g]*3+(w->date.y-1800)/4;
+}
+int WEco_ShipDays(const World *w,u8 ci){
+ int y=w->eco[ci].yards;if(y<1)y=1;
+ int d=90/y;return d<15?15:d;
+}
+bool WEco_BuildShip(World *w,u8 ci){
+ WCountry *c=&w->c[ci];
+ s32 cost=WEco_ShipCost(w,ci);
+ if(!c->alive||!w->eco[ci].yards||c->shipQ||c->gold<cost)return false;
+ c->gold-=cost;c->shipQ=(u16)WEco_ShipDays(w,ci);
+ return true;
+}
+bool WEco_Blockaded(const World *w,u8 ci){
+ const WCountry *c=&w->c[ci];
+ if(!c->warN)return false;
+ for(u8 j=1;j<w->nC;j++)
+  if(w->c[j].alive&&w->c[j].ships>c->ships*3/2+2&&World_AtWar(w,ci,j))return true;
+ return false;
+}
+
+s32 WEco_GoldWeek(const World *w,u8 ci){const WEco *e=&w->eco[ci];return e->inc+e->trade-e->exp;}
+int WEco_ArmsPct(const World *w,u8 ci){return 50+w->eco[ci].sat[GD_ARMAS]/2;}
+int WEco_ToolsPct(const World *w,u8 ci){
+ if(w->date.y<1830)return 100;
+ return 50+w->eco[ci].sat[GD_FERRAMENTAS]/2;
+}
+
+void WEco_Init(World *w){
+ for(int g=0;g<GD_COUNT;g++){w->wprice[g]=GD_BASE[g];w->wvol[g]=0;}
+ for(u8 ci=0;ci<=W_MAXC;ci++){
+  WEco *e=&w->eco[ci];
+  u8 *z=(u8*)e;for(unsigned k=0;k<sizeof *e;k++)z[k]=0;
+  e->tax=1;e->life=70;e->ind=100;e->hub=-1;
+  for(int g=0;g<GD_COUNT;g++){e->price[g]=GD_BASE[g];e->sat[g]=100;}
+ }
+}
+
+// ---------------- semana ----------------
+static s32 NEED[W_MAXC+1][GD_COUNT];      // insumo pedido pela industria do pais
+static s32 RUR[W_MAXC+1][GD_COUNT];       // parte artesanal (rural) da manufatura: nao depende de insumo
+static s32 MS[W_MAXC+1][GD_COUNT],MD[W_MAXC+1][GD_COUNT],MN[W_MAXC+1][GD_COUNT]; // mercado (bloco)
+static s32 MCAP[W_MAXC+1];
+static s32 EXP[W_MAXC+1][GD_COUNT],IMP[W_MAXC+1][GD_COUNT];
+static u8 MIND[W_MAXC+1],MLACK[W_MAXC+1];
+static s32 POS[W_MAXC+1][GD_COUNT],NEG[W_MAXC+1][GD_COUNT];
+
+static u8 MarketOf(const World *w,u8 ci){
+ u8 b=w->c[ci].bloc;
+ return (b&&b<w->nC&&w->c[b].alive&&w->c[b].bloc==b)?b:ci;
+}
+static bool Tropical(const World *w,const WCountry *c){
+ int lat=NATIONS[c->nat].lat;
+ return (lat<=25&&lat>=-25)||c->terr[WT_JUNGLE]*6>(int)c->cells;
+ (void)w;
+}
+// preco a partir da razao demanda/oferta (Q8, entre 1/4 e 4x o base)
+static u16 PriceOf(int g,s32 d,s32 s){
+ s32 r=(d+8)*256/(s+8);
+ if(r<64)r=64;
+ if(r>1024)r=1024;
+ return (u16)(GD_BASE[g]*r/256);
+}
+
+void WEco_Week(World *w){
+ const int Y=w->date.y;
+ // 1) campo + necessidades rurais, por pais
+ for(u8 ci=1;ci<w->nC;ci++){
+  WCountry *c=&w->c[ci];WEco *e=&w->eco[ci];
+  for(int g=0;g<GD_COUNT;g++){e->sup[g]=e->dem[g]=0;NEED[ci][g]=0;}
+  e->ports=e->yards=0;e->hub=-1;
+  if(!c->alive)continue;
+  const u16 *T=c->terr;
+  // campo: a populacao rural (c->pop) planta, corta lenha, fia e forja;
+  // o que sobra disso vira oferta, o resto ela mesma consome
+  s32 rp=(s32)c->pop;
+  // produtividade do campo sobe com a era (adubo, maquinas): 1800 = 100%, 2025 = 190%
+  s32 ag=100+(Y-1800)*3/5;
+  e->sup[GD_GRAOS]=(s32)(T[WT_PLAINS]*3+T[WT_STEPPE]*2+T[WT_FOREST]+T[WT_JUNGLE]+T[WT_HILLS]+T[WT_SWAMP])*3/2*ag/100;
+  e->sup[GD_MADEIRA]=(s32)(T[WT_FOREST]*2+T[WT_JUNGLE]*2+T[WT_TUNDRA]+T[WT_SWAMP])/4*ag/100;
+  e->sup[GD_FIBRA]=(s32)(T[WT_STEPPE]*2+T[WT_PLAINS]+T[WT_DESERT]/2)/8*ag/100;
+  e->sup[GD_MINERIO]=(s32)(T[WT_HILLS]+T[WT_MOUNTAIN]*2)/4*ag/100;
+  if(Tropical(w,c))e->sup[GD_LUXO]=(s32)(T[WT_JUNGLE]*2+T[WT_PLAINS])/6*ag/100;
+  if(Y<1900)e->sup[GD_TEXTEIS]=rp/300;            // tear domestico
+  e->sup[GD_ARMAS]=rp/600;                         // ferreiros e armeiros
+  e->dem[GD_GRAOS]=rp/4;
+  e->dem[GD_MADEIRA]=rp/40;
+  e->dem[GD_FIBRA]=rp/400;
+  e->dem[GD_TEXTEIS]=rp/150;
+  e->dem[GD_LUXO]=rp/(Y<1870?1000:600);
+  e->dem[GD_ARMAS]=(c->troops+c->atkTroops)/600+c->ships/4;
+  if(Y>=1900)e->dem[GD_PETROLEO]=rp/1500+c->ships/4;
+  for(int g=0;g<GD_COUNT;g++)RUR[ci][g]=Manuf(g)?e->sup[g]:0;
+ }
+ // 2) cidades (mercado local: a vila come primeiro do proprio entorno)
+ static s32 cg[W_MAXCITY];
+ for(int i=0;i<w->nCity;i++){
+  WCity *ct=&w->city[i];u8 o=ct->owner;cg[i]=0;
+  if(!o||!w->c[o].alive)continue;
+  WEco *e=&w->eco[o];
+  s32 p[GD_COUNT],n[GD_COUNT],d[GD_COUNT];
+  WEco_CityFlows(w,i,p,n,d);
+  for(int g=0;g<GD_COUNT;g++){e->sup[g]+=p[g];e->dem[g]+=d[g];NEED[o][g]+=n[g];}
+  cg[i]=d[GD_GRAOS]?Mn(100,p[GD_GRAOS]*100/d[GD_GRAOS]):100;
+  bool port=false;
+  for(int s=0;s<CITY_SLOTS;s++){if(ct->bld[s]==BK_PORTO)port=true;if(ct->bld[s]==BK_ESTALEIRO)e->yards++;}
+  if(port){e->ports++;if(e->hub<0||w->city[e->hub].pop<ct->pop)e->hub=(s16)i;}
+ }
+ // 3) capacidade de comercio externo e mercado (bloco)
+ for(u8 m=0;m<w->nC;m++){MCAP[m]=0;for(int g=0;g<GD_COUNT;g++){MS[m][g]=MD[m][g]=MN[m][g]=0;POS[m][g]=NEG[m][g]=0;}}
+ for(u8 ci=1;ci<w->nC;ci++){
+  WCountry *c=&w->c[ci];WEco *e=&w->eco[ci];
+  if(!c->alive)continue;
+  s32 sea=e->ports*30+e->yards*10+Mn(c->ships,20)*3;
+  if(WEco_Blockaded(w,ci))sea/=3;
+  s32 cap=6+(s32)c->cells/50+sea;
+  cap=cap*(100+c->m.tradePct)/100;
+  e->cap=(u16)Mn(cap,60000);
+  u8 m=MarketOf(w,ci);MCAP[m]+=e->cap;
+  for(int g=0;g<GD_COUNT;g++){
+   if(!Manuf(g))MS[m][g]+=e->sup[g];
+   MD[m][g]+=e->dem[g];MN[m][g]+=NEED[ci][g];
+  }
+ }
+ // 4) industria do mercado: roda a ind% do insumo que mais falta
+ for(u8 m=1;m<w->nC;m++){
+  MIND[m]=100;MLACK[m]=0;
+  for(int g=0;g<GD_COUNT;g++){
+   if(!MN[m][g])continue;
+   s32 av=Mx(0,MS[m][g]-MD[m][g]/2)+MCAP[m]/4;
+   s32 pct=av*100/MN[m][g];
+   if(pct<MIND[m]){MIND[m]=(u8)Mx(0,pct);MLACK[m]=(u8)g;}
+  }
+ }
+ for(u8 ci=1;ci<w->nC;ci++){
+  WCountry *c=&w->c[ci];WEco *e=&w->eco[ci];
+  if(!c->alive)continue;
+  u8 m=MarketOf(w,ci);
+  int ef=MIND[m];
+  int bonus=100+c->m.prodPct;if(c->unrestT)bonus=bonus*70/100;
+  e->ind=(u8)ef;e->lack=MLACK[m];
+  for(int g=0;g<GD_COUNT;g++){
+   if(Manuf(g)){s32 r=RUR[ci][g];e->sup[g]=r+(e->sup[g]-r)*ef/100*bonus/100;MS[m][g]+=e->sup[g];}
+   s32 used=NEED[ci][g]*ef/100;
+   e->dem[g]+=used;MD[m][g]+=used;
+   if(Y<Gd_Year((u8)g)){e->sup[g]=e->dem[g]=0;}
+  }
+ }
+ // 5) mercado mundial: o que sobra/falta no bloco cruza o mar ate a capacidade
+ s32 E[GD_COUNT],I[GD_COUNT];
+ for(int g=0;g<GD_COUNT;g++){E[g]=I[g]=0;}
+ for(u8 m=1;m<w->nC;m++){
+  if(!MCAP[m])continue;
+  s32 tot=0;
+  for(int g=0;g<GD_COUNT;g++){s32 d=MS[m][g]-MD[m][g];tot+=d<0?-d:d;}
+  for(int g=0;g<GD_COUNT;g++){
+   s32 d=MS[m][g]-MD[m][g];
+   s32 v=d<0?-d:d;
+   if(tot>MCAP[m])v=(s32)((s64)v*MCAP[m]/tot);
+   EXP[m][g]=d>0?v:0;IMP[m][g]=d<0?v:0;
+   E[g]+=EXP[m][g];I[g]+=IMP[m][g];
+  }
+ }
+ for(int g=0;g<GD_COUNT;g++){
+  s32 r=(I[g]+30)*256/(E[g]+30);
+  if(r<102)r=102;
+  if(r>768)r=768;
+  u16 np=(u16)(GD_BASE[g]*r/256);
+  w->wprice[g]=(u16)((w->wprice[g]*3+np)/4);
+  w->wvol[g]=Mn(E[g],I[g]);
+ }
+ // 6) fecha cada mercado: oferta final, satisfacao e preco
+ for(u8 m=1;m<w->nC;m++){
+  if(!MCAP[m])continue;
+  for(int g=0;g<GD_COUNT;g++){
+   s32 ex=E[g]?(s32)((s64)EXP[m][g]*w->wvol[g]/E[g]):0;
+   s32 im=I[g]?(s32)((s64)IMP[m][g]*w->wvol[g]/I[g]):0;
+   EXP[m][g]=ex;IMP[m][g]=im;
+   MS[m][g]+=im-ex;
+  }
+ }
+ for(u8 ci=1;ci<w->nC;ci++){
+  WEco *e=&w->eco[ci];
+  if(!w->c[ci].alive)continue;
+  u8 m=MarketOf(w,ci);
+  for(int g=0;g<GD_COUNT;g++){s32 b=e->sup[g]-e->dem[g];if(b>0)POS[m][g]+=b;else NEG[m][g]-=b;}
+ }
+ for(u8 ci=1;ci<w->nC;ci++){
+  WCountry *c=&w->c[ci];WEco *e=&w->eco[ci];
+  if(!c->alive)continue;
+  u8 m=MarketOf(w,ci);
+  s32 val=0,trade=0;e->used=0;
+  for(int g=0;g<GD_COUNT;g++){
+   s32 S=MS[m][g],D=MD[m][g];
+   e->sat[g]=(u8)(D>0?Mn(100,Mx(0,S)*100/D):100);
+   u16 pl=PriceOf(g,D,S);
+   e->price[g]=(u16)((IMP[m][g]||EXP[m][g])?(pl+2*w->wprice[g])/3:pl);
+   if(Y<Gd_Year((u8)g)){e->sat[g]=100;e->price[g]=GD_BASE[g];}
+   // vende a sobra e compra a falta no preco do mercado: o que o bloco
+   // nao absorve nem exporta encalha (e derruba o preco)
+   s32 b=e->sup[g]-e->dem[g];
+   s32 P=POS[m][g],N=NEG[m][g];
+   s32 sold=Mn(P,N+EXP[m][g]),bought=Mn(N,P+IMP[m][g]);
+   s32 q=0;
+   if(b>0&&P)q=(s32)((s64)b*sold/P);
+   else if(b<0&&N)q=-(s32)((s64)(-b)*bought/N);
+   e->net[g]=(s16)Mx(-32000,Mn(32000,-q));
+   // alfandega: o Estado cobra sobre o que entra e sai do pais (dentro do
+   // bloco a taxa e' menor: e' o atrativo do mercado comum)
+   s32 aq=q<0?-q:q;
+   trade+=aq*e->price[g]*(m!=ci||MCAP[m]==0?2:4);
+   val+=e->sup[g]*e->price[g];
+  }
+  // uso dos portos: a parte deste pais no comercio externo do mercado
+  {s32 ext=0;for(int g=0;g<GD_COUNT;g++)ext+=EXP[m][g]+IMP[m][g];
+   e->used=(u16)Mn(e->cap,MCAP[m]?(s32)((s64)ext*e->cap/MCAP[m]):0);}
+  // receita: imposto sobre o valor produzido; despesa: soldo e frota
+  static const u8 RATE[3]={1,2,3};
+  e->inc=val/1000*RATE[e->tax%3]+val%1000*RATE[e->tax%3]/1000;
+  e->inc+=c->cityGold*7/2*(100+c->m.goldPct)/100; // taxas urbanas (City_Day soma por dia)
+  e->trade=trade/100;
+  // soldo, frota e a maquina do Estado (1% do tesouro: cofre parado custa)
+  e->exp=(c->troops+c->atkTroops)/60+c->ships+(c->gold>500?c->gold/100:0);
+  c->gold+=e->inc+e->trade-e->exp;
+  if(c->gold<0){c->gold=0;if(c->troops>c->cap/3)c->troops-=c->troops/12;} // falencia: o exercito deserta
+  // nivel de vida: comer pesa mais; o resto depende da era
+  int lw=e->sat[GD_GRAOS]*40+e->sat[GD_TEXTEIS]*20+e->sat[GD_LUXO]*15;
+  int tw=75;
+  if(Y>=1830){lw+=e->sat[GD_FERRAMENTAS]*15;tw+=15;}
+  if(Y>=1900){lw+=e->sat[GD_PETROLEO]*10;tw+=10;}
+  e->life=(u8)(lw/tw);
+ }
+ // 7) comida local das cidades: o entorno primeiro, o mercado completa
+ for(int i=0;i<w->nCity;i++){
+  WCity *ct=&w->city[i];u8 o=ct->owner;
+  if(!o||!w->c[o].alive)continue;
+  int loc=(int)cg[i];
+  ct->food=(u8)Mn(100,loc+(100-loc)*w->eco[o].sat[GD_GRAOS]/100);
+ }
+ // 8) rotas maritimas (mapa/painel): os 3 bens que o pais mais exporta e
+ // quem mais importa cada um entre os paises com porto de outro mercado
+ for(u8 ci=1;ci<w->nC;ci++){
+  WEco *e=&w->eco[ci];
+  for(int k=0;k<3;k++){e->route[k]=0;e->routeG[k]=0;e->routeV[k]=0;}
+  if(!w->c[ci].alive||!e->ports)continue;
+  u8 top[3]={0,0,0};s32 tv[3]={0,0,0};
+  for(int g=0;g<GD_COUNT;g++){
+   s32 v=-e->net[g];
+   if(v<=0)continue;
+   for(int k=0;k<3;k++)if(v>tv[k]){for(int j=2;j>k;j--){tv[j]=tv[j-1];top[j]=top[j-1];}tv[k]=v;top[k]=(u8)g;break;}
+  }
+  u8 mk=MarketOf(w,ci);int nr=0;
+  for(int k=0;k<3&&tv[k]>0;k++){
+   u8 g=top[k];u8 best=0;s32 bv=0;
+   for(u8 j=1;j<w->nC;j++){
+    if(j==ci||!w->c[j].alive||!w->eco[j].ports)continue;
+    if(MarketOf(w,j)==mk)continue;
+    s32 v=w->eco[j].net[g];
+    if(v>bv){bv=v;best=j;}
+   }
+   if(best){e->route[nr]=best;e->routeG[nr]=g;e->routeV[nr]=(u16)Mn(60000,Mn(bv,tv[k]));nr++;}
+  }
+ }
+}

@@ -2,6 +2,8 @@
 #include "city.h"
 #include "earth.h"
 #include "history.h"
+#include "wecon.h"
+#include "wdiplo.h"
 // world.c — mundo celular M1 (DESIGN.md sec 4.1, 4.5, 4.6).
 // Custos e taxas sao proposta de design: balancear aqui.
 
@@ -76,6 +78,13 @@ void World_DeclareWar(World *w,u8 a,u8 b){
  if(!a||!b||a==b||!w->c[a].alive||!w->c[b].alive)return;
  SetWar(w,a,b,true);
 }
+// guerra de IA/jogador: os aliados de cada lado sao chamados (wdiplo.c)
+void World_DeclareWarCall(World *w,u8 a,u8 b){
+ if(!a||!b||a==b||!w->c[a].alive||!w->c[b].alive||World_AtWar(w,a,b))return;
+ SetWar(w,a,b,true);
+ WDip_Unally(w,a,b);
+ WDip_OnWar(w,a,b);
+}
 void World_DeclareHistWar(World *w,u8 a,u8 b){
  if(!a||!b||a==b||!w->c[a].alive||!w->c[b].alive)return;
  SetWar(w,a,b,true);
@@ -109,6 +118,7 @@ static u8 ArchOf(const u8 t[NAT_TRAITS]){
 void World_SetTraits(World *w,u8 ci){
  WCountry *c=&w->c[ci];
  Tr_Mods(c->traits,&c->m);
+ WDip_IdeoMods(c->ideo,&c->m);
  c->archetype=ArchOf(c->traits);
 }
 u8 World_CountryOfNat(const World *w,int nat){
@@ -140,6 +150,10 @@ static void InitCountry(World *w,u8 ci,int nat,int cx,int cy){
  WCountry *c=&w->c[ci];
  u8 *z=(u8*)c;for(unsigned i=0;i<sizeof(*c);i++)z[i]=0;
  c->nat=(u8)nat;c->alive=true;c->kind=d->kind;c->gov=d->gov;
+ c->ideo=c->ideo0=WDip_IdeoOfGov(d->gov);c->mood=(u8)(((u32)nat*2654435761u^w->seed)%101u);
+ {WEco *e=&w->eco[ci];u8 *q=(u8*)e;for(unsigned i=0;i<sizeof(*e);i++)q[i]=0;
+  e->tax=1;e->life=70;e->ind=100;e->hub=-1;
+  for(int g=0;g<GD_COUNT;g++){e->price[g]=GD_BASE[g];e->sat[g]=100;}}
  for(int i=0;i<NAT_TRAITS;i++)c->traits[i]=d->traits[i];
  World_SetTraits(w,ci);
  c->capX=(u16)cx;c->capY=(u16)cy;c->bx0=c->bx1=(u16)cx;c->by0=c->by1=(u16)cy;
@@ -161,18 +175,20 @@ static u32 CellW(const World *w,u32 i,u8 ci){
 static void SetOwner(World *w,u32 i,u8 to){
  u8 from=W_OWNER[i];
  if(from==to)return;
- if(from){WCountry *f=&w->c[from];if(f->cells)f->cells--;u32 cw=CellW(w,i,from);f->pop=f->pop>cw?f->pop-cw:0;}
+ u8 t=W_TERR[i];
+ if(from){WCountry *f=&w->c[from];if(f->cells)f->cells--;u32 cw=CellW(w,i,from);f->pop=f->pop>cw?f->pop-cw:0;if(f->terr[t])f->terr[t]--;}
  W_OWNER[i]=to;
  // render incremental: so' o bloco 8x8 desta celula sera redesenhado
  {u32 b=(i/w->w/8)*W_BLK_W+(i%w->w)/8;w->dirtyBlk[b>>3]|=(u8)(1u<<(b&7));}
  if((W_CITYB[i>>3]>>(i&7))&1)City_OnOwner(w,i,to);
- if(to){w->c[to].cells++;w->c[to].pop+=CellW(w,i,to);Grow(&w->c[to],(int)(i%w->w),(int)(i/w->w));}
+ if(to){w->c[to].cells++;w->c[to].pop+=CellW(w,i,to);w->c[to].terr[t]++;Grow(&w->c[to],(int)(i%w->w),(int)(i/w->w));}
 }
 static void RecalcAllPop(World *w){
- for(u8 ci=1;ci<w->nC;ci++)w->c[ci].pop=0;
+ for(u8 ci=1;ci<w->nC;ci++){w->c[ci].pop=0;for(int t=0;t<WT_COUNT;t++)w->c[ci].terr[t]=0;}
  u32 n=(u32)w->w*w->h;
- for(u32 i=0;i<n;i++){u8 o=W_OWNER[i];if(o)w->c[o].pop+=CellW(w,i,o);}
+ for(u32 i=0;i<n;i++){u8 o=W_OWNER[i];if(o){w->c[o].pop+=CellW(w,i,o);w->c[o].terr[W_TERR[i]]++;}}
 }
+void World_RecountTerr(World *w){RecalcAllPop(w);}
 // troca o nucleo `from` (nacao) por `to` no mapa inteiro
 static void Recore(World *w,int from,int to){
  u32 n=(u32)w->w*w->h;
@@ -189,6 +205,7 @@ static bool AtFloor(const World *w,u8 o){
 static void Kill(World *w,u8 ci){
  WCountry *c=&w->c[ci];
  c->alive=false;c->atkOn=false;c->troops=0;
+ WDip_OnDeath(w,ci);
  for(u8 j=1;j<w->nC;j++){
   if(World_AtWar(w,ci,j))SetWar(w,ci,j,false);
   if(w->c[j].atkOn&&w->c[j].atkTo==ci){w->c[j].troops+=w->c[j].atkTroops;w->c[j].atkOn=false;}
@@ -282,6 +299,8 @@ void World_Become(World *w,u8 ci,int nat){
  c->nat=(u8)nat;w->natToC[nat]=ci;
  Recore(w,old,nat);
  c->kind=d->kind;c->gov=d->gov;
+ // nova bandeira de base: se a ideologia era a de base, segue a nova
+ {u8 o0=c->ideo0;c->ideo0=WDip_IdeoOfGov(d->gov);if(c->ideo==o0)c->ideo=c->ideo0;}
  for(int i=0;i<NAT_TRAITS;i++)c->traits[i]=d->traits[i];
  World_SetTraits(w,ci);
  c->overlord=0;
@@ -365,11 +384,11 @@ static void Expand(World *w,bool fill){
 }
 // Depois da expansao: conta celulas, caixas, tropas iniciais.
 static void Settle(World *w){
- for(u8 ci=1;ci<w->nC;ci++){w->c[ci].cells=0;w->c[ci].pop=0;}
+ for(u8 ci=1;ci<w->nC;ci++){w->c[ci].cells=0;w->c[ci].pop=0;for(int t=0;t<WT_COUNT;t++)w->c[ci].terr[t]=0;}
  for(int y=0;y<w->h;y++)for(int x=0;x<w->w;x++){
   u32 i=World_Idx(w,x,y);
   u8 o=W_OWNER[i];
-  if(o){W_CORE[i]=(u8)(w->c[o].nat+1);w->c[o].cells++;w->c[o].pop+=CellW(w,i,o);Grow(&w->c[o],x,y);}
+  if(o){W_CORE[i]=(u8)(w->c[o].nat+1);w->c[o].cells++;w->c[o].pop+=CellW(w,i,o);w->c[o].terr[W_TERR[i]]++;Grow(&w->c[o],x,y);}
  }
  for(u8 ci=1;ci<w->nC;ci++){
   WCountry *c=&w->c[ci];
@@ -446,6 +465,7 @@ void World_GenRandom(World *w,u32 seed,u8 size,u8 nNations,u8 diff,int playerNat
  Expand(w,false);
  Settle(w);
  World_Field(w);City_Gen(w);
+ WEco_Init(w);WDip_Init(w);WEco_Week(w);
  Hist_Init(w);
 }
 
@@ -512,6 +532,7 @@ void World_GenMundi(World *w,u32 seed,u8 hist,u8 diff,int playerNat){
   World_DeclareHistWar(w,World_CountryOfNat(w,Nat_Find(WARS[k][0])),World_CountryOfNat(w,Nat_Find(WARS[k][1])));
  w->nWars=0;
  World_Field(w);City_Gen(w);
+ WEco_Init(w);WDip_Init(w);WEco_Week(w);
  Hist_Init(w);
 }
 
@@ -581,7 +602,11 @@ void World_Recall(World *w,u8 ci){
 }
 // Recrutar: ouro vira regimentos. Custa metade do teto e da' 1/4 dele, ate
 // 150% do teto (o excesso decai no World_Day). Unico gasto de ouro do mundo.
-s32 World_RecruitCost(const World *w,u8 ci){return w->c[ci].cap/2+20;}
+s32 World_RecruitCost(const World *w,u8 ci){
+ // armas caras (falta no mercado) encarecem o recrutamento
+ s32 p=w->eco[ci].price[GD_ARMAS],b=GD_BASE[GD_ARMAS];
+ return (w->c[ci].cap/2+20)*(100+(p-b)*50/b)/100;
+}
 bool World_Recruit(World *w,u8 ci){
  WCountry *c=&w->c[ci];
  s32 cost=World_RecruitCost(w,ci);
@@ -639,7 +664,12 @@ bool World_Landing(World *w,u8 a,u8 b,s32 *cost){
  }
  if(best<0)return false;
  SetOwner(w,(u32)best,a);w->nConquests++;
- if(cost){*cost=w->c[a].troops/10;w->c[a].troops-=*cost;}
+ // a frota escolta: sem navios custa o dobro; frota inimiga maior afunda transportes
+ s32 k=w->c[a].troops/10;
+ if(w->c[a].ships<=0)k*=2;
+ if(b&&w->c[b].ships>w->c[a].ships)k+=w->c[a].troops/8;
+ if(cost){*cost=k;}
+ w->c[a].troops-=k;if(w->c[a].troops<0)w->c[a].troops=0;
  return true;
 }
 // Troca o pais do jogador (governo no exilio / "jogar como outro", DESIGN 2.1.7).
@@ -783,6 +813,11 @@ static void AI(World *w,u8 ci){
     bool bold=c->archetype==WA_EXPANSIONISTA||c->archetype==WA_OPORTUNISTA||c->archetype==WA_REVOLUCIONARIO;
     // por mil, por decisao (a cada 8 dias): mapa-mundi com historia e bem mais calmo
     int chance=w->mode!=WM_MUNDI?80:(w->hist==WH_LIGADA?3:10);
+    // rival, ideologia oposta e temperamento mudam a conta (imprevisivel)
+    if(o==c->rival)chance*=3;
+    if(WDip_Allied(w,ci,o))continue;
+    if((c->ideo==ID_COMUNISTA)!=(d->ideo==ID_COMUNISTA))chance*=2;
+    chance=chance*(50+c->mood)/100;
     int maxWars=w->mode==WM_MUNDI?0:1;
     if(!bold||c->warN>maxWars||d->troops*10>c->troops*5||World_RngRange(w,1000)>=chance)continue;
     s=40+(int)(myD-dD);
@@ -792,7 +827,7 @@ static void AI(World *w,u8 ci){
  }
  if(best<0)return;
  if(best&&!World_AtWar(w,ci,(u8)best)){
-  World_DeclareWar(w,ci,(u8)best);
+  World_DeclareWarCall(w,ci,(u8)best);
   c->warTarget=(u8)best;c->warGain=0;
   c->warGoal=(u16)(w->c[best].cells/3+4); // guerra limitada, nao aniquilacao
  }
@@ -812,14 +847,16 @@ void World_Day(World *w){
   else if(c->warDays)c->warDays=c->warDays>2?c->warDays-2:0;
   s32 tired=c->warDays/20;
   if(tired>50)tired=50;
-  s32 regen=(c->cap/60+1)*(100+c->m.regenPct)/100*(100-tired)/100;
+  s32 regen=(c->cap/60+1)*(100+c->m.regenPct)/100*(100-tired)/100*WEco_ArmsPct(w,ci)/100;
   if(c->troops<c->cap){s32 g=regen*(c->cap-c->troops)/Max32(1,c->cap);c->troops+=g>0?g:1;}
   else c->troops-=(c->troops-c->cap)/50+1;
-  c->gold+=((s32)c->cells/16+1)*(100+c->m.goldPct)/100;
+  c->gold+=((s32)c->cells/48+1)*(100+c->m.goldPct)/100;   // renda da terra (o grosso vem da economia)
   if(newYear)c->prestige+=c->m.prestigeYear+(s32)c->cells/200+(c->kind==NK_ESTADO?1:0);
   if(c->rndCd)c->rndCd--;
  }
  City_Day(w);
+ if((w->day%7)==0)WEco_Week(w);
+ WDip_Day(w);
  for(u8 ci=1;ci<w->nC;ci++)
   if(w->c[ci].alive&&!w->c[ci].player&&((ci+w->day)&7)==0)AI(w,ci);
  Fronts(w);
@@ -885,7 +922,8 @@ u32 World_Hash(const World *w){
  u32 h=2166136261u;
  u32 n=(u32)w->w*w->h;
  for(u32 i=0;i<n;i++){h^=W_OWNER[i];h*=16777619u;}
- for(u8 ci=1;ci<w->nC;ci++){h^=(u32)w->c[ci].troops;h*=16777619u;h^=(u32)w->c[ci].gold;h*=16777619u;}
+ for(u8 ci=1;ci<w->nC;ci++){h^=(u32)w->c[ci].troops;h*=16777619u;h^=(u32)w->c[ci].gold;h*=16777619u;
+  h^=(u32)w->c[ci].ideo|((u32)w->c[ci].bloc<<8)|((u32)w->c[ci].ally[0]<<16)|((u32)(u16)w->c[ci].ships<<24);h*=16777619u;}
  for(int i=0;i<w->nCity;i++){const WCity *c=&w->city[i];h^=(u32)c->pop|((u32)c->tier<<16)|((u32)c->owner<<20);h*=16777619u;
   for(int s=0;s<CITY_SLOTS;s++){h^=c->bld[s];h*=16777619u;}}
  h^=w->rng;

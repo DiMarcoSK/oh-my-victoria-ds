@@ -1,6 +1,7 @@
 #include "city.h"
 #include "earth.h"
 #include "str.h"
+#include "wecon.h"
 // city.c — cidades (DESIGN.md sec 4.7). Ver city.h.
 // Custo: City_Day e' O(cidades) (<=512) por dia; buscas por celula passam
 // antes pelo bitmap W_CITYB (12KB) e so' entao varrem a lista. Nenhuma
@@ -24,6 +25,11 @@ const BldDef BLD[BK_COUNT]={
  [BK_FABRICA]    ={STR_BK_FABRICA,    400,120,2,1830,8,0, 0,1, 0,BK_OFICINA, 0,STR_BD_FABRICA},
  [BK_FERROVIA]   ={STR_BK_FERROVIA,   350,100,1,1830,4,2, 0,1, 0,0,          0,STR_BD_FERROVIA},
  [BK_PALACIO]    ={STR_BK_PALACIO,    500,150,2,   0,2,0,20,8,20,0, BF_CAPITAL,STR_BD_PALACIO},
+ [BK_SERRARIA]   ={STR_BK_SERRARIA,    90, 35,0,   0,0,0, 0,0, 0,0,   BF_WOOD,STR_BD_SERRARIA},
+ [BK_MINA]       ={STR_BK_MINA,       160, 60,0,   0,1,0, 0,0, 0,0,    BF_ORE,STR_BD_MINA},
+ [BK_ARSENAL]    ={STR_BK_ARSENAL,    260, 80,1,   0,0,0,15,0, 5,BK_OFICINA,0,STR_BD_ARSENAL},
+ [BK_ESTALEIRO]  ={STR_BK_ESTALEIRO,  240, 90,1,   0,1,0, 0,1, 0,BK_PORTO, BF_COAST,STR_BD_ESTALEIRO},
+ [BK_POCO]       ={STR_BK_POCO,       300, 90,0,1860,2,0, 0,0, 0,0,    BF_OIL,STR_BD_POCO},
 };
 
 // Cidades de 1800 (populacao aproximada em milhares). Grafia em PT quando
@@ -160,6 +166,40 @@ static bool Coastal(const World *w,int x,int y){
  }
  return false;
 }
+// latitude aproximada da linha y (mapa-mundi: projecao da Terra; aleatorio: faixa)
+static int LatOf(const World *w,int y){
+ if(w->mode==WM_MUNDI)return EARTH_LAT_TOP-(y*EARTH_LAT_SPAN)/w->h;
+ return 90-(y*180)/(w->h?w->h:1);
+}
+// potencial do entorno (raio 3, 49 celulas): lavoura, mata, minerio, clima e
+// petroleo. Calculado 1x ao criar a cidade; a economia so' le (wecon.c).
+static void Survey(const World *w,WCity *c){
+ int ag=0,wd=0,ore=0,oil=0,jun=0;
+ for(int dy=-3;dy<=3;dy++)for(int dx=-3;dx<=3;dx++){
+  int nx=c->x+dx,ny=c->y+dy;
+  if(ny<0||ny>=w->h)continue;
+  if(nx<0||nx>=w->w){if(!w->wrap)continue;nx=(nx+w->w)%w->w;}
+  switch(W_TERR[World_Idx(w,nx,ny)]){
+   case WT_PLAINS:ag+=3;break;
+   case WT_STEPPE:ag+=2;oil++;break;
+   case WT_FOREST:wd+=3;ag+=1;break;
+   case WT_JUNGLE:wd+=2;ag+=1;jun++;break;
+   case WT_HILLS:ore+=2;ag+=1;break;
+   case WT_MOUNTAIN:ore+=4;break;
+   case WT_DESERT:oil+=2;break;
+   case WT_SWAMP:oil+=1;wd+=1;break;
+   case WT_TUNDRA:wd+=1;oil+=1;break;
+   default:break;
+  }
+ }
+ c->agri=(u8)(ag>255?255:ag);c->wood=(u8)(wd>255?255:wd);c->ore=(u8)(ore>255?255:ore);
+ int lat=LatOf(w,c->y);
+ c->res=0;
+ if((lat<=23&&lat>=-23)||jun>=4)c->res|=RS_TROPICAL;
+ // petroleo: deserto/estepe/pantano e um sorteio fixo pela posicao (nem todo deserto tem)
+ if(oil>=4&&(Hs((u32)c->x*977u+c->y,w->seed^0x0117u)%3)!=0)c->res|=RS_OLEO;
+ c->food=100;
+}
 static int Add(World *w,int x,int y,u16 pop,u8 flags,u16 name){
  if(w->nCity>=W_MAXCITY)return -1;
  u32 i=World_Idx(w,x,y);
@@ -167,6 +207,7 @@ static int Add(World *w,int x,int y,u16 pop,u8 flags,u16 name){
  u8 *p=(u8*)c;for(unsigned k=0;k<sizeof *c;k++)p[k]=0;
  c->x=(u16)x;c->y=(u16)y;c->owner=W_OWNER[i];c->pop=pop;c->name=name;
  c->flags=(u8)(flags|(Coastal(w,x,y)?CF_COASTAL:0));
+ Survey(w,c);
  SetB(i);
  return w->nCity++;
 }
@@ -184,7 +225,17 @@ static void InitCity(World *w,int i){
  int s=0;
  for(int k=0;k<6&&L[c->tier][k];k++)c->bld[s++]=L[c->tier][k];
  if(c->tier>=CT_CIDADE&&(c->flags&CF_COASTAL)&&s<City_Slots(c->tier))c->bld[s++]=BK_PORTO;
- if(c->tier>=CT_METROPOLE&&City_IsCapital(w,i)&&s<City_Slots(c->tier))c->bld[s++]=BK_PALACIO;
+ // potencias navais de 1800 ja tem estaleiro nos grandes portos
+ if(c->tier>=CT_CIDADE&&(c->flags&CF_COASTAL)&&c->owner&&s<City_Slots(c->tier)-2){
+  const WCountry *O=&w->c[c->owner];bool sea=false;
+  for(int t=0;t<NAT_TRAITS;t++)if(O->traits[t]==TR_MARES||O->traits[t]==TR_COLONIAL||O->traits[t]==TR_ENTREPOSTO||O->traits[t]==TR_CORSARIOS)sea=true;
+  if(sea)c->bld[s++]=BK_ESTALEIRO;
+ }
+ // 1800: as grandes cidades ja tem oficinas; minas e serrarias onde ha recurso
+ if(c->tier>=CT_CIDADE&&s<City_Slots(c->tier)-2)c->bld[s++]=BK_OFICINA;
+ if(c->tier>=CT_VILAREJO&&c->ore>=24&&s<City_Slots(c->tier)-2)c->bld[s++]=BK_MINA;
+ else if(c->tier>=CT_VILAREJO&&c->wood>=30&&s<City_Slots(c->tier)-2)c->bld[s++]=BK_SERRARIA;
+ if(c->tier>=CT_METROPOLE&&City_IsCapital(w,i)&&s<City_Slots(c->tier)-1)c->bld[s++]=BK_PALACIO;
 }
 // terra mais proxima (ate r) de (x,y)
 static bool NearLand(const World *w,int *x,int *y,int r){
@@ -265,16 +316,29 @@ bool City_CanBuild(const World *w,int i,u8 k){
  if(b->need&&!Has(c,b->need))return false;
  if((b->flags&BF_COAST)&&!(c->flags&CF_COASTAL))return false;
  if((b->flags&BF_CAPITAL)&&!City_IsCapital(w,i))return false;
+ if((b->flags&BF_WOOD)&&c->wood<6)return false;
+ if((b->flags&BF_ORE)&&c->ore<6)return false;
+ if((b->flags&BF_OIL)&&!(c->res&RS_OLEO))return false;
  return true;
+}
+// preco da obra: madeira e ferramentas caras no mercado encarecem (75%..150%)
+s32 City_Cost(const World *w,int i,u8 k){
+ const WCity *c=&w->city[i];
+ const WEco *e=&w->eco[c->owner];
+ s32 p=e->price[GD_MADEIRA]+e->price[GD_FERRAMENTAS],b=GD_BASE[GD_MADEIRA]+GD_BASE[GD_FERRAMENTAS];
+ s32 m=100+(p-b)*50/b;
+ if(m<75)m=75;
+ if(m>150)m=150;
+ return (s32)BLD[k].cost*m/100;
 }
 bool City_Build(World *w,int i,int slot,u8 k){
  WCity *c=&w->city[i];
- if(!c->owner||!City_CanBuild(w,i,k)||w->c[c->owner].gold<BLD[k].cost)return false;
+ if(!c->owner||!City_CanBuild(w,i,k)||w->c[c->owner].gold<City_Cost(w,i,k))return false;
  if(slot<0||slot>=City_Slots(c->tier)||c->bld[slot]){
   slot=-1;for(int s=0;s<City_Slots(c->tier);s++)if(!c->bld[s]){slot=s;break;}
   if(slot<0)return false;
  }
- w->c[c->owner].gold-=BLD[k].cost;
+ w->c[c->owner].gold-=City_Cost(w,i,k);
  c->bq=k;c->bqDays=BLD[k].days;c->bqSlot=(u8)slot;
  return true;
 }
@@ -307,16 +371,44 @@ static u8 StyleOf(const World *w,u8 owner){
 // ---- IA: constroi por prioridade e funda quando tem ouro e terra vazia ----
 // ordem pensada no caminho de nivel: mercado (-> cidade) e universidade
 // (-> metropole) antes de quartel/muralha, senao a cidade lota os slots
-static const u8 PRIO[]={BK_FAZENDA,BK_MERCADO,BK_TEMPLO,BK_UNIVERSIDADE,BK_OFICINA,BK_FABRICA,
- BK_PORTO,BK_FERROVIA,BK_QUARTEL,BK_MURALHA,BK_PALACIO};
+// A IA pesa o que o mercado pede: bem em falta (preco alto) puxa a obra que
+// o produz; o caminho de nivel (mercado -> cidade, universidade/fabrica ->
+// metropole) e a guerra (quartel, muralha, arsenal) somam pontos.
+static int Want(const WEco *e,u8 g){return e->price[g]*100/GD_BASE[g]+(100-e->sat[g]);}
+static int AiScore(const World *w,int i,u8 k){
+ const WCity *c=&w->city[i];const WCountry *C=&w->c[c->owner];const WEco *e=&w->eco[c->owner];
+ int s=0;
+ switch(k){
+  case BK_FAZENDA:s=60+(100-c->food)*2+Want(e,GD_GRAOS)/2;break;
+  case BK_MERCADO:s=c->tier>=CT_VILAREJO?150:70;break;
+  case BK_TEMPLO:s=40+(C->happy<50?60:0);break;
+  case BK_UNIVERSIDADE:s=c->tier>=CT_CIDADE?120:0;break;
+  case BK_OFICINA:s=50+Want(e,GD_FERRAMENTAS)/2;break;
+  case BK_FABRICA:s=80+Want(e,GD_TEXTEIS)/2+Want(e,GD_FERRAMENTAS)/2;break;
+  case BK_SERRARIA:s=Want(e,GD_MADEIRA)+c->wood;break;
+  case BK_MINA:s=Want(e,GD_MINERIO)+c->ore;break;
+  case BK_ARSENAL:s=(C->warN?120:30)+Want(e,GD_ARMAS)/2;break;
+  case BK_POCO:s=60+Want(e,GD_PETROLEO);break;
+  case BK_PORTO:s=90+(C->archetype==WA_MERCADOR?60:0);break;
+  case BK_ESTALEIRO:s=(C->archetype==WA_MERCADOR||C->m.tradePct>=10)?110:30;break;
+  case BK_FERROVIA:s=90;break;
+  case BK_QUARTEL:s=C->warN?110:40;break;
+  case BK_MURALHA:s=C->warN?80:20;break;
+  case BK_PALACIO:s=60;break;
+  default:break;
+ }
+ return s;
+}
 static void AiBuild(World *w,int i){
  WCity *c=&w->city[i];WCountry *C=&w->c[c->owner];
- for(unsigned k=0;k<sizeof PRIO;k++){
-  u8 b=PRIO[k];
-  if(!City_CanBuild(w,i,b))continue;
-  if(C->gold<BLD[b].cost*2)return;     // guarda reserva p/ a guerra
-  City_Build(w,i,-1,b);return;
+ int best=-1,bs=0;
+ for(u8 k=1;k<BK_COUNT;k++){
+  if(!City_CanBuild(w,i,k))continue;
+  int sc=AiScore(w,i,k)+(int)(Hs((u32)i*31u+k,w->day>>5)%20);   // pitada de acaso (hash, nao RNG)
+  if(sc>bs){bs=sc;best=k;}
  }
+ if(best<0||C->gold<City_Cost(w,i,(u8)best)*2)return;     // guarda reserva p/ a guerra
+ City_Build(w,i,-1,(u8)best);
 }
 static void AiFound(World *w,u8 ci){
  WCountry *C=&w->c[ci];
@@ -338,7 +430,8 @@ void City_Day(World *w){
   if(!o||!w->c[o].alive)continue;
   WCountry *C=&w->c[o];
   if(c->bq){
-   if(c->bqDays)c->bqDays--;
+   // falta de ferramentas atrasa a obra (1 dia de obra a cada ~2 dias)
+   if(c->bqDays&&(int)((w->day*37u+(u32)i)%100u)<WEco_ToolsPct(w,o))c->bqDays--;
    if(!c->bqDays){
     int s=c->bqSlot;
     if(s>=CITY_SLOTS||c->bld[s]){s=-1;for(int k=0;k<CITY_SLOTS;k++)if(!c->bld[k]){s=k;break;}}
@@ -350,15 +443,16 @@ void City_Day(World *w){
   int gold=c->tier,food=0,cap=c->pop/8,prest=0;
   for(int s=0;s<CITY_SLOTS;s++){u8 k=c->bld[s];if(!k)continue;
    gold+=BLD[k].gold;food+=BLD[k].food;cap+=BLD[k].cap;prest+=BLD[k].prestige;}
-  C->cityGold+=gold;C->cityCap+=cap;C->nCity++;
-  C->gold+=gold;
+  C->cityGold+=gold;C->cityCap+=cap;C->nCity++;   // ouro entra na semana (WEco_Week)
   if(newYear)C->prestige+=prest;
   int pc=City_PopCap(c);
+  if(c->food<50&&c->pop>3&&((w->day+(u32)i)%60u)==0)c->pop=(u16)(c->pop-(c->pop/100+1)); // fome: a cidade encolhe
   if(c->pop<pc){
    // crescimento realista: ~1,5%/ano sem obras, ate ~4%/ano com fazenda,
-   // porto e ferrovia; desacelera perto do teto (logistica). Vila pequena
-   // ganha 1 mil por vez e vira vilarejo em poucos anos.
+   // porto e ferrovia; desacelera perto do teto (logistica) e depende da
+   // comida (mercado local + nacional, wecon.c) e do nivel de vida.
    int g=4+food*3+c->tier*2+(C->happy>60?2:0);
+   g=g*c->food/100*(50+w->eco[o].life/2)/100;
    if(c->pop*4>pc*3)g/=2;
    c->grow=(u16)(c->grow+g);
    if(c->grow>=1000){c->grow-=1000;int add=c->pop/200;if(add<1)add=1;c->pop=(u16)(c->pop+add);if(c->pop>pc)c->pop=(u16)pc;}
