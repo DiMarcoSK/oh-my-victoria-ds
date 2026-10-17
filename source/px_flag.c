@@ -16,6 +16,11 @@ static const u8 EMB[FE_COUNT][8]={
  {0x18,0x18,0xFF,0xFF,0x18,0x18,0x18,0x18}, // cruz
  {0xE0,0xB8,0x1C,0x0E,0x77,0xE3,0x81,0x00}, // dragao
  {0xFF,0xFF,0xFF,0xFF,0x7E,0x7E,0x3C,0x18}, // escudo
+ {0x0E,0x07,0x63,0x33,0x1E,0x8C,0x76,0x23}, // foice e martelo
+ {0x10,0x54,0x7C,0xFE,0x7C,0x38,0x10,0x10}, // folha de bordo
+ {0x10,0x28,0xFE,0x44,0x44,0xFE,0x28,0x10}, // estrela de seis pontas
+ {0x3C,0x42,0xFF,0xA5,0xA5,0xFF,0x42,0x3C}, // esfera armilar / globo
+ {0xE0,0xE5,0x40,0x08,0x02,0x09,0x02,0x00}, // estrela grande + 4 pequenas (cantao)
 };
 
 static u16 FC(u8 c){u8 r,g,b;Flag_PalRGB(c,&r,&g,&b);return Px_Col(r,g,b);}
@@ -86,6 +91,34 @@ static void Draw(u16 *buf,int stride,int x,int y,int w,int h,const FlagDef *f,in
    case FP_LISTRAS:c=(stripe&1)?c1:c0;
     if(i<cantW&&j<cantH)c=c2;
     break;
+   case FP_LOSANGO:{
+    // losango tocando quase as bordas + disco central
+    int cx=w/2,cy=h/2,ax=Iabs(i-cx)*h,ay=Iabs(j-cy)*w;
+    if(ax+ay<=(w*h)*9/20)c=c1;
+    int rx=(i-cx)*2,ry=(j-cy)*2*w/h,rr=h*w/h*7/10;
+    if(rx*rx/4+ry*ry/4<=(rr*rr)/4&&c2!=c1&&(rx*rx+ry*ry)<=(h*h*49/100))c=c2;
+   }break;
+   case FP_TRIANG:case FP_TRIANG2:{
+    if(f->pat==FP_TRIANG){int st=h>=10?5:3;c=((j*st)/h)&1?c1:c0;}
+    else c=band2==0?c0:c1;
+    int tri=(j<h/2?j:h-1-j)*w*2/(h*3)+1;      // triangulo ate' ~2/5 da largura
+    if(i<tri)c=c2;
+   }break;
+   case FP_LISTRAS5:{int b5=(j*5)/h;c=b5==0||b5==4?c0:(b5==2?c2:c1);
+    if(f->c0==FC_WHITE&&f->c2==FC_WHITE){int b=(j*7)/h;c=(b==1||b==5)?c1:c0;} // Israel: 2 faixas finas
+   }break;
+   case FP_ENSIGN:{
+    c=c0;
+    if(i<w/2&&j<h/2){                        // Union Jack no cantao
+     int ww=w/2,hh=h/2,bb=ww>hh?ww:hh,tt=hh/6;if(tt<1)tt=1;
+     int d1=Iabs(i*hh-j*ww),d2=Iabs((ww-1-i)*hh-j*ww);
+     c=nv;
+     if(d1<=tt*bb||d2<=tt*bb)c=wh;
+     if(d1<=tt*bb/3||d2<=tt*bb/3)c=rd;
+     if(Iabs(i-ww/2)<=tt||Iabs(j-hh/2)<=tt)c=wh;
+     if(Iabs(i-ww/2)<=tt/2||Iabs(j-hh/2)<=tt/2)c=rd;
+    }
+   }break;
    default:break;
    }
    row[i]=c;
@@ -94,6 +127,9 @@ static void Draw(u16 *buf,int stride,int x,int y,int w,int h,const FlagDef *f,in
  u16 ec=FC(f->ec);
  if(f->pat==FP_CANTAO)Emblem(buf,stride,x,y,w/2,h/2,f->emb,ec);
  else if(f->pat==FP_LISTRAS)Emblem(buf,stride,x,y,cantW,cantH,f->emb,ec);
+ else if(f->pat==FP_TRIANG||f->pat==FP_TRIANG2)Emblem(buf,stride,x,y+h/4,w/4,h/2,f->emb,ec);
+ else if(f->pat==FP_ENSIGN)Emblem(buf,stride,x+w/2,y,w/2,h,f->emb,ec);
+ else if(f->emb==FE_ESTRELAS)Emblem(buf,stride,x,y,w/2,h/2,f->emb,ec);
  else Emblem(buf,stride,x,y,w,h-vcut,f->emb,ec);
 }
 

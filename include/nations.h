@@ -20,11 +20,18 @@ typedef enum {
 // Bandeira procedural (DESIGN.md sec 6.2.1): padrao + 3 cores + emblema.
 typedef enum {
  FP_LISA=0, FP_TRI_V, FP_TRI_H, FP_BI_H, FP_BI_V, FP_NORDICA, FP_CRUZ,
- FP_SALTIRE, FP_UNION, FP_CANTAO, FP_BORDA, FP_DIAG, FP_LISTRAS, FP_COUNT
+ FP_SALTIRE, FP_UNION, FP_CANTAO, FP_BORDA, FP_DIAG, FP_LISTRAS,
+ FP_LOSANGO,   // campo c0, losango c1, disco c2 (Brasil)
+ FP_TRIANG,    // listras c0/c1 + triangulo c2 na tralha (Cuba)
+ FP_TRIANG2,   // 2 faixas c0/c1 + triangulo c2 (Filipinas, Tchecoslovaquia)
+ FP_LISTRAS5,  // 5 faixas simetricas c0 c1 c2 c1 c0 (Tailandia, Israel)
+ FP_ENSIGN,    // campo c0 + Union Jack no cantao (Canada, Raj, colonias)
+ FP_COUNT
 } FlagPattern;
 typedef enum {
  FE_NONE=0, FE_ESTRELA, FE_CRESCENTE, FE_SOL, FE_DISCO, FE_COROA, FE_AGUIA,
- FE_AGUIA2, FE_LEAO, FE_CRUZ, FE_DRAGAO, FE_ESCUDO, FE_COUNT
+ FE_AGUIA2, FE_LEAO, FE_CRUZ, FE_DRAGAO, FE_ESCUDO,
+ FE_FOICE, FE_FOLHA, FE_ESTRELA6, FE_GLOBO, FE_ESTRELAS, FE_COUNT
 } FlagEmblem;
 typedef enum {
  FC_WHITE=0, FC_RED, FC_BLUE, FC_NAVY, FC_GREEN, FC_YELLOW, FC_BLACK, FC_ORANGE,
@@ -60,3 +67,10 @@ int Nat_Find(const char *tag);           // indice ou -1
 const char *Nat_ContName(u8 c);
 const char *Nat_GovName(u8 g);
 void Flag_PalRGB(u8 c,u8 *r,u8 *g,u8 *b); // cor da paleta de bandeiras (5 bits)
+// Bandeiras historicas e por regime (source/hflags.c, ADR-34): a bandeira de
+// um pais muda com o ANO e com a IDEOLOGIA (Franca Bourbon, Imperio Alemao,
+// Weimar, Brasil Imperio -> Republica, Russia 1858, Canada 1965...).
+// Devolve 2 = bandeira propria desta ideologia (usar como esta'); 1 = base
+// do periodo (aplicar a transformacao da ideologia por cima); 0 = catalogo.
+int HFlag_Find(const char *tag,u16 year,u8 ideo,FlagDef *out);
+int HFlag_Count(void);
