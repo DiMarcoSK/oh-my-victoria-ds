@@ -17,6 +17,7 @@ void WDip_Day(World *w);
 void WDip_OnWar(World *w,u8 a,u8 b);
 void WDip_OnDeath(World *w,u8 ci);              // limpa referencias a um pais morto          // guerra nova (nao historica): aliados
 bool WDip_Allied(const World *w,u8 a,u8 b);
+bool WDip_Opposed(u8 a,u8 b);                   // ideologias inimigas (comunismo x todos, autoritario x liberal)
 void WDip_Ally(World *w,u8 a,u8 b);
 void WDip_Unally(World *w,u8 a,u8 b);
 int WDip_Allies(const World *w,u8 a);

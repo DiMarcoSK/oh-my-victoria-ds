@@ -19,6 +19,9 @@
 #include "settings.h"
 #include "menu.h"
 #include "wgame.h"
+#include "wwar.h"
+#include "wsoc.h"
+#include "city.h"
 #include "wfort.h"
 #include "wlaw.h"
 #include "wstat.h"
@@ -101,6 +104,11 @@ int main(void){
  Press(g,KEY_A);
  printf("  gerou o mundo em %.0f ms (PC, ASan)\n",(double)(clock()-t0)*1000.0/CLOCKS_PER_SEC);
  if(g->screen!=SCR_WORLD){printf("FALHA: nao entrou no SCR_WORLD\n");return 1;}
+ // abertura (ADR-46): o seculo toma a tela por ~5 s e some sozinho
+ if(!WG_Ptr()->centT){printf("FALHA: a partida nao abriu com a transicao de seculo\n");bad=1;}
+ Frames(g,30);Shot(g,"07a_seculo");
+ Frames(g,340);
+ if(WG_Ptr()->centT){printf("FALHA: a transicao de seculo nao terminou\n");bad=1;}
  Shot(g,"07_mundo_z3");
  Press(g,KEY_SELECT);Frames(g,600);  Shot(g,"08_mundo_50dias");
  Press(g,KEY_SELECT);
@@ -140,8 +148,35 @@ int main(void){
  u32 c0=WG_World()->c[WG_Ptr()->me].cells,c1=c0;
  World_Recruit(WG_World(),WG_Ptr()->me);World_Recruit(WG_World(),WG_Ptr()->me); // recruta com o ouro inicial
  WG_Ptr()->pct=100;
- if(!TapAct(g,DM_GUERRA)&&!TapAct(g,DM_ATACAR)){printf("FALHA: folha sem guerra/ataque sobre a Franca\n");bad=1;}
- if(WG_Ptr()->dipOpen){printf("FALHA: a folha nao fechou depois da acao\n");bad=1;}
+ // ADR-45: exigir abre a folha de objetivo; o objetivo abre a CRISE (40 dias);
+ // so' no fim do prazo, sem acordo, vira guerra
+ {World*w=WG_World();u8 me=WG_Ptr()->me,fra=World_CountryOfNat(w,Nat_Find("FRA"));
+  if(TapAct(g,DM_GUERRA)){
+   if(!WG_Ptr()->dipOpen||WG_Ptr()->actKind!=AK_META){printf("FALHA: Exigir nao abriu a folha de objetivo\n");bad=1;}
+   Shot(g,"14b_objetivo");
+   if(!TapAct(g,DM_META_TERRA)){printf("FALHA: folha de objetivo sem Territorio\n");bad=1;}
+   if(WG_Ptr()->dipOpen){printf("FALHA: a folha nao fechou depois da acao\n");bad=1;}
+   u8 tg=WG_Ptr()->dipTo;int k=War_Find(w,me,tg);    // alvo = o pais sob a mira (a GBR ja' esta' em guerra com a Franca em 1800)
+   printf("  exigir territorio de %s\n",tg?NATIONS[w->c[tg].nat].tag:"-");
+   if(k<0||w->cr[k].st!=CRS_CRISE){printf("FALHA: exigir nao abriu a crise\n");bad=1;}
+   else{
+    // a Franca e' forte: o jogador fica com o mesmo tamanho da coalizao dela p/ a crise nao acabar em recuo
+    w->c[me].troops+=War_Strength(w,k,1);
+    if(w->prop.kind)Answer(g,false);
+    Frames(g,4);Shot(g,"15a_crise");
+    int n=War_CallAllies(w,k,me);printf("  crise aberta: prazo %d dias, exige %d celulas, aliados chamados %d\n",w->cr[k].days,(int)w->cr[k].demand,n);
+    bool p=WG_Ptr()->paused;WG_Ptr()->paused=false;
+    for(int i=0;i<4000&&w->cr[k].st==CRS_CRISE;i++){if(w->prop.kind)Answer(g,false);WG_Ptr()->paused=false;Frames(g,1);}
+    WG_Ptr()->paused=p;
+    printf("  fim da crise: %s\n",World_AtWar(w,me,tg)?"guerra":(w->cr[k].st?"?":"resolvida sem guerra"));
+   }
+  }
+  if(fra&&World_AtWar(w,me,fra)){if(w->c[me].atkOn)World_Recall(w,me);WG_Goto(w->c[fra].capX+3,w->c[fra].capY+4);WG_Ptr()->pct=100;Press(g,KEY_A);
+   if(!TapAct(g,DM_ATACAR)){printf("FALHA: em guerra, a folha nao tem Atacar\n");bad=1;}
+   if(WG_Ptr()->dipOpen){printf("FALHA: a folha nao fechou depois do ataque\n");bad=1;}
+   Shot(g,"15e_guerra_placar");}
+  else{World_DeclareWar(w,me,fra);w->c[me].troops+=3000;World_Attack(w,me,fra,100);}   // a crise acabou em acordo: guerra direta p/ o resto do roteiro
+ }
  Press(g,KEY_SELECT);
  // resposta da IA: quantos dias ate' o alvo abrir frente de volta (contra-ataque)
  {World*w=WG_World();u8 me=WG_Ptr()->me,fra=World_CountryOfNat(w,Nat_Find("FRA"));u32 d0=w->day;int resp=-1;
@@ -165,6 +200,7 @@ int main(void){
    if(W_OWNER[i+1]==w->c[o].atkTo||W_OWNER[i-1]==w->c[o].atkTo){fx=x;fy=y;fa=o;break;}}
   printf("  frente na tela: %s\n",fx>=0?NATIONS[w->c[fa].nat].tag:"nenhuma frente no mundo");
   if(fx>=0)WG_Goto(fx,fy);
+  if(w->prop.kind)Answer(g,false);          // despacho pendente come as teclas
   WG_Ptr()->bannerT=0;Press(g,KEY_R);Frames(g,8);Shot(g,"15d_z5_batalha");
   if(WG_Ptr()->zoom!=5){printf("FALHA: R nao chegou ao Z5\n");bad=1;}
   Press(g,KEY_L);}
@@ -215,6 +251,23 @@ int main(void){
    bool built=false;for(int k=0;k<CITY_SLOTS;k++)if(w->city[cap].bld[k]==want)built=true;
    if(!built){printf("FALHA: obra nao ficou pronta\n");bad=1;}
    Frames(g,8);Shot(g,"25_cidade_pronta");
+   // ampliar (ADR-44): a obra recem-feita sobe de nivel pelo botao do lote
+   {WCity *c=&w->city[cap];int sl=-1;for(int k=0;k<CITY_SLOTS;k++)if(c->bld[k]==want)sl=k;
+    if(sl>=0&&c->bpos[sl]<CG_N){
+     s->cityLot=c->bpos[sl];w->c[s->me].gold+=5000;int lv=City_Level(c,sl);u16 why=City_UpWhy(w,cap,sl);
+     Touch(g,128,CY_BTN_Y+8);Shot(g,"25b_ampliando");
+     if(why)printf("  ampliar: indisponivel (%s)\n",Str(why));
+     else{
+      if(!c->bq||!c->bqUp){printf("FALHA: botao Ampliar nao pos a obra na fila\n");bad=1;}
+      s->paused=false;for(int i=0;i<400&&c->bq;i++)Frames(g,1);s->paused=true;
+      printf("  ampliar: nivel %d -> %d\n",lv,City_Level(c,sl));
+      if(City_Level(c,sl)!=lv+1){printf("FALHA: ampliacao nao subiu o nivel\n");bad=1;}
+     }}
+    // mapa 20x12 (ADR-44): mira no canto oposto rola a camera
+    s->cityLot=(u8)(CG_N-1);for(int i=0;i<12;i++)Frames(g,1);
+    printf("  camera da cidade: %d,%d\n",s->cityCamX,s->cityCamY);
+    if(!s->cityCamX||!s->cityCamY){printf("FALHA: a camera da cidade nao rolou ate' o canto\n");bad=1;}
+    Shot(g,"25c_cidade_rolada");}
    Press(g,KEY_B);
   }
   // fundar: celula propria longe de cidades
@@ -328,6 +381,20 @@ int main(void){
   Press(g,KEY_R);Shot(g,"32_gabinete_diplo");
   Press(g,KEY_R);Shot(g,"33_gabinete_politica");
   Press(g,KEY_R);Shot(g,"37_gabinete_financas");
+  // juros (ADR-43): metade esquerda baixa, direita sobe
+  {u8 b0=w->eco[s->me].bank;Touch(g,LG_ACT_X+FN_HALF+20,LG_ACT_Y+10);
+   if(w->eco[s->me].bank!=b0+1){printf("FALHA: botao Subir juros nao subiu (%d -> %d)\n",b0,w->eco[s->me].bank);bad=1;}
+   Touch(g,LG_ACT_X+20,LG_ACT_Y+10);Touch(g,LG_ACT_X+20,LG_ACT_Y+10);
+   if(w->eco[s->me].bank!=(b0?b0-1:0)){printf("FALHA: botao Baixar juros nao baixou\n");bad=1;}
+   printf("  juros: %d%% -> %d%% a.a.\n",b0,w->eco[s->me].bank);}
+  Shot(g,"37b_financas_juros");
+  // Sociedade (ADR-42): 3 estratos + burguesia
+  {int x,y,tw;Lg_TabRect(LT_SOCIEDADE,&x,&y,&tw);Touch(g,x+tw/2,y+8);}
+  if(s->ledTab!=LT_SOCIEDADE){printf("FALHA: toque na aba Sociedade nao abriu\n");bad=1;}
+  {const WSoc *so=&w->soc[s->me];
+   printf("  sociedade: pobres %d medios %d ricos %d por mil, satisf %d/%d/%d, burguesia %d%%\n",so->share[0],so->share[1],so->share[2],so->sat[0],so->sat[1],so->sat[2],so->bourg);
+   if(so->share[0]+so->share[1]+so->share[2]!=1000){printf("FALHA: estratos nao somam 1000\n");bad=1;}}
+  Shot(g,"46_sociedade");
   // Leis (ADR-40): grade de assuntos -> Educacao -> outra lei -> Propor = debate -> aprovada
   {int x,y,tw;Lg_TabRect(LT_LEIS,&x,&y,&tw);Touch(g,x+tw/2,y+8);}
   if(s->ledTab!=LT_LEIS){printf("FALHA: toque na aba Leis nao abriu\n");bad=1;}

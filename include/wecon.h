@@ -31,6 +31,7 @@ void WEco_Week(World *w);              // fecha a semana do mundo (World_Day)
 // Producao/consumo de uma cidade numa semana (UI e IA). prod = saida,
 // need = insumo das obras, dem = consumo da populacao.
 void WEco_CityFlows(const World *w,int city,s32 prod[GD_COUNT],s32 need[GD_COUNT],s32 dem[GD_COUNT]);
+int WEco_BldJobs(u8 k);                      // milhares de vagas por nivel da obra k
 int WEco_CityJobs(const WCity *c,int *want); // % das vagas da industria preenchidas (want = vagas)
 // precos nominais (ADR-40): 1.000.000 = nivel de 1800
 #define CPI1 1000000u

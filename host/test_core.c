@@ -12,6 +12,8 @@
 #include "flag.h"
 #include "px.h"
 #include "world.h"
+#include "wsoc.h"
+#include "wwar.h"
 #include "city.h"
 #include "wecon.h"
 #include "wdiplo.h"
@@ -296,8 +298,25 @@ static void TestMundi(void){
  printf("  2025: %u dias, %.3f ms/dia (PC); historicos %d disparados, %d falharam, %d pendentes\n",days,ms,fired,failed,pend);
  printf("  %u paises vivos, %u guerras, %u conquistas de celula, %u eventos\n",alive,W1.nWars,W1.nConquests,W1.nEvents);
  {int t[CT_COUNT]={0},b=0;for(int i=0;i<W1.nCity;i++){t[W1.city[i].tier]++;for(int k=0;k<CITY_SLOTS;k++)if(W1.city[i].bld[k])b++;}
-  printf("  2025: %u cidades (%d/%d/%d/%d por nivel), %d obras\n",W1.nCity,t[0],t[1],t[2],t[3],b);
-  CHECK(t[CT_METROPOLE]>40,"cidades cresceram ate 2025 (%d metropoles)",t[CT_METROPOLE]);}
+  printf("  2025: %u cidades (%d/%d/%d/%d/%d por nivel), %d obras, %u ampliacoes\n",W1.nCity,t[0],t[1],t[2],t[3],t[4],b,W1.nUpgrades);
+  CHECK(t[CT_METROPOLE]+t[CT_MEGALOPOLE]>40,"cidades cresceram ate 2025 (%d metropoles + %d megalopoles)",t[CT_METROPOLE],t[CT_MEGALOPOLE]);
+  if(!t[CT_MEGALOPOLE])WARN("nenhuma megalopole em 2025 (ADR-44)");
+  CHECK(W1.nUpgrades>=50,"obras sao ampliadas ao longo da partida (%u)",W1.nUpgrades);
+  int lv=0;for(int i=0;i<W1.nCity;i++)for(int k=0;k<CITY_SLOTS;k++)if(W1.city[i].bld[k]&&City_Level(&W1.city[i],k)>City_MaxLevel(W1.city[i].tier))lv++;
+  CHECK(!lv,"nivel de obra nunca passa de tier+1 (%d fora)",lv);}
+ // crises e guerras com objetivo (ADR-45): a IA abre crises; parte acaba sem guerra
+ printf("  crises %u: cedeu %u, recuou %u, acordo %u | golpes %u, burguesia bancou %u obras\n",W1.nCrises,W1.nConcede,W1.nBackdown,W1.nDeals,W1.nCoups,W1.nLobby);
+ CHECK(W1.nCrises>=20,"a IA abre crises antes da guerra (%u)",W1.nCrises);
+ CHECK(W1.nConcede+W1.nBackdown+W1.nDeals>=5,"crises tambem acabam sem guerra (%u)",W1.nConcede+W1.nBackdown+W1.nDeals);
+ // estratos (ADR-42): fatias somam 1000 e a classe media cresce com o seculo
+ {int bad=0,n=0;s32 mid=0;
+  for(u8 i=1;i<W1.nC;i++){if(!W1.c[i].alive)continue;const WSoc *so=&W1.soc[i];
+   if(so->share[0]+so->share[1]+so->share[2]!=1000)bad++;
+   mid+=so->share[SS_MEDIA];n++;
+   if(W1.eco[i].bank>20)bad++;}
+  CHECK(!bad,"estratos somam 1000 por mil e juros em 0..20 (%d ruins)",bad);
+  printf("  2025: classe media media %d por mil\n",n?(int)(mid/n):0);
+  CHECK(n&&mid/n>150,"a classe media cresce ate 2025 (%d por mil)",n?(int)(mid/n):0);}
  EcoDiag(&W1);
  CHECK(W1.nRevol>=5&&W1.nRevol<400,"revolucoes/separatismos acontecem mas nao sem parar (%u)",W1.nRevol);
  CHECK(W1.nAlliances>=10,"a IA forma aliancas (%u)",W1.nAlliances);

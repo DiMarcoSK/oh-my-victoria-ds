@@ -10,6 +10,8 @@
 #include "wlaw.h"
 #include "wstat.h"
 #include "calendar.h"
+#include "wsoc.h"
+#include "city.h"
 // px_ledger.c — Gabinete (SCR_LEDGER, DESIGN 4.8): 4 abas sobre a economia e
 // o mundo. Cima = pagina da aba (pergaminho com tabela); baixo = abas,
 // explicacao curta, 1 acao e voltar (geometria LG_* em wgame.h).
@@ -64,7 +66,7 @@ void PxW_GoodChip(u16 *d,int x,int y,u8 g){
  }
 }
 
-static const u16 TABS[LT_COUNT]={STR_TAB_MERCADO,STR_TAB_COMERCIO,STR_TAB_DIPLO,STR_TAB_POLITICA,STR_TAB_FINANCAS,STR_TAB_LEIS,STR_TAB_GRAF};
+static const u16 TABS[LT_COUNT]={STR_TAB_MERCADO,STR_TAB_COMERCIO,STR_TAB_DIPLO,STR_TAB_POLITICA,STR_TAB_FINANCAS,STR_TAB_LEIS,STR_TAB_GRAF,STR_TAB_SOCIEDADE};
 static void SmallFlag(u16 *d,const World *w,u8 ci,int x,int y,int fw,int fh){
  if(!ci||!w->c[ci].alive)return;
  FlagDef f;WDip_Flag(w,ci,&f);
@@ -247,12 +249,19 @@ static void PgFinancas(u16 *d,const World *w,u8 me){
  const WEco *e=&w->eco[me];const WCountry *c=&w->c[me];
  Px_Text2(d,12,26,Str(STR_RECEITA),&F_SERIF8,C_GOLD_DIM);
  Px_Text2(d,132,26,Str(STR_DESPESA),&F_SERIF8,C_GOLD_DIM);
- const u16 RL[7]={STR_RC_PROD,STR_RC_POP,STR_RC_CID,STR_RC_TERRA,STR_ALFANDEGA,STR_RC_EXPORT,STR_RC_ARMAS};
- const s32 RV[7]={e->rProd,e->rPop,e->rCity,e->rLand,e->rTariff,e->rExport,e->rArms};
- for(int i=0;i<7;i++)Line(d,10,36+i*9,RL[i],RV[i],false);
- const u16 XL[8]={STR_DP_EXERC,STR_DP_FROTA,STR_DP_ADM,STR_DP_EDU,STR_DP_SOC,STR_DP_OBRAS,STR_DP_JUROS,STR_DP_CORR};
- const s32 XV[8]={e->xArmy,e->xNavy,e->xAdmin,e->xEdu,e->xSoc,e->xUpkeep,e->xDebt,e->xCorrupt};
- for(int i=0;i<8;i++)Line(d,130,36+i*9,XL[i],XV[i],true);
+ const u16 RL[8]={STR_RC_PROD,STR_RC_POP,STR_RC_CID,STR_RC_TERRA,STR_ALFANDEGA,STR_RC_EXPORT,STR_RC_ARMAS,STR_RC_TESOURO};
+ const s32 RV[8]={e->rProd,e->rPop,e->rCity,e->rLand,e->rTariff,e->rExport,e->rArms,e->rBank};
+ for(int i=0;i<8;i++)Line(d,10,36+i*9,RL[i],RV[i],false);
+ // despesa: as 8 fixas; credito, concessao e mobilizacao (ADR-42/43/45) so'
+ // aparecem quando existem — o que nao cabe soma em "Outros"
+ const u16 XL[11]={STR_DP_EXERC,STR_DP_FROTA,STR_DP_ADM,STR_DP_EDU,STR_DP_SOC,STR_DP_OBRAS,STR_DP_JUROS,STR_DP_CORR,STR_DP_CREDITO,STR_DP_CONC,STR_DP_MOB};
+ const s32 XV[11]={e->xArmy,e->xNavy,e->xAdmin,e->xEdu,e->xSoc,e->xUpkeep,e->xDebt,e->xCorrupt,e->xBank,e->xConc,e->mobX};
+ {u8 li[11];int n=0;
+  for(int i=0;i<11;i++)if(i<8||XV[i])li[n++]=(u8)i;
+  if(n>8){int m=0;for(int j=0;j<n;j++)if(XV[li[j]]||li[j]>=8)li[m++]=li[j];n=m;}   // zeradas saem primeiro
+  s32 rest=0;
+  for(int j=0;j<n;j++){if(n>8&&j>=7){rest+=XV[li[j]];continue;}Line(d,130,36+j*9,XL[li[j]],XV[li[j]],true);}
+  if(n>8)Line(d,130,36+7*9,STR_DP_OUTROS,rest,true);}
  Px_Rect(d,10,110,236,1,C_PARCH_SH);
  s32 bal=WEco_GoldWeek(w,me);
  char t[112]={0};Cat(t,112,Str(STR_SALDO));Cat(t,112,": ");if(bal>=0)Cat(t,112,"+");Num(t,112,bal);Cat(t,112,Str(STR_POR_SEM));
@@ -273,9 +282,51 @@ static void PgFinancas(u16 *d,const World *w,u8 me){
  t[0]=0;Cat(t,112,Str(STR_LFX_0+LFX_INFL));Cat(t,112," ");Permil(t,112,e->infl);Cat(t,112,Str(STR_POR_ANO));
  Cat(t,112," · ");Cat(t,112,Str(STR_PRECOS));Cat(t,112," x");Mult(t,112,e->cpi);
  Px_Text2(d,12,163,t,&F_SERIF8,e->infl>50?C_EVENT:C_GOLD_DIM);
- t[0]=0;Cat(t,112,Str(Law_Str(LW_IMPOSTO,e->law[LW_IMPOSTO])));Cat(t,112," · ");Cat(t,112,Str(Law_Str(LW_MOEDA,e->law[LW_MOEDA])));
- Cat(t,112," · ");Cat(t,112,Str(Law_Str(LW_COMERCIO,e->law[LW_COMERCIO])));
- Px_Text2(d,12,175,t,&F_SERIF8,C_GOLD_DIM);
+ // juros basicos (ADR-43) e o que eles fazem agora
+ t[0]=0;Cat(t,112,Str(STR_JUROS_BAS));Cat(t,112," ");Num(t,112,e->bank);Cat(t,112,Str(STR_JUROS_AA));
+ Cat(t,112," · ");Cat(t,112,Str(STR_JX_PROD));Cat(t,112," ");Signed(t,112,(6-(int)e->bank)*3/2);Cat(t,112,"%");
+ Cat(t,112," · ");Cat(t,112,Str(STR_JX_INV));Cat(t,112," ");{int m=130-6*(int)e->bank;if(m<10)m=10;Num(t,112,m);}Cat(t,112,"%");
+ Px_Text2(d,12,175,t,&F_SERIF8,e->bank>=10?C_EVENT:(e->bank<=2?C_GOLD:C_INK));
+}
+// ---- Sociedade (ADR-42): pobres, medios e ricos + a burguesia ----
+static void PgSociedade(u16 *d,const World *w,u8 me){
+ const WSoc *so=&w->soc[me];const WEco *e=&w->eco[me];
+ char t[112];
+ static const u16 CU[ST_COUNT]={STR_CU_EURO,STR_CU_ASIA,STR_CU_ISLAM,STR_CU_AFRICA,STR_CU_NATIVE};
+ t[0]=0;Cat(t,112,Str(STR_CULTURA));Cat(t,112,": ");Cat(t,112,Str(CU[Soc_Culture(w,me)%ST_COUNT]));
+ Px_Text2(d,12,25,t,&F_SERIF8,C_GOLD_DIM);
+ static const u16 SC[SS_COUNT]={PXC(14,9,5),PXC(6,12,20),PXC(22,16,3)};
+ for(int k=0;k<SS_COUNT;k++){
+  int y=37+k*34;
+  Px_Rect(d,12,y+1,6,6,SC[k]);
+  Px_Text2(d,22,y,Str(Soc_StratStr((u8)k)),&F_SERIF12,C_INK);
+  // fatia da populacao e renda relativa
+  t[0]=0;Num(t,112,so->share[k]/10);Cat(t,112,",");{char q[2]={(char)('0'+so->share[k]%10),0};Cat(t,112,q);}
+  Cat(t,112,Str(STR_SS_POP));Cat(t,112," · ");Cat(t,112,Str(STR_SS_RENDA));Cat(t,112," x");
+  {int v=so->inc[k];Num(t,112,v/100);Cat(t,112,",");char q[3]={(char)('0'+(v%100)/10),(char)('0'+v%10),0};Cat(t,112,q);}
+  RText(d,244,y+2,t,C_GOLD_DIM);
+  // satisfacao
+  Px_Text2(d,22,y+14,Str(STR_SATISFACAO),&F_SERIF8,C_INK);
+  Bar(d,104,y+16,104,so->sat[k],so->sat[k]<30?C_EVENT:(so->sat[k]>=60?PXC(6,18,8):C_GOLD));
+  t[0]=0;Num(t,112,so->sat[k]);Cat(t,112,"%");RText(d,244,y+14,t,C_INK);
+  // desejo em aberto (e quantas semanas faltam)
+  t[0]=0;
+  if(so->want[k]){Cat(t,112,Str(STR_SS_QUER));Cat(t,112,Str(Soc_WantStr(so->want[k])));Cat(t,112," (");Num(t,112,so->wantT[k]);Cat(t,112,Str(STR_SEM));Cat(t,112,")");}
+  else if(so->mood[k]>0)Cat(t,112,Str(STR_SS_CONTENTE));
+  else if(so->mood[k]<0)Cat(t,112,Str(STR_SS_MAGOADO));
+  else Cat(t,112,Str(STR_SS_CALMO));
+  Px_Text2(d,22,y+24,t,&F_SERIF8,so->want[k]?C_CRIMSON:C_GOLD_DIM);
+ }
+ Px_Rect(d,10,140,236,1,C_PARCH_SH);
+ // burguesia: quanto dos ricos investe, o fundo privado e o que ja' bancou
+ t[0]=0;Cat(t,112,Str(STR_BURGUESIA));Cat(t,112," ");Num(t,112,so->bourg);Cat(t,112,Str(STR_SS_DOS_RICOS));
+ Px_Text2(d,12,144,t,&F_SERIF8,C_INK);
+ t[0]=0;Cat(t,112,Str(STR_INVEST));Cat(t,112," ");{char q[24];Kfmt(q,24,e->invest);Cat(t,112,q);}
+ Cat(t,112," · ");Cat(t,112,Str(STR_SS_RITMO));Cat(t,112," ");Num(t,112,Soc_InvestPct(w,me));Cat(t,112,"%");
+ Px_Text2(d,12,156,t,&F_SERIF8,C_INK);
+ t[0]=0;Cat(t,112,Str(STR_SS_BANCOU));{char q[24];Kfmt(q,24,so->lobbyTot);Cat(t,112,q);}
+ if(e->concW){Cat(t,112," · ");Cat(t,112,Str(STR_SS_CONC));Num(t,112,e->concPct);Cat(t,112,"% · ");Num(t,112,e->concW);Cat(t,112,Str(STR_SEM));}
+ Px_Text2(d,12,168,t,&F_SERIF8,C_GOLD_DIM);
 }
 // ---- Leis (ADR-40) ----
 // valor de um efeito com unidade: % / pontos / por mil -> "x,y%/ano"
@@ -433,6 +484,7 @@ void PxL_Top(u16 *d){
   case LT_FINANCAS:PgFinancas(d,w,me);break;
   case LT_LEIS:PgLeis(d,w,s,me);break;
   case LT_GRAF:PgGraf(d,w,s,me);break;
+  case LT_SOCIEDADE:PgSociedade(d,w,me);break;
   default:PgPolitica(d,w,me);break;
  }
 }
@@ -505,7 +557,7 @@ void PxL_Bot(u16 *d){
  }
  if(s->ledTab==LT_LEIS){BotLeis(d,w,s,me);return;}
  if(s->ledTab==LT_GRAF){BotGraf(d,s);return;}
- static const u16 HS[LT_COUNT]={STR_H_MERCADO,STR_H_COMERCIO,STR_H_DIPLO,STR_H_POLITICA,STR_H_FINANCAS,STR_H_LEIS,STR_H_GRAF};
+ static const u16 HS[LT_COUNT]={STR_H_MERCADO,STR_H_COMERCIO,STR_H_DIPLO,STR_H_POLITICA,STR_H_FINANCAS,STR_H_LEIS,STR_H_GRAF,STR_H_SOCIEDADE};
  Ui_Navy(d,4,38,248,76);
  Px_WrapN(d,12,44,232,Str(HS[s->ledTab%LT_COUNT]),&F_SERIF8,C_TEXT,6,false);
  // acao da aba
@@ -516,7 +568,19 @@ void PxL_Bot(u16 *d){
   case LT_COMERCIO:Cat(t,64,Str(STR_LANCAR_NAVIO));Cat(t,64," · ");Num(t,64,WEco_ShipCost(w,me));
    en=e->yards&&!c->shipQ&&c->gold>=WEco_ShipCost(w,me);ico=ICO_SHIP;break;
   case LT_DIPLO:Cat(t,64,Str(c->bloc?STR_SAIR_BLOCO:STR_CRIAR_BLOCO));ico=ICO_FLAG;break;
-  default:Cat(t,64,Str(STR_IR_LEIS));ico=ICO_BOOK;break;     // Politica e Financas levam as leis
+  case LT_FINANCAS:{   // juros (ADR-43): 2 metades, baixar e subir
+   for(int h=0;h<2;h++){
+    int x=LG_ACT_X+h*FN_HALF;bool on=h?e->bank<20:e->bank>0;
+    Px_Rect(d,x,LG_ACT_Y,FN_HALF-2,LG_ACT_H,on?(h?C_CRIMSON:C_NAVY_HI):C_NAVY);
+    Px_Border(d,x,LG_ACT_Y,FN_HALF-2,LG_ACT_H,C_GOLD);
+    char q[40]={0};Cat(q,40,Str(h?STR_JUROS_MAIS:STR_JUROS_MENOS));
+    Ui_TextC(d,x+FN_HALF/2-1,LG_ACT_Y+4,q,0,on?C_TEXT:C_TEXT_DIM);
+    q[0]=0;Num(q,40,e->bank+(h?1:-1)<0?0:e->bank+(h?1:-1));Cat(q,40,Str(STR_JUROS_AA));
+    Ui_TextC(d,x+FN_HALF/2-1,LG_ACT_Y+15,q,0,C_TEXT_DIM);
+   }
+   LBack(d,LG_ACT_X,LG_BACK_Y,LG_ACT_W,LG_ACT_H);
+  }return;
+  default:Cat(t,64,Str(STR_IR_LEIS));ico=ICO_BOOK;break;     // Politica e Sociedade levam as leis
  }
  Px_Rect(d,LG_ACT_X,LG_ACT_Y,LG_ACT_W,LG_ACT_H,en?C_CRIMSON:C_NAVY);
  Px_Border(d,LG_ACT_X,LG_ACT_Y,LG_ACT_W,LG_ACT_H,C_GOLD);

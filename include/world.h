@@ -64,6 +64,7 @@ typedef struct {
  u8 ind, lack;            // industria rodando a ind% (insumo que falta: lack = bem)
  s16 hub;                 // cidade-porto principal (rotas no mapa), -1 = nenhuma
  u8 law[LW_COUNT];         // lei em vigor por assunto (0..4, ADR-40)
+ u8 bank;                  // taxa basica de juros (% a.a., 0..20; ADR-43): baixa acelera, alta enche o caixa
  u8 lawCat, lawTo;         // debate em curso: assunto e lei proposta (lawCat 0xFF = nenhum)
  u16 lawDays;              // dias ate' a votacao
  LawFx fx;                 // efeito somado das leis em vigor (Law_Apply)
@@ -76,6 +77,10 @@ typedef struct {
  // balanco fiscal (ADR-32): linhas de receita e despesa da semana
  s32 rProd, rPop, rCity, rLand, rTariff;         // receita (rPop = imposto per capita)
  s32 rExport, rArms;      // lucro das casas exportadoras (tributado) e contratos de armas (ADR-37)
+ s32 rBank, xBank;        // juros (ADR-43): rendimento do Tesouro com juro alto / credito subsidiado com juro baixo
+ s32 xConc;               // concessao a' burguesia (ADR-42): parte da renda urbana cedida por um prazo
+ u16 concW; u8 concPct;   // semanas restantes e % da concessao
+ s32 mobX;                // mobilizacao da semana (crises e guerras com objetivo, ADR-45)
  s32 expVal, impVal;      // valor exportado/importado na semana (balanca comercial)
  s32 invest;              // fundo do investimento privado (vira obra nas cidades; ADR-37)
  u8 jobs;                 // % das vagas da industria preenchidas (cidades sem gente produzem menos)
@@ -128,12 +133,18 @@ typedef struct {
  u8 instCd;              // dias ate' poder instigar outra guerra
 } WCountry;
 // Proposta/decisao pendente para o jogador (modal no painel).
-enum { PR_NONE=0, PR_ALIANCA, PR_BLOCO, PR_AJUDA, PR_TRIBUTO, PR_PAZ, PR_DECISAO, PR_COUNT };
+// PR_BURGUES: a burguesia financia uma obra publica em troca de algo (wsoc.c);
+// PR_LADO: um aliado pede que o jogador tome o lado dele numa crise (wwar.c);
+// PR_CRISE: o jogador e' o alvo de uma exigencia (crise aberta contra ele).
+enum { PR_NONE=0, PR_ALIANCA, PR_BLOCO, PR_AJUDA, PR_TRIBUTO, PR_PAZ, PR_DECISAO,
+ PR_BURGUES, PR_LADO, PR_CRISE, PR_COUNT };
 typedef struct { u8 kind, from, about; u16 idx; s32 gold; u32 day; } WProp;
 
 // Cidade (DESIGN 4.7: Victoria 3 + Imperator). Nivel sobe com populacao e
-// obras: povoado -> vilarejo -> cidade -> metropole. Obras em slots.
-enum { CT_POVOADO=0, CT_VILAREJO, CT_CIDADE, CT_METROPOLE, CT_COUNT };
+// obras: povoado -> vilarejo -> cidade -> metropole -> megalopole (ADR-44).
+// Obras em slots; cada obra tem nivel 1..tier+1 (ampliar = mais producao,
+// vagas e insumo).
+enum { CT_POVOADO=0, CT_VILAREJO, CT_CIDADE, CT_METROPOLE, CT_MEGALOPOLE, CT_COUNT };
 // Obras da cidade: IDs gravados (save/IA). So' ADICIONE antes de BK_COUNT.
 enum { BK_NONE=0, BK_FAZENDA, BK_MERCADO, BK_OFICINA, BK_QUARTEL, BK_PORTO,
  BK_TEMPLO, BK_MURALHA, BK_UNIVERSIDADE, BK_FABRICA, BK_FERROVIA, BK_PALACIO,
@@ -157,6 +168,8 @@ typedef struct {
  u8 food;                // % de comida atendida na ultima semana (local)
  u8 bpos[CITY_SLOTS];    // lote de cada obra no mapa da cidade (CG_W x CG_H), 0xFF = sem lugar
  u8 bqLot;               // lote da obra em construcao
+ u8 bqUp;                // 1 = a obra em curso amplia a obra do slot bqSlot (ADR-44)
+ u8 blv[CITY_SLOTS];     // nivel da obra por slot (0 = 1; ampliar sobe ate' tier+1)
 } WCity;
 enum { RS_TROPICAL=1, RS_OLEO=2 };
 // Series historicas (ADR-41): o jogador e o lider do ranking, ate' ST_N pontos.
@@ -170,6 +183,43 @@ typedef struct { s32 v[SR_COUNT][2][ST_N]; u16 n, step, acc; u32 day0; u8 top; }
 // do GameState), mas mantenha a ordem p/ a IA e a arte.
 enum { FT_FORTE=0, FT_TRINCHEIRA, FT_BATERIA, FT_COUNT };
 typedef struct { u16 x, y; u8 owner, kind; u8 days; u8 lvl; } WFort;
+// Estratos sociais (wsoc.c, ADR-42): pobres, medios e ricos (a burguesia e'
+// a parte dos ricos que investe). Cada estrato tem fatia da populacao,
+// satisfacao e um DESEJO que depende da cultura (tabela em wsoc.c) e do momento.
+enum { SS_POBRE=0, SS_MEDIA, SS_RICA, SS_COUNT };
+// desejos: IDs nao gravados (o World nao vai ao save), usados pela tabela de cultura
+enum { DW_NONE=0, DW_COMIDA, DW_ROUPA, DW_BENS, DW_LUXO, DW_TEMPLO, DW_ESCOLA, DW_SAUDE,
+ DW_FERROVIA, DW_IMPOSTO, DW_JUROS_BAIXOS, DW_JUROS_ALTOS, DW_PAZ, DW_GLORIA, DW_TERRA,
+ DW_ELETRO, DW_COUNT };
+typedef struct {
+ u16 share[SS_COUNT];     // por mil da populacao
+ u8 sat[SS_COUNT];        // satisfacao 0..100
+ u8 want[SS_COUNT];       // desejo atual (DW_*)
+ u8 wantT[SS_COUNT];      // semanas restantes p/ atender
+ s8 mood[SS_COUNT];       // eco do ultimo desejo (+ atendido / - ignorado), volta a 0
+ u16 inc[SS_COUNT];       // renda anual per capita (ouro de 1800)
+ u8 bourg;                // % dos ricos que sao burgueses (o resto: aristocracia e latifundio)
+ u8 lobbyCd;              // semanas ate' a proxima oferta da burguesia
+ s32 lobbyTot;            // obras publicas ja' financiadas pela burguesia (ouro)
+ s32 pres0;               // prestigio quando o desejo DW_GLORIA abriu
+} WSoc;
+// Crise diplomatica e guerra com objetivo (wwar.c, ADR-45): antes da guerra ha'
+// um AQUECIMENTO (estilo Victoria 3): exigencia, lados, mobilizacao, acordo ou
+// recuo. Se ninguem cede vira guerra com placar; a paz cobra o objetivo.
+enum { GL_TERRA=0, GL_TRIBUTO, GL_HUMILHAR, GL_COUNT };
+enum { CRS_NONE=0, CRS_CRISE, CRS_GUERRA };
+enum { CR_MAX=24, CR_SIDE=5, CR_DAYS=40 };
+typedef struct {
+ u8 st, att, def, goal;
+ u16 days;                // crise: dias ate' a guerra; guerra: dias de guerra
+ u8 side[2][CR_SIDE];     // [0] apoia o atacante, [1] o defensor (lideres fora da lista)
+ s32 demand;              // celulas (terra), ouro de 1800 (tributo) ou prestigio (humilhar)
+ u32 c0[2];               // celulas dos lideres quando a guerra abriu
+ s8 score;                // placar -100..100 (+ = atacante vencendo)
+ u8 flags;                // CRF_*
+ u8 talkCd;               // dias ate' outra proposta de acordo/paz
+} WCrisis;
+enum { CRF_CALL0=1, CRF_CALL1=2 };   // o lado 0/1 ja' chamou aliados nesta crise
 typedef struct {
  u16 w, h; u8 mode, hist, diff; bool wrap;
  u32 seed, rng;
@@ -196,6 +246,9 @@ typedef struct {
  WFort fort[W_MAXFORT];
  u32 nInvest, nArms, nInstig; // contadores: obras do investimento privado, cargas de armas vendidas, guerras instigadas
  WStats st;                // series p/ a aba Graficos (wstat.c, ADR-41)
+ WSoc soc[W_MAXC+1];       // estratos sociais por pais (wsoc.c, ADR-42)
+ WCrisis cr[CR_MAX];       // crises e guerras com objetivo (wwar.c, ADR-45)
+ u32 nCrises, nConcede, nBackdown, nDeals, nCoups, nLobby, nUpgrades; // contadores (testes/Gazeta)
  u8 rankBest, rankGreat;   // melhor posicao ja' avisada (1-based, 0 = nada) e se esta' entre as 8 grandes
  s32 gdpMark; u32 popMark; // marcos: PIB dobrou / populacao dobrou desde o ultimo aviso
  u8 dirtyBlk[(W_BLK_W*W_BLK_H+7)/8]; // bloco 8x8 mudou de dono (px_world limpa)

@@ -12,6 +12,8 @@
 #include "prof.h"
 #include "wfort.h"
 #include "wlaw.h"
+#include "wwar.h"
+#include "wsoc.h"
 // wgame.c — partida no mundo celular (SCR_WORLD). Ver wgame.h.
 // O World e as grades W_* sao estaticos (.bss); nada aqui conta nos 14KB do
 // GameState. Toda regra de jogo esta em world.c/history.c; este arquivo so'
@@ -127,6 +129,7 @@ void WG_New(u8 mode,u8 hist,u8 size,u8 nNat,u8 diff,u32 seed,int nat){
  S.sel=S.me;S.selLand=false;
  S.msgSeen=W.msgDay;
  Toast(STR_DICA_JOGO,0);S.toastT=400;
+ S.centY=W.date.y/100*100;S.centT=330;     // abertura: o seculo em que a partida comeca (ADR-46)
 }
 
 // ---------------- acoes (botoes do painel e atalhos) ----------------
@@ -139,9 +142,10 @@ static void DoAttack(void){
  bool landing=!World_Borders(&W,S.me,t);
  bool declared=false;
  if(t&&!World_AtWar(&W,S.me,t)){
-  // guerra e' diplomacia (DESIGN 4.5): pede o 2o toque e custa prestigio
-  if(S.warAsk!=t){S.warAsk=t;Toast(STR_T_CONFIRMA_GUERRA,t);return;}
-  World_DeclareWar(&W,S.me,t);me->prestige-=5;S.warAsk=0;declared=true;
+  // guerra e' diplomacia (DESIGN 4.5, ADR-45): primeiro a CRISE com uma
+  // exigencia; a guerra so' abre quando o prazo acaba sem acordo
+  if(War_Find(&W,S.me,t)>=0){Toast(STR_T_CRISE_ESPERA,t);return;}
+  S.actKind=AK_META;S.dipTo=t;S.dipSel=0;S.dipN=(u8)WG_DipItems(S.dipIt);S.dipOpen=true;return;
  }
  if(me->atkOn&&me->atkTo!=t)World_Recall(&W,S.me);
  // sem fronteira: desembarque numa praia do alvo (frontwars)
@@ -184,11 +188,15 @@ int WG_DipItems(u8 *o){
    if(City_CanFound(&W,me,S.curX,S.curY))o[n++]=DM_FUNDAR;
    o[n++]=DM_RECRUTAR;break;
   case AK_LIVRE:o[n++]=DM_COLONIZAR;o[n++]=DM_RECRUTAR;break;
+  case AK_META:
+   if(!t||t>=W.nC||!W.c[t].alive||t==me||War_Find(&W,me,t)>=0||World_AtWar(&W,me,t))return 0;
+   o[n++]=DM_META_TERRA;o[n++]=DM_META_TRIBUTO;o[n++]=DM_META_HUMILHAR;break;
   default:{
    if(!t||t>=W.nC||!W.c[t].alive||t==me)return 0;
    bool war=World_AtWar(&W,me,t),al=WDip_Allied(&W,me,t);
    bool sub=W.c[t].overlord==me||W.c[me].overlord==t;
-   if(war){o[n++]=DM_ATACAR;o[n++]=DM_PAZ;}
+   if(war){o[n++]=DM_ATACAR;o[n++]=DM_PAZ;
+    {int k=War_Find(&W,me,t);if(k>=0&&W.cr[k].st==CRS_GUERRA)o[n++]=DM_CONCEDER;}}
    else{
     if(!al&&WDip_Allies(&W,me)<2&&!sub)o[n++]=DM_ALIANCA;
     if(al)o[n++]=DM_ROMPER;
@@ -199,7 +207,7 @@ int WG_DipItems(u8 *o){
     if(W.c[me].armsTo==t)o[n++]=DM_ARMAS_FIM;
     else if(W.c[t].warN)o[n++]=DM_ARMAS;
     if(!sub&&!W.c[t].player)o[n++]=DM_INSTIGAR;
-    if(!al&&!sub)o[n++]=DM_GUERRA;
+    if(!al&&!sub&&War_Find(&W,me,t)<0)o[n++]=DM_GUERRA;   // exigir = abrir crise (ADR-45)
    }
   }break;
  }
@@ -251,7 +259,22 @@ static void DipDo(GameState *g,u8 it){
  }
  if(!t||!W.c[t].alive)return;
  switch(it){
-  case DM_PAZ:Toast(World_ProposePeace(&W,me,t)?STR_T_PAZ_OK:STR_T_PAZ_NAO,t);break;
+  case DM_PAZ:{
+   int k=War_Find(&W,me,t);
+   if(k>=0&&W.cr[k].st==CRS_GUERRA){int r=War_PeaceTry(&W,k,me);
+    Toast(r==2?STR_T_PAZ_TERMOS:(r==1?STR_T_PAZ_OK:(W.cr[k].talkCd>15?STR_T_PAZ_NAO:STR_T_CONVERSA_CD)),t);}
+   else Toast(World_ProposePeace(&W,me,t)?STR_T_PAZ_OK:STR_T_PAZ_NAO,t);
+  }break;
+  case DM_CONCEDER:{
+   int k=War_Find(&W,me,t);
+   if(k<0)break;
+   s32 c=War_ConcedeCost(&W,k,me);
+   if(War_Concede(&W,k,me))Toast(STR_T_CONCEDEU,t);else Toast(c>W.c[me].gold?STR_T_SEM_OURO:STR_T_PAZ_NAO,0);
+  }break;
+  case DM_META_TERRA:case DM_META_TRIBUTO:case DM_META_HUMILHAR:{
+   int k=War_Start(&W,me,t,(u8)(GL_TERRA+(it-DM_META_TERRA)));
+   Toast(k>=0?STR_T_CRISE_ABERTA:STR_T_ALVO,t);
+  }break;
   case DM_ALIANCA:Toast(WDip_AskAlliance(&W,me,t)?STR_T_ALIANCA_OK:STR_T_ALIANCA_NAO,t);break;
   case DM_ROMPER:WDip_Unally(&W,me,t);W.c[t].opin=(s8)(W.c[t].opin>-80?W.c[t].opin-20:-100);Toast(STR_T_ROMPEU,t);break;
   case DM_ENTRAR:{u8 L=W.c[t].bloc;
@@ -273,10 +296,8 @@ static void DipDo(GameState *g,u8 it){
    else Toast(STR_T_ALVO,0);
   }break;
   case DM_GUERRA:
-   // declarar = chamar os aliados e ja' mandar a % da reserva (um gesto so')
-   World_DeclareWarCall(&W,me,t);W.c[me].prestige-=5;
-   S.sel=t;S.selLand=false;DoAttack();
-   if(!S.toastT||S.toastId==STR_T_SEM_TROPAS)Toast(STR_T_GUERRA,t);
+   // exigir (ADR-45): escolhe o objetivo da crise numa 2a folha
+   S.actKind=AK_META;S.dipTo=t;S.dipSel=0;S.dipN=(u8)WG_DipItems(S.dipIt);S.dipOpen=S.dipN>1;
    break;
   default:break;
  }
@@ -297,7 +318,7 @@ static bool PropInput(GameState *g,u32 d,bool tDown,int tx,int ty){
 }
 // abre o mapa de lotes da cidade (SCR_CITY)
 static void OpenCity(GameState *g,int ci){
- S.cityIdx=(s16)ci;S.citySlot=0;S.cityPick=false;S.cityLot=(u8)City_Plaza(&W,ci);S.cityHold=0;
+ S.cityIdx=(s16)ci;S.citySlot=0;S.cityPick=false;S.cityLot=(u8)City_Plaza(&W,ci);S.cityHold=0;S.cityCamX=0xFFFF;
  Menu_Go(g,SCR_CITY);
 }
 static void DoRecruit(void){
@@ -389,6 +410,30 @@ static void TouchMap(GameState *g,bool tDown,bool tUp,bool tHeld,int tx,int ty){
  }
 }
 
+// faixa da crise no painel (ADR-45): 3 botoes conforme o estado. Crise:
+// chamar aliados / propor acordo / ceder (defensor) ou recuar (atacante).
+// Guerra com objetivo: chamar aliados / negociar paz / comprar a paz.
+static bool CrisisTap(GameState *g,int tx,int ty){
+ if(S.dead||ty<CR_BY||ty>=CR_BY+CR_BH)return false;
+ int k=War_Of(&W,S.me);
+ if(k<0)return false;
+ const WCrisis *c=&W.cr[k];
+ if(c->att!=S.me&&c->def!=S.me)return false;   // so' o lider negocia
+ int b=(tx-CR_BX0)/CR_BDX;
+ if(tx<CR_BX0||b>2||tx>=CR_BX0+b*CR_BDX+CR_BW)return true;
+ u8 o=c->att==S.me?c->def:c->att;
+ g->dirtyBot=true;
+ if(b==0){int n=War_CallAllies(&W,k,S.me);Toast(n?STR_T_ALIADOS_OK:STR_T_ALIADOS_NAO,0);if(n)S.toastNum=n;return true;}
+ if(c->st==CRS_CRISE){
+  if(b==1){bool cd=c->talkCd>0;Toast(War_Deal(&W,k,S.me)?STR_T_ACORDO_OK:(cd?STR_T_CONVERSA_CD:STR_T_ACORDO_NAO),o);}
+  else{bool def=c->def==S.me;War_Yield(&W,k,S.me);Toast(def?STR_T_CEDEU:STR_T_RECUOU,o);}
+ }else{
+  if(b==1){int r=War_PeaceTry(&W,k,S.me);Toast(r==2?STR_T_PAZ_TERMOS:(r==1?STR_T_PAZ_OK:STR_T_PAZ_NAO),o);}
+  else if(War_Concede(&W,k,S.me))Toast(STR_T_CONCEDEU,o);else Toast(STR_T_SEM_OURO,0);
+ }
+ g->dirty=true;
+ return true;
+}
 void WG_Input(GameState *g,u32 d,u32 h,bool tDown,bool tUp,bool tHeld,int tx,int ty){
  // painel (tela de baixo) e' so' caneta. No layout Invertida o painel fica em
  // cima, sem toque: ai' a folha/proposta aceitam CIMA/BAIXO + A/B.
@@ -436,12 +481,15 @@ void WG_Input(GameState *g,u32 d,u32 h,bool tDown,bool tUp,bool tHeld,int tx,int
  }
  if(MoveSteps(h)){Px_WantTop();if(Hover())BotLazy();}
  if(swap)TouchMap(g,tDown,tUp,tHeld,tx,ty);
+ else if(tDown&&CrisisTap(g,tx,ty))return;
  else if(tDown){int id=Ui_Hit(UI_WORLD,tx,ty);if(id>0)Act(g,id);}
 }
 
 // fim do dia: ficha, morte, faixa de noticia e redesenho
 static void DayDone(GameState *g){
  if(Hover())g->dirtyBot=true;
+ // virada de seculo (ADR-46): 1/1/1900, 1/1/2000... o ano toma a tela
+ if(W.date.m==1&&W.date.d==1&&(W.date.y%100)==0&&W.date.y!=S.centY){S.centY=W.date.y;S.centT=330;}
  if(!W.c[S.me].alive){S.dead=true;S.paused=true;Toast(STR_CAIU,0);S.toastT=600;}
  if(W.msgDay!=S.msgSeen&&W.msg[0]){S.msgSeen=W.msgDay;S.bannerT=200;}
  if(W.ended)S.paused=true;
@@ -458,6 +506,7 @@ void WG_Frame(GameState *g){
  if(S.botLazy&&((!S.vX&&!S.vY)||++S.botLazy>10)){g->dirtyBot=true;S.botLazy=0;}
  if(S.btnT&&!--S.btnT)g->dirtyBot=true;
  if(S.bannerT&&!--S.bannerT)g->dirty=true;
+ if(S.centT){int v=Px_Vb();S.centT=(u16)(S.centT>v?S.centT-v:0);if(g->screen==SCR_WORLD)Px_WantTop();}
  // cidade tomada enquanto aberta: volta ao mapa (o painel nao tem mais dono)
  if((g->screen==SCR_CITY)&&(S.cityIdx<0||S.cityIdx>=W.nCity||W.city[S.cityIdx].owner!=S.me)){
   Menu_Go(g,SCR_WORLD);Toast(STR_T_CIDADE_PERDIDA,0);
@@ -512,16 +561,21 @@ void WG_Idle(GameState *g){
 }
 
 // ---------------- Gabinete (SCR_LEDGER) ----------------
-static void LedgerAct(GameState *g){
+static void LedgerAct(GameState *g,int tx){
  if(S.dead)return;
  WCountry *me=&W.c[S.me];
  switch(S.ledTab){
+  case LT_FINANCAS:{   // juros (ADR-43): metade esquerda baixa, direita sobe
+   WEco *e=&W.eco[S.me];
+   if(tx<LG_ACT_X+FN_HALF){if(e->bank>0)e->bank--;}else if(e->bank<20)e->bank++;
+   Toast(STR_T_JUROS,0);S.toastNum=e->bank;
+  }break;
   case LT_MERCADO:S.mapMode=WMAP_COM;Menu_Go(g,SCR_WORLD);return;
   case LT_COMERCIO:Toast(WEco_BuildShip(&W,S.me)?STR_T_NAVIO:STR_T_SEM_NAVIO,0);break;
   case LT_DIPLO:
    if(me->bloc)WDip_LeaveBloc(&W,S.me);else WDip_FoundBloc(&W,S.me);
    break;
-  case LT_POLITICA:case LT_FINANCAS:S.ledTab=LT_LEIS;S.lawCat=0xFF;break;   // as leis moram na aba propria
+  case LT_POLITICA:case LT_SOCIEDADE:S.ledTab=LT_LEIS;S.lawCat=0xFF;break;   // as leis moram na aba propria
   default:break;
  }
  g->dirty=true;g->dirtyBot=true;
@@ -571,7 +625,7 @@ void WG_LedgerInput(GameState *g,u32 d,bool tDown,int tx,int ty){
   else if(ty>=LG_ACT_Y&&ty<LG_ACT_Y+LG_ACT_H&&tx>=LG_ACT_X&&tx<LG_ACT_X+LG_ACT_W)act=true;
   else if(ty>=LG_BACK_Y&&ty<LG_BACK_Y+LG_ACT_H)d|=KEY_B;
  }
- if(act){LedgerAct(g);if(g->screen!=SCR_LEDGER)return;}
+ if(act){LedgerAct(g,tx);if(g->screen!=SCR_LEDGER)return;}
  if(d&(KEY_B|KEY_START|KEY_X)){Menu_Go(g,SCR_WORLD);return;}
  if(d&KEY_SELECT){S.paused=!S.paused;}
  if(moved){g->dirty=true;g->dirtyBot=true;}
@@ -612,13 +666,26 @@ static u8 FirstPickAt(int ci,int lot){
  return BK_FAZENDA;
 }
 static void OpenPick(int ci){S.cityPick=true;S.pickK=FirstPickAt(ci,S.cityLot);}
+// acao do lote (A ou o botao): estaleiro lanca navio; obra pronta amplia
+// (ADR-44); lote livre abre o catalogo
+static void LotAct(int ci){
+ WCity *c=&W.city[ci];
+ int sl=City_LotSlot(c,S.cityLot);
+ if(sl>=0&&c->bld[sl]==BK_ESTALEIRO){Toast(WEco_BuildShip(&W,S.me)?STR_T_NAVIO:STR_T_SEM_NAVIO,0);return;}
+ if(sl>=0){
+  u16 why=City_UpWhy(&W,ci,sl);
+  if(why){Toast(why,0);return;}
+  if(City_Upgrade(&W,ci,sl)){Toast(STR_T_AMPLIA,0);S.toastNum=c->bqDays;}else Toast(STR_T_SEM_OURO,0);
+  return;
+ }
+ if(City_LotBase(&W,ci,S.cityLot)==LK_TERRA&&!(c->bq&&c->bqLot==S.cityLot))OpenPick(ci);
+}
 static void CityGoLot(int ci){
  (void)ci;S.cityPick=false;
 }
 void WG_CityInput(GameState *g,u32 d,bool tDown,int tx,int ty){
  int ci=S.cityIdx;
  if(ci<0||ci>=W.nCity||W.city[ci].owner!=S.me){Menu_Go(g,SCR_WORLD);return;}
- WCity *c=&W.city[ci];
  bool moved=false,top=false;
  // setas: lote a lote; segurando, repete a cada 5 quadros depois de 14
  u32 h=keysHeld();
@@ -635,12 +702,7 @@ void WG_CityInput(GameState *g,u32 d,bool tDown,int tx,int ty){
    S.cityLot=(u8)(y*CG_W+x);moved=true;top=true;
   }
  }else S.cityHold=0;
- if(d&KEY_A&&!S.cityPick){
-  int sl=City_LotSlot(c,S.cityLot);
-  if(sl>=0&&c->bld[sl]==BK_ESTALEIRO)Toast(WEco_BuildShip(&W,S.me)?STR_T_NAVIO:STR_T_SEM_NAVIO,0);
-  else if(sl<0&&City_LotBase(&W,ci,S.cityLot)==LK_TERRA&&!(c->bq&&c->bqLot==S.cityLot))OpenPick(ci);
-  moved=true;
- }
+ if(d&KEY_A&&!S.cityPick){LotAct(ci);moved=true;top=true;}
  if(tDown){
   if(S.cityPick&&ty>=CY_PICK_Y){
    if(ty<CY_OK_Y&&tx<CY_ARW_W)d|=KEY_LEFT;
@@ -659,12 +721,7 @@ void WG_CityInput(GameState *g,u32 d,bool tDown,int tx,int ty){
   }else if(tx>=CY_MINI_X&&tx<CY_MINI_X+CG_W*CY_CELL&&ty>=CY_MINI_Y&&ty<CY_MINI_Y+CG_H*CY_CELL){
    int l=((ty-CY_MINI_Y)/CY_CELL)*CG_W+(tx-CY_MINI_X)/CY_CELL;
    S.cityLot=(u8)l;CityGoLot(ci);moved=true;top=true;
-  }else if(!S.cityPick&&ty>=CY_BTN_Y&&ty<CY_BTN_Y+CY_BTN_H){
-   int sl=City_LotSlot(c,S.cityLot);
-   if(sl>=0&&c->bld[sl]==BK_ESTALEIRO)Toast(WEco_BuildShip(&W,S.me)?STR_T_NAVIO:STR_T_SEM_NAVIO,0);
-   else if(sl<0&&City_LotBase(&W,ci,S.cityLot)==LK_TERRA&&!(c->bq&&c->bqLot==S.cityLot))OpenPick(ci);
-   moved=true;
-  }
+  }else if(!S.cityPick&&ty>=CY_BTN_Y&&ty<CY_BTN_Y+CY_BTN_H){LotAct(ci);moved=true;top=true;}
  }
  if(d&KEY_B){
   if(S.cityPick){S.cityPick=false;moved=true;}
@@ -675,7 +732,7 @@ void WG_CityInput(GameState *g,u32 d,bool tDown,int tx,int ty){
   int dir=(d&KEY_R)?1:-1;
   for(int k=1;k<=W.nCity;k++){
    int j=((ci+dir*k)%W.nCity+W.nCity)%W.nCity;
-   if(W.city[j].owner==S.me){S.cityIdx=(s16)j;S.cityLot=(u8)City_Plaza(&W,j);S.curX=(s16)W.city[j].x;S.curY=(s16)W.city[j].y;Center();Hover();break;}
+   if(W.city[j].owner==S.me){S.cityIdx=(s16)j;S.cityCamX=0xFFFF;S.cityLot=(u8)City_Plaza(&W,j);S.curX=(s16)W.city[j].x;S.curY=(s16)W.city[j].y;Center();Hover();break;}
   }
   g->dirty=true;
  }

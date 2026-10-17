@@ -8,6 +8,9 @@
 #include "wfort.h"
 #include "wlaw.h"
 #include "wstat.h"
+#include "wwar.h"
+#include "wsoc.h"
+#include "str.h"
 // world.c — mundo celular M1 (DESIGN.md sec 4.1, 4.5, 4.6).
 // Custos e taxas sao proposta de design: balancear aqui.
 
@@ -107,6 +110,7 @@ void World_Peace(World *w,u8 a,u8 b){
  SetWar(w,a,b,false);
  if(w->c[a].atkOn&&w->c[a].atkTo==b){w->c[a].troops+=w->c[a].atkTroops;w->c[a].atkOn=false;w->c[a].atkTroops=0;}
  if(w->c[b].atkOn&&w->c[b].atkTo==a){w->c[b].troops+=w->c[b].atkTroops;w->c[b].atkOn=false;w->c[b].atkTroops=0;}
+ War_OnPeace(w,a,b);             // guerra com objetivo dos lideres: fecha os dois lados (wwar.c)
 }
 
 // ===================== paises =====================
@@ -495,7 +499,7 @@ void World_GenRandom(World *w,u32 seed,u8 size,u8 nNations,u8 diff,int playerNat
  Expand(w,false);
  Settle(w);
  World_Field(w);City_Gen(w);
- WEco_Init(w);WEco_PopInit(w);WDip_Init(w);WEco_Week(w);
+ WEco_Init(w);WEco_PopInit(w);WDip_Init(w);War_Init(w);Soc_Init(w);WEco_Week(w);
  Hist_Init(w);
 }
 
@@ -562,7 +566,7 @@ void World_GenMundi(World *w,u32 seed,u8 hist,u8 diff,int playerNat){
   World_DeclareHistWar(w,World_CountryOfNat(w,Nat_Find(WARS[k][0])),World_CountryOfNat(w,Nat_Find(WARS[k][1])));
  w->nWars=0;
  World_Field(w);City_Gen(w);
- WEco_Init(w);WEco_PopInit(w);WDip_Init(w);WEco_Week(w);
+ WEco_Init(w);WEco_PopInit(w);WDip_Init(w);War_Init(w);Soc_Init(w);WEco_Week(w);
  Hist_Init(w);
 }
 
@@ -849,6 +853,24 @@ HOT_ARM static void Fronts(World *w){
 }
 
 // ===================== IA =====================
+// forca de um pais com os aliados (aliado conta 2/3: nem todo aliado vem)
+static s32 Coalition(const World *w,u8 ci){
+ const WCountry *c=&w->c[ci];
+ s32 s=c->troops+c->atkTroops+c->ships*20;
+ for(int k=0;k<2;k++){u8 a=c->ally[k];if(a&&a<w->nC&&w->c[a].alive)s+=(w->c[a].troops+w->c[a].ships*20)*2/3;}
+ return s;
+}
+// vale abrir crise contra t? coalizao 30% mais forte (expansionista: 10%),
+// caixa no azul, divida sob controle, sem cansaco e sem outra crise aberta
+static bool AiWants(World *w,u8 ci,u8 t){
+ const WCountry *c=&w->c[ci];const WEco *e=&w->eco[ci];
+ if(War_Of(w,ci)>=0||(War_Of(w,t)>=0&&World_RngRange(w,3)))return false;  // alvo ja' em crise: raramente outra
+ if(c->gold<0||e->debt>WEco_DebtLimit(w,ci)/2||c->warDays>180)return false;
+ s32 me=Coalition(w,ci),th=Coalition(w,t);
+ int need=c->archetype==WA_EXPANSIONISTA?110:130;
+ if(w->c[t].player)need+=20;                  // o jogador reage: a IA so' o pressiona com folga
+ return (s64)me*100>=(s64)th*need;
+}
 HOT_ARM static void AI(World *w,u8 ci,bool declare){
  WCountry *c=&w->c[ci];
  // paz quando a guerra vai mal
@@ -859,7 +881,7 @@ HOT_ARM static void AI(World *w,u8 ci,bool declare){
  bool mundi=w->mode==WM_MUNDI;
  int tiredDays=mundi?1500:720;
  if(declare&&c->warN&&(c->troops<c->cap/4||(c->warDays>tiredDays&&World_RngRange(w,100)<10)||(!mundi&&World_RngRange(w,100)<2))){
-  for(u8 j=1;j<w->nC;j++)if(World_AtWar(w,ci,j)&&(!w->c[j].player||World_RngRange(w,3)==0)){
+  for(u8 j=1;j<w->nC;j++)if(World_AtWar(w,ci,j)&&!War_Managed(w,ci,j)&&(!w->c[j].player||World_RngRange(w,3)==0)){
    if(HistWar(w,ci,j)>=0&&(c->warDays<3000||World_RngRange(w,100)!=0))continue;
    if(w->c[j].troops>w->c[j].cap/2&&c->troops<c->cap/4&&World_RngRange(w,2))continue;
    World_Peace(w,ci,j);
@@ -926,9 +948,14 @@ HOT_ARM static void AI(World *w,u8 ci,bool declare){
  }
  if(best<0)return;
  if(best&&!World_AtWar(w,ci,(u8)best)){
-  World_DeclareWarCall(w,ci,(u8)best);
-  c->warTarget=(u8)best;c->warGain=0;
-  c->warGoal=(u16)(w->c[best].cells/3+4); // guerra limitada, nao aniquilacao
+  // ADR-45: a IA nao declara do nada — abre uma CRISE com exigencia e so'
+  // se a coalizao dela (aliados contam) for bem mais forte, o caixa aguentar
+  // e o pais nao estiver cansado. O objetivo segue o arquetipo.
+  if(!AiWants(w,ci,(u8)best))return;
+  u8 goal=c->archetype==WA_MERCADOR?GL_TRIBUTO:(c->archetype==WA_REVOLUCIONARIO&&World_RngRange(w,2)?GL_HUMILHAR:
+   (c->archetype==WA_OPORTUNISTA&&w->c[best].gold>c->gold?GL_TRIBUTO:GL_TERRA));
+  War_Start(w,ci,(u8)best,goal);
+  return;                          // a guerra (se vier) abre no fim do prazo
  }
  // a IA empurra rumo a' capital do alvo (terra livre: frente inteira)
  if(World_Attack(w,ci,(u8)best,ARCH_PCT[c->archetype]))
@@ -952,10 +979,13 @@ void World_Day(World *w){
 HOT_ARM static void DayBegin(World *w){
  w->day++;Cal_Next(&w->date);
  bool newYear=(w->date.m==1&&w->date.d==1);
+ // virada de seculo (ADR-46): a era nova entra na faixa de noticias
+ if(newYear&&(w->date.y%100)==0&&w->day>1){int k=(w->date.y-1800)/100;if(k>3)k=3;World_Msg(w,Str((u16)(STR_SEC_0+k*2)),Str((u16)(STR_SEC_0+k*2+1)));}
  for(u8 ci=1;ci<w->nC;ci++){
   WCountry *c=&w->c[ci];
   if(!c->alive)continue;
   Recap(c);c->cap=c->cap*Max32(20,100+w->eco[ci].fx.v[LFX_CAP])/100;   // lei do servico militar
+  if(War_Mobilized(w,ci))c->cap+=c->cap/4;      // mobilizado (crise/guerra com objetivo, ADR-45): reservistas
   if(c->warN){if(c->warDays<3000)c->warDays++;}
   else if(c->warDays)c->warDays=c->warDays>2?c->warDays-2:0;
   s32 tired=c->warDays/20;
@@ -976,6 +1006,7 @@ HOT_ARM void World_DayPhase(World *w,int ph){
   case 1:if((w->day%7)==0)PT(1,WEco_Week(w));break;
   case 2:
    PT(2,WDip_Day(w));
+   War_Day(w);                  // crises e guerras com objetivo (wwar.c, ADR-45)
    Law_Day(w);Stat_Day(w);      // debates de lei do jogador; series dos graficos + marcos (ADR-40/41)
    // IA: cada pais pensa a cada 4 dias (escalonado); em alerta, todo dia
    PT(3,for(u8 ci=1;ci<w->nC;ci++){

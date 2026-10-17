@@ -5,6 +5,8 @@
 #include "city.h"
 #include "str.h"
 #include "calendar.h"
+#include "wwar.h"
+#include "wsoc.h"
 // wdiplo.c — ideologia, diplomacia da IA, propostas, marinha e ambicoes.
 // Ver wdiplo.h. Usa o RNG do mundo (w->rng): mesma semente = mesma historia.
 
@@ -115,6 +117,7 @@ static bool Opposed(u8 a,u8 b){
  if((a==ID_AUTORITARIO&&b==ID_LIBERAL)||(b==ID_AUTORITARIO&&a==ID_LIBERAL))return true;
  return false;
 }
+bool WDip_Opposed(u8 a,u8 b){return Opposed(a,b);}
 // peso de cada ideologia por era (sorteio da revolucao)
 static const u8 EW[ERA_COUNT][ID_COUNT]={
  {30,40,20, 0, 5, 5},{35,35,25, 0, 5, 5},{20,45,25, 5, 5, 3},{15,40,30,10, 5, 3},
@@ -329,8 +332,22 @@ void WDip_Answer(World *w,bool yes){
   else{World_DeclareWarCall(w,p.from,me);F->warTarget=me;F->warGain=0;F->warGoal=(u16)(w->c[me].cells/4+4);}
   break;
  case PR_PAZ:
-  if(F&&yes)World_Peace(w,me,p.from);
+  // guerra com objetivo (wwar.c): gold > 0 = o jogador paga; < 0 = recebe
+  if(F)War_PeaceAnswer(w,me,p.from,p.gold,yes);
   break;
+ case PR_BURGUES:Soc_LobbyAnswer(w,me,&p,yes);break;
+ case PR_LADO:
+  if(!F)break;
+  {int k=p.about%CR_MAX;const WCrisis *c=&w->cr[k];     // a crise ainda e' do mesmo lider?
+   if(yes&&c->st&&(c->att==p.from||c->def==p.from)){War_JoinSide(w,k,me,(int)p.gold);F->opin=(s8)Mn(100,F->opin+20);break;}}
+  if(!yes)F->opin=(s8)(F->opin>-80?F->opin-15:-100);
+  break;
+ case PR_CRISE:{
+  int k=p.about%CR_MAX;const WCrisis *c=&w->cr[k];
+  if(c->st!=CRS_CRISE||(c->att!=p.from&&c->def!=p.from)||War_Side(w,k,me)<0)break;   // a crise ja' acabou
+  if(p.idx==0){if(yes)War_Yield(w,k,me);}             // exigencia: ceder
+  else if(yes)War_Settle(w,k,50);                     // a IA propos acordo (metade)
+ }break;
  case PR_DECISAO:
   Rnd_Decide(w,me,p.idx,yes);
   break;
@@ -456,8 +473,9 @@ int WDip_Instigate(World *w,u8 me,u8 t,u8 *victim){
   int ov=w->c[v].opin-15;w->c[v].opin=(s8)(ov<-100?-100:ov);
   return 0;
  }
- World_DeclareWarCall(w,t,v);
- c->warTarget=v;c->warGain=0;c->warGoal=(u16)(w->c[v].cells/3+4);c->alert=12;
+ // ADR-45: o instigado abre uma crise (exige terra da vitima); pode acabar em acordo
+ if(War_Start(w,t,v,GL_TERRA)<0)return 0;
+ c->alert=12;
  w->nInstig++;
  return 1;
 }
@@ -527,8 +545,8 @@ static void Bully(World *w,u8 ci,u8 me){
  if(c->rival!=me||World_AtWar(w,ci,me)||WDip_Allied(w,ci,me))return;
  if(c->troops<P->troops*2||c->mood<55||World_RngRange(w,100)>=6)return;
  if(c->archetype!=WA_EXPANSIONISTA&&c->archetype!=WA_OPORTUNISTA)return;
- s32 g=P->gold/4+50;
- WDip_Propose(w,PR_TRIBUTO,ci,0,g,0);
+ // ADR-45: a exigencia de tributo vira crise (o jogador recebe o despacho PR_CRISE)
+ War_Start(w,ci,me,GL_TRIBUTO);
 }
 static void AiNavyArmy(World *w,u8 ci){
  WCountry *c=&w->c[ci];const WEco *e=&w->eco[ci];
@@ -597,6 +615,7 @@ void WDip_OnDeath(World *w,u8 ci){
  }
  WCountry *d=&w->c[ci];d->bloc=0;d->ally[0]=d->ally[1]=0;d->rival=0;d->ships=0;d->shipQ=0;
  if(w->prop.kind&&w->prop.from==ci)w->prop.kind=PR_NONE;
+ War_OnDeath(w,ci);
 }
 void WDip_Init(World *w){
  for(u8 ci=1;ci<w->nC;ci++){
@@ -636,6 +655,7 @@ HOT_ARM void WDip_Day(World *w){
    // leis (ADR-40): efeito direto + aprovacao da ideologia; inflacao corroi o salario
    int infl=w->eco[ci].infl;
    int tgt=30+w->eco[ci].life/2+c->m.happy+w->eco[ci].fx.v[LFX_HAPPY]+Law_Approval(w,ci)-(infl>0?(infl/10>15?15:infl/10):0);
+   tgt+=Soc_HappyFx(w,ci);      // estratos (ADR-42): pobres, medios e ricos pesam pelo tamanho x poder
    // pedido do povo (wecon.c, ADR-37): atendido alegra, ignorado revolta, aberto incomoda
    tgt+=w->eco[ci].reqMood-(w->eco[ci].reqG<GD_COUNT?3:0);
    if(c->warDays>360)tgt-=5;
@@ -644,7 +664,7 @@ HOT_ARM void WDip_Day(World *w){
     tgt+=fun>8?8:fun;
     if(w->eco[ci].debt>WEco_DebtLimit(w,ci)*2/3)tgt-=5;}
    if(c->happy<tgt)c->happy++;else if(c->happy>tgt)c->happy--;
-   int mt=20+c->m.militancy+(60-(int)c->happy)/2+w->eco[ci].fx.v[LFX_MILIT];
+   int mt=20+c->m.militancy+(60-(int)c->happy)/2+w->eco[ci].fx.v[LFX_MILIT]+Soc_MilitFx(w,ci);
    if(mt<0)mt=0;
    if(c->militancy<mt)c->militancy++;else if(c->militancy>mt)c->militancy--;
   }
@@ -673,7 +693,7 @@ HOT_ARM void WDip_Day(World *w){
   Revolutions(w,ci);
   if(me)Bully(w,ci,me);
   // paz oferecida ao jogador por quem esta perdendo
-  if(me&&World_AtWar(w,ci,me)&&c->warDays>365&&c->troops<w->c[me].troops/2&&World_RngRange(w,100)<15)
+  if(me&&World_AtWar(w,ci,me)&&!War_Managed(w,ci,me)&&c->warDays>365&&c->troops<w->c[me].troops/2&&World_RngRange(w,100)<15)
    WDip_Propose(w,PR_PAZ,ci,0,0,0);
  }
  if(me){

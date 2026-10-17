@@ -526,12 +526,22 @@ static void Apply(World *w,const HOp *o,u8 self){
  }
 }
 
+// Pequena dose de acaso (ADR-46): cada evento ganha um ATRASO fixo pela semente
+// (0..120 dias) e uma chance pequena de simplesmente nao acontecer (4% com a
+// historia ligada, 12% no modo sabor). Tratados de paz nunca falham (senao a
+// guerra historica nao acaba). Hash da semente, nao o RNG: a mesma semente
+// repete a mesma historia; outra semente diverge um pouco.
+static u32 Jit(const World *w,int i){u32 h=(w->seed^0x51ED27u)*2654435761u+(u32)i*40503u;h^=h>>13;h*=0x5BD1E995u;h^=h>>15;return h;}
+static bool Treaty(const HistEvent *e){for(int k=0;k<6;k++)if(e->eff[k].op==HE_PEACE||e->eff[k].op==HE_PEACEALL)return true;return false;}
 void Hist_Day(World *w){
  for(int i=0;i<HIST_N;i++){
   if(w->day<ANCH[i])break;          // tabela em ordem de data (teste garante)
   if(Hist_State(w,i))continue;
   const HistEvent *e=&HIST[i];
-  if(w->day>ANCH[i]+(u32)e->win*365u+30u){SetState(w,i,2);continue;}
+  u32 j=Jit(w,i);
+  if(w->day<ANCH[i]+j%121u)continue;
+  if(!Treaty(e)&&(j>>8)%100u<(w->hist==WH_LIGADA?3u:12u)){SetState(w,i,2);continue;}   // o mundo divergiu
+  if(w->day>ANCH[i]+(u32)e->win*365u+150u){SetState(w,i,2);continue;}
   bool ok=true;
   for(int k=0;k<3&&ok;k++)if(e->cond[k].op)ok=Cond(w,&e->cond[k]);
   if(!ok)continue;

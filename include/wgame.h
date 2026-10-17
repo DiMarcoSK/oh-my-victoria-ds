@@ -14,14 +14,16 @@
 // + botoes rapidos + % e velocidade.
 // Layout Invertida (Settings) poe o mapa embaixo, tocavel (lcdMainOnBottom).
 enum { WMAP_POL=0, WMAP_TER, WMAP_DIP, WMAP_COM, WMAP_IDEO, WMAP_COUNT };   // modos de mapa (Y)
-enum { LT_MERCADO=0, LT_COMERCIO, LT_DIPLO, LT_POLITICA, LT_FINANCAS, LT_LEIS, LT_GRAF, LT_COUNT };    // abas do Gabinete
+enum { LT_MERCADO=0, LT_COMERCIO, LT_DIPLO, LT_POLITICA, LT_FINANCAS, LT_LEIS, LT_GRAF, LT_SOCIEDADE, LT_COUNT };    // abas do Gabinete
 // folha de acoes (A sobre a mira, ou botao bandeira): o que da' p/ fazer com o
 // alvo sob a mira — pais, sua terra, sua cidade ou terra livre. So' caneta.
 enum { DM_PAZ=0, DM_ALIANCA, DM_ROMPER, DM_ENTRAR, DM_CONVIDAR, DM_GUERRA, DM_CANCELAR,
        DM_CIDADE, DM_FUNDAR, DM_RECRUTAR, DM_ATACAR, DM_COLONIZAR,
-       DM_FORTE, DM_TRINCHEIRA, DM_BATERIA, DM_ARMAS, DM_ARMAS_FIM, DM_INSTIGAR, DM_COUNT };
+       DM_FORTE, DM_TRINCHEIRA, DM_BATERIA, DM_ARMAS, DM_ARMAS_FIM, DM_INSTIGAR,
+       DM_META_TERRA, DM_META_TRIBUTO, DM_META_HUMILHAR, DM_CONCEDER, DM_COUNT };   // ADR-45: objetivo da crise; comprar a paz
 // AK_OBRA: folha do botao Construir (cidade + fortificacoes na celula da mira; ADR-38)
-enum { AK_PAIS=0, AK_TERRA, AK_CIDADE, AK_LIVRE, AK_OBRA };  // tipo do alvo da folha
+// AK_META: objetivo da crise contra o pais dipTo (DM_GUERRA abre; ADR-45)
+enum { AK_PAIS=0, AK_TERRA, AK_CIDADE, AK_LIVRE, AK_OBRA, AK_META };  // tipo do alvo da folha
 enum { WG_ACT_Y=30, WG_ACT_H=22 };                        // linhas tocaveis da folha
 enum { WZ_COUNT=6 };      // zoom 0..5: (1<<z)/2 px por celula (Z0 = mundo inteiro; Z5 = 16 px, tropas lutando)
 enum { WG_MAP_Y=20, WG_MAP_H=172 };                    // viewport do mapa
@@ -71,6 +73,9 @@ typedef struct {
  u32 propSeen;        // dia da ultima proposta que ja pausou o jogo
  bool propRun;        // o jogo corria quando a proposta chegou (volta a correr)
  u8 botLazy;          // ficha do painel pendente durante o pan (quadros desde o pedido; ADR-36)
+ u16 centT;           // transicao de seculo na tela do mapa (VBlanks restantes; ADR-46)
+ u16 centY;           // ano da transicao (1800, 1900, 2000...)
+ u16 cityCamX, cityCamY; // camera do mapa da cidade (px; 20x12 lotes > tela, ADR-44)
 } WGame;
 // Gabinete (tela de baixo): geometria compartilhada por px_ledger.c e wgame.c
 // abas em 2 linhas (ADR-40): 4 em cima (64 px), 3 embaixo (85 px)
@@ -91,8 +96,12 @@ enum { GR_BX=4, GR_BY=40, GR_BW=62, GR_BH=32 };
 // ranking (SCR_RANK): abas de criterio, paginas, minha nacao (voltar = LG_BACK_Y)
 enum { RK_TAB_Y=2, RK_TAB_H=26, RK_BTN_Y=124, RK_BTN_H=26, RK_BTN_W=56, RK_UP_X=8, RK_DN_X=70, RK_ME_X=132, RK_ME_W=116 };
 // cidade (SCR_CITY, painel): minimapa de lotes, botao do lote, catalogo
-enum { CY_MINI_X=6, CY_MINI_Y=46, CY_CELL=7, CY_BTN_Y=120, CY_BTN_H=22, CY_PICK_Y=118,
+enum { CY_MINI_X=6, CY_MINI_Y=46, CY_CELL=6, CY_BTN_Y=120, CY_BTN_H=22, CY_PICK_Y=118,
        CY_ARW_W=36, CY_OK_X=56, CY_OK_Y=162, CY_OK_W=96, CY_OK_H=24, CY_NO_X=158, CY_NO_W=90 };
+// faixa da crise/guerra com objetivo no lugar do despacho (painel do mapa, ADR-45)
+enum { CR_Y=106, CR_BY=131, CR_BH=16, CR_BX0=8, CR_BW=78, CR_BDX=80 };
+// aba Financas: botoes de juros (metades da linha de acao LG_ACT_*)
+enum { FN_HALF=LG_ACT_W/2 };
 // modal de proposta (painel do mapa): botoes Aceitar / Recusar
 enum { PM_BTN_Y=150, PM_BTN_H=36 };
 

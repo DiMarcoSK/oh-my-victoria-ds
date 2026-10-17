@@ -135,20 +135,29 @@ static const char *const SY1[ST_COUNT][16]={
 static u8 StyleOf(const World *w,u8 owner);
 static u16 GenName(const World *w,u8 owner,u32 h){return (u16)(((u32)StyleOf(w,owner)<<13)|(h&0xFF));}
 
-int City_Slots(u8 tier){static const u8 S[CT_COUNT]={3,6,10,16};return tier<CT_COUNT?S[tier]:3;}
-int City_NextPop(u8 tier){static const u16 N[CT_COUNT]={10,50,400,0};return tier<CT_COUNT?N[tier]:0;}
+int City_Slots(u8 tier){static const u8 S[CT_COUNT]={3,6,10,16,16};return tier<CT_COUNT?S[tier]:3;}
+int City_NextPop(u8 tier){static const u16 N[CT_COUNT]={10,50,400,5000,0};return tier<CT_COUNT?N[tier]:0;}
+// nivel das obras (ADR-44): 1..tier+1; a megalopole amplia ate' 5
+int City_Level(const WCity *c,int s){return c->bld[s]?(c->blv[s]?c->blv[s]:1):0;}
+int City_MaxLevel(u8 tier){return tier<CT_COUNT?tier+1:1;}
 static bool Has(const WCity *c,u8 k){for(int s=0;s<CITY_SLOTS;s++)if(c->bld[s]==k)return true;return false;}
 static int Count(const WCity *c,u8 k){int n=0;for(int s=0;s<CITY_SLOTS;s++)if(c->bld[s]==k)n++;return n;}
 int City_Count(const WCity *c,u8 k){return Count(c,k);}
 HOT_ARM int City_PopCap(const WCity *c){
- static const u16 B[CT_COUNT]={14,70,460,3000};
- int m=100+20*Count(c,BK_FAZENDA)+10*Count(c,BK_PORTO)+15*Count(c,BK_FERROVIA);
- return B[c->tier%CT_COUNT]*m/100;
+ static const u16 B[CT_COUNT]={14,70,460,3600,12000};
+ int m=100;
+ for(int s=0;s<CITY_SLOTS;s++){int l=c->blv[s]?c->blv[s]:1;   // uma passada (roda todo dia p/ cada cidade)
+  switch(c->bld[s]){case BK_FAZENDA:m+=20*l;break;case BK_PORTO:m+=10*l;break;case BK_FERROVIA:m+=15*l;break;
+   case BK_USINA:m+=10*l;break;case BK_HOSPITAL:m+=8*l;break;default:break;}}
+ s32 v=(s32)B[c->tier%CT_COUNT]*m/100;
+ return v>60000?60000:(int)v;
 }
+// megalopole (ADR-44): 5 milhoes de habitantes + bolsa ou usina (finanças e energia)
 static bool TierReq(const WCity *c,u8 to){
  if(c->pop<City_NextPop((u8)(to-1)))return false;
  if(to==CT_CIDADE)return Has(c,BK_MERCADO);
  if(to==CT_METROPOLE)return Has(c,BK_FABRICA)||Has(c,BK_UNIVERSIDADE);
+ if(to==CT_MEGALOPOLE)return Has(c,BK_BOLSA)||Has(c,BK_USINA);
  return true;
 }
 static int Dist(const World *w,int ax,int ay,int bx,int by){
@@ -254,13 +263,16 @@ static void Layout(const World *w,int ci){
   for(int y=0;y<CG_H;y++){LAY[y*CG_W+rx]=LK_AGUA;u32 q=Hs(h,(u32)y+50);if((q&3)==0&&rx<CG_W-2)rx++;else if((q&3)==1&&rx>1)rx--;}
  }
  // avenidas (cruz) + ruas secundarias; ponte onde cruza o rio
- int r0=4+(int)((h>>8)%2),c0=6+(int)((h>>10)%4);
+ int r0=CG_H/2-1+(int)((h>>8)%2),c0=CG_W/2-2+(int)((h>>10)%4);
  for(int x=0;x<CG_W;x++){int i=r0*CG_W+x;if(LAY[i]!=LK_AGUA||sd==SD_NONE)LAY[i]=LK_RUA;}
  for(int y=0;y<CG_H;y++){int i=y*CG_W+c0;if(LAY[i]!=LK_AGUA||sd==SD_NONE)LAY[i]=LK_RUA;}
  static const s8 SR[2]={-3,3},SC[2]={-4,4};
  for(int k=0;k<2;k++){
   int r=r0+SR[k];if(r>=0&&r<CG_H)for(int x=c0-6;x<=c0+6;x++)if(x>=0&&x<CG_W&&LAY[r*CG_W+x]==LK_TERRA)LAY[r*CG_W+x]=LK_RUA;
   int cc=c0+SC[k];if(cc>=0&&cc<CG_W)for(int y=r0-3;y<=r0+3;y++)if(y>=0&&y<CG_H&&LAY[y*CG_W+cc]==LK_TERRA)LAY[y*CG_W+cc]=LK_RUA;
+  // anel de fora (ADR-44): ruas p/ onde a cidade grande se espalha
+  int r2=r0+SR[k]*2-(k?1:-1);if(r2>=0&&r2<CG_H)for(int x=c0-9;x<=c0+9;x++)if(x>=0&&x<CG_W&&LAY[r2*CG_W+x]==LK_TERRA&&((x+r2)%5))LAY[r2*CG_W+x]=LK_RUA;
+  int c2=c0+SC[k]*2;if(c2>=0&&c2<CG_W)for(int y=r0-5;y<=r0+5;y++)if(y>=0&&y<CG_H&&LAY[y*CG_W+c2]==LK_TERRA&&((y+c2)%4))LAY[y*CG_W+c2]=LK_RUA;
  }
  int pl=(r0-1)*CG_W+c0+1;if(LAY[pl]==LK_TERRA)LAY[pl]=LK_PRACA;
 }
@@ -280,8 +292,19 @@ bool City_LotCoast(const World *w,int ci,int lot){
 int City_Plaza(const World *w,int ci){
  Layout(w,ci);
  for(int i=0;i<CG_N;i++)if(LAY[i]==LK_PRACA)return i;
- return 4*CG_W+7;
+ return (CG_H/2-2)*CG_W+CG_W/2-1;
 }
+// limite urbano (ADR-44): o povoado ocupa o miolo; a cidade se espalha pelo
+// mapa conforme o nivel. Campo e extracao (fazenda, mina, serraria, poco)
+// podem ir alem do limite: sao os arredores.
+int City_Radius(u8 tier){static const u8 R[CT_COUNT]={3,5,7,9,99};return tier<CT_COUNT?R[tier]:3;}
+bool City_LotInside(const World *w,int ci,int lot){
+ int pl=City_Plaza(w,ci),dx=lot%CG_W-pl%CG_W,dy=lot/CG_W-pl/CG_W;
+ if(dx<0)dx=-dx;
+ if(dy<0)dy=-dy;
+ return (dx>dy?dx:dy)<=City_Radius(w->city[ci].tier);
+}
+static bool Rural(u8 k){return k==BK_FAZENDA||k==BK_MINA||k==BK_SERRARIA||k==BK_POCO;}
 int City_LotSlot(const WCity *c,int lot){
  for(int s=0;s<CITY_SLOTS;s++)if(c->bld[s]&&c->bpos[s]==lot)return s;
  return -1;
@@ -301,15 +324,20 @@ int City_AutoLot(const World *w,int ci,u8 k){
  for(int i=0;i<CG_N;i++){
   if(!LotFree(w,ci,i))continue;
   if(coast&&!City_LotCoast(w,ci,i))continue;
+  if(!Rural(k)&&!City_LotInside(w,ci,i))continue;
   int dx=i%CG_W-px,dy=i/CG_W-py;
   int d=(dx*dx+dy*dy)*8+(int)(Hs((u32)ci*131u+(u32)i,k)%7);
-  if(k==BK_FAZENDA||k==BK_MINA||k==BK_SERRARIA||k==BK_POCO)d=-d;    // campo e extracao: nos arredores
+  // campo e extracao: nos arredores, logo alem do limite urbano (nem no
+  // centro, nem na borda do mapa)
+  if(Rural(k)){int ax=dx<0?-dx:dx,ay=dy<0?-dy:dy,ch=ax>ay?ax:ay,r=City_Radius(w->city[ci].tier)+1;if(r>7)r=7;
+   d=(ch>r?ch-r:r-ch)*64+(int)(Hs((u32)ci*131u+(u32)i,k)%7);}
   if(d<bd){bd=d;best=i;}
  }
  return best;
 }
 bool City_CanBuildAt(const World *w,int ci,int lot,u8 k){
  if(!City_CanBuild(w,ci,k)||!LotFree(w,ci,lot))return false;
+ if(!Rural(k)&&!City_LotInside(w,ci,lot))return false;
  if((BLD[k].flags&BF_COAST)&&!City_LotCoast(w,ci,lot))return false;
  return true;
 }
@@ -353,6 +381,7 @@ static void InitCity(World *w,int i){
   {BK_FAZENDA,0},
   {BK_FAZENDA,BK_TEMPLO,0},
   {BK_FAZENDA,BK_MERCADO,BK_TEMPLO,0},
+  {BK_FAZENDA,BK_MERCADO,BK_TEMPLO,BK_UNIVERSIDADE,0},
   {BK_FAZENDA,BK_MERCADO,BK_TEMPLO,BK_UNIVERSIDADE,0}};  // sempre sobram slots p/ o jogador
  int s=0;
  for(int k=0;k<6&&L[c->tier][k];k++)c->bld[s++]=L[c->tier][k];
@@ -371,6 +400,8 @@ static void InitCity(World *w,int i){
  if(c->tier>=CT_CIDADE&&s<City_Slots(c->tier)-2)c->bld[s++]=BK_ESCOLA;
  // cada obra inicial ganha um lote no mapa da cidade
  for(int k=0;k<CITY_SLOTS;k++)if(c->bld[k]){int l=City_AutoLot(w,i,c->bld[k]);c->bpos[k]=(u8)(l<0?0xFF:l);}
+ // as grandes cidades de 1800 ja' tem a fazenda e o mercado ampliados
+ for(int k=0;k<CITY_SLOTS;k++){u8 b=c->bld[k];c->blv[k]=(u8)((b&&c->tier>=CT_CIDADE&&(b==BK_FAZENDA||b==BK_MERCADO))?2:(b?1:0));}
 }
 // terra mais proxima (ate r) de (x,y)
 static bool NearLand(const World *w,int *x,int *y,int r){
@@ -475,7 +506,7 @@ static bool Queue(World *w,int i,int slot,u8 k){
  }
  int lot=City_AutoLot(w,i,k);
  if(lot<0&&(BLD[k].flags&BF_COAST))return false;
- c->bq=k;c->bqDays=BLD[k].days;c->bqSlot=(u8)slot;c->bqLot=(u8)(lot<0?0xFF:lot);
+ c->bq=k;c->bqDays=BLD[k].days;c->bqSlot=(u8)slot;c->bqLot=(u8)(lot<0?0xFF:lot);c->bqUp=0;
  return true;
 }
 bool City_Build(World *w,int i,int slot,u8 k){
@@ -492,7 +523,39 @@ bool City_BuildAt(World *w,int i,int lot,u8 k){
  int slot=-1;for(int s=0;s<City_Slots(c->tier);s++)if(!c->bld[s]){slot=s;break;}
  if(slot<0)return false;
  w->c[c->owner].gold-=City_Cost(w,i,k);
- c->bq=k;c->bqDays=BLD[k].days;c->bqSlot=(u8)slot;c->bqLot=(u8)lot;
+ c->bq=k;c->bqDays=BLD[k].days;c->bqSlot=(u8)slot;c->bqLot=(u8)lot;c->bqUp=0;
+ return true;
+}
+// obra doada (a burguesia paga, ADR-42): entra na fila sem cobrar do Estado
+bool City_Grant(World *w,int i,u8 k){
+ if(i<0||i>=w->nCity||!City_CanBuild(w,i,k))return false;
+ return Queue(w,i,-1,k);
+}
+// ---- ampliar (ADR-44): a obra do slot sobe 1 nivel ----
+// custo: o preco da obra x (nivel+1)/2; prazo: 2/3 da obra nova. Uma obra por
+// vez na cidade (a ampliacao ocupa a fila como uma obra nova).
+s32 City_UpCost(const World *w,int i,int s){
+ const WCity *c=&w->city[i];
+ return City_Cost(w,i,c->bld[s])*(City_Level(c,s)+1)/2;
+}
+u16 City_UpWhy(const World *w,int i,int s){
+ const WCity *c=&w->city[i];
+ if(s<0||s>=CITY_SLOTS||!c->bld[s])return STR_VAZIO;
+ if(c->bq)return STR_JA_EM_OBRA;
+ if(City_Level(c,s)>=City_MaxLevel(c->tier))return City_Level(c,s)>=City_MaxLevel(CT_COUNT-1)?STR_NIVEL_MAX:STR_REQ_NIVEL_CID;
+ if(w->date.y<BLD[c->bld[s]].minYear)return STR_REQ_ANO;
+ return 0;
+}
+static void QueueUp(World *w,int i,int s){
+ WCity *c=&w->city[i];
+ c->bq=c->bld[s];c->bqDays=(u16)(BLD[c->bld[s]].days*2/3+1);c->bqSlot=(u8)s;c->bqLot=c->bpos[s];c->bqUp=1;
+}
+bool City_Upgrade(World *w,int i,int s){
+ WCity *c=&w->city[i];
+ if(!c->owner||City_UpWhy(w,i,s))return false;
+ s32 cost=City_UpCost(w,i,s);
+ if(w->c[c->owner].gold<cost)return false;
+ w->c[c->owner].gold-=cost;QueueUp(w,i,s);
  return true;
 }
 void City_Name(const World *w,int i,char *out,int max){
@@ -507,6 +570,7 @@ void City_Name(const World *w,int i,char *out,int max){
  (void)w;
 }
 u8 City_Style(const World *w,int i){return StyleOf(w,w->city[i].owner);}
+u8 City_StyleOf(const World *w,u8 owner){return StyleOf(w,owner);}
 static u8 StyleOf(const World *w,u8 owner){
  if(!owner)return ST_EURO;
  const NationDef *d=&NATIONS[w->c[owner].nat];
@@ -576,24 +640,33 @@ static bool Private(u8 k){
  switch(k){case BK_QUARTEL:case BK_MURALHA:case BK_PALACIO:case BK_TEMPLO:case BK_ESCOLA:case BK_UNIVERSIDADE:
   case BK_HOSPITAL:case BK_PARQUE:case BK_ESTALEIRO:return false;default:return true;}
 }
+static int UpScore(const World *w,int i,int s);
 void City_Invest(World *w,u8 ci){
  WEco *e=&w->eco[ci];WCountry *C=&w->c[ci];
  if(!C->alive||e->invest<150)return;
- int bi=-1,bk=0,bs=69;
+ int bi=-1,bk=0,bs=69,bu=-1;
  for(int i=0;i<w->nCity;i++){
   const WCity *c=&w->city[i];
   if(c->owner!=ci||c->bq)continue;
   int fr=0;for(int s=0;s<City_Slots(c->tier);s++)if(!c->bld[s])fr++;
+  // a burguesia amplia as proprias fabricas (ADR-42/44): sem slot livre, cresce no lugar
+  for(int s=0;s<CITY_SLOTS;s++){
+   if(!Private(c->bld[s]))continue;
+   int sc=UpScore(w,i,s);if(sc<0)continue;
+   sc+=(int)(Hs((u32)i*23u+(u32)s,w->day>>6)%15);
+   if(sc>bs&&City_UpCost(w,i,s)<=e->invest){bs=sc;bi=i;bu=s;bk=c->bld[s];}
+  }
   if(fr<(C->player?2:1))continue;
   for(u8 k=1;k<BK_COUNT;k++){
    if(!Private(k)||!City_CanBuild(w,i,k))continue;
    int sc=AiScore(w,i,k)+(int)(Hs((u32)i*17u+k,w->day>>6)%15);
-   if(sc>bs&&City_Cost(w,i,k)<=e->invest){bs=sc;bi=i;bk=k;}
+   if(sc>bs&&City_Cost(w,i,k)<=e->invest){bs=sc;bi=i;bk=k;bu=-1;}
   }
  }
  if(bi<0)return;
- s32 cost=City_Cost(w,bi,(u8)bk);
- if(!Queue(w,bi,-1,(u8)bk))return;
+ s32 cost;
+ if(bu>=0){cost=City_UpCost(w,bi,bu);QueueUp(w,bi,bu);}
+ else{cost=City_Cost(w,bi,(u8)bk);if(!Queue(w,bi,-1,(u8)bk))return;}
  e->invest-=cost;w->nInvest++;
  if(C->player){char nm[40];City_Name(w,bi,nm,40);char t[96];int n=0;const char *a=Str(BLD[bk].nameStr);
   while(*a&&n<50)t[n++]=*a++;
@@ -602,14 +675,28 @@ void City_Invest(World *w,u8 ci){
   t[n]=0;
   World_Msg(w,Str(STR_INVEST_MSG),t);}
 }
+// ampliar vale o que a obra vale (o mercado ainda pede) menos um tanto por
+// nivel: a IA amplia o que da' lucro e constroi o que falta
+static int UpScore(const World *w,int i,int s){
+ const WCity *c=&w->city[i];
+ if(City_UpWhy(w,i,s))return -1;
+ // so' amplia com gente sobrando p/ as vagas novas (40% da cidade trabalha)
+ int want;WEco_CityJobs(c,&want);
+ if(c->pop*2/5<want+WEco_BldJobs(c->bld[s]))return -1;
+ int lv=City_Level(c,s),sc=AiScore(w,i,c->bld[s]);
+ if(sc<70)return -1;                                   // o mercado precisa pedir de verdade
+ return sc*2/(2+lv*2);
+}
 static void AiBuild(World *w,int i){
  WCity *c=&w->city[i];WCountry *C=&w->c[c->owner];
- int best=-1,bs=0;
+ int best=-1,bs=0,up=-1;
  for(u8 k=1;k<BK_COUNT;k++){
   if(!City_CanBuild(w,i,k))continue;
   int sc=AiScore(w,i,k)+(int)(Hs((u32)i*31u+k,w->day>>5)%20);   // pitada de acaso (hash, nao RNG)
   if(sc>bs){bs=sc;best=k;}
  }
+ for(int s=0;s<CITY_SLOTS;s++){int sc=UpScore(w,i,s);if(sc>bs){bs=sc;up=s;best=-1;}}
+ if(up>=0){if(C->gold>=City_UpCost(w,i,up)*2)City_Upgrade(w,i,up);return;}
  if(best<0||C->gold<City_Cost(w,i,(u8)best)*2)return;     // guarda reserva p/ a guerra
  City_Build(w,i,-1,(u8)best);
 }
@@ -624,9 +711,22 @@ static void AiFound(World *w,u8 ci){
   if(x<w->w&&y<w->h&&City_CanFound(w,ci,x,y)){City_Found(w,ci,x,y);return;}
  }
 }
+// Urbanizacao (ADR-44): a soma das cidades nao passa de uma fatia da
+// populacao do pais que sobe com a era (1800 ~8%, 1900 ~25%, 2000 ~50%) e
+// com a alfabetizacao. Sem isso a megalopole crescia sem gente no pais e a
+// demanda urbana engolia o mercado. URBP = soma de ontem (1 passada/dia).
+static u32 URBP[W_MAXC+1],URBC[W_MAXC+1];
+static u32 UrbCap(const World *w,const WCountry *C){
+ int y=w->date.y,p=7+(y-1800)/5+C->lit/60;
+ if(p>80)p=80;
+ return (u32)((u64)C->popK*(u32)p/100u)+20u;
+}
 HOT_ARM void City_Day(World *w){
  for(u8 ci=1;ci<w->nC;ci++){w->c[ci].cityGold=0;w->c[ci].cityCap=0;w->c[ci].nCity=0;}
  bool newYear=(w->date.m==1&&w->date.d==1);
+ for(int ci=0;ci<=W_MAXC;ci++)URBP[ci]=0;
+ for(int i=0;i<w->nCity;i++)URBP[w->city[i].owner]+=w->city[i].pop;
+ for(u8 ci=1;ci<w->nC;ci++)URBC[ci]=w->c[ci].alive?UrbCap(w,&w->c[ci]):0;
  for(int i=0;i<w->nCity;i++){
   WCity *c=&w->city[i];
   u8 o=c->owner;
@@ -637,20 +737,28 @@ HOT_ARM void City_Day(World *w){
    if(c->bqDays&&(int)((w->day*37u+(u32)i)%100u)<WEco_ToolsPct(w,o))c->bqDays--;
    if(!c->bqDays){
     int s=c->bqSlot;
-    if(s>=CITY_SLOTS||c->bld[s]){s=-1;for(int k=0;k<CITY_SLOTS;k++)if(!c->bld[k]){s=k;break;}}
-    if(s>=0){c->bld[s]=c->bq;c->bpos[s]=c->bqLot;}
-    if(C->player){char nm[40];City_Name(w,i,nm,40);World_Msg(w,Str(STR_OBRA_PRONTA),nm);}
-    c->bq=0;
+    if(c->bqUp){
+     // ampliacao: a obra do slot sobe 1 nivel (se ainda for a mesma)
+     if(s<CITY_SLOTS&&c->bld[s]==c->bq){c->blv[s]=(u8)(City_Level(c,s)+1);w->nUpgrades++;}
+    }else{
+     if(s>=CITY_SLOTS||c->bld[s]){s=-1;for(int k=0;k<CITY_SLOTS;k++)if(!c->bld[k]){s=k;break;}}
+     if(s>=0){c->bld[s]=c->bq;c->bpos[s]=c->bqLot;c->blv[s]=1;}
+    }
+    if(C->player){char nm[40];City_Name(w,i,nm,40);World_Msg(w,Str(c->bqUp?STR_OBRA_AMPLIADA:STR_OBRA_PRONTA),nm);}
+    c->bq=0;c->bqUp=0;
    }
   }
   int gold=c->tier,food=0,cap=c->pop/8,prest=0;
-  for(int s=0;s<CITY_SLOTS;s++){u8 k=c->bld[s];if(!k)continue;
-   gold+=BLD[k].gold;food+=BLD[k].food;cap+=BLD[k].cap;prest+=BLD[k].prestige;}
+  for(int s=0;s<CITY_SLOTS;s++){u8 k=c->bld[s];if(!k)continue;int lv=c->blv[s]?c->blv[s]:1;
+   gold+=BLD[k].gold*lv;food+=BLD[k].food*lv;cap+=BLD[k].cap*lv;prest+=BLD[k].prestige*(lv+1)/2;}
   C->cityGold+=gold;C->cityCap+=cap;C->nCity++;   // ouro entra na semana (WEco_Week)
   if(newYear)C->prestige+=prest;
   int pc=City_PopCap(c);
   if(c->food<50&&c->pop>3&&((w->day+(u32)i)%60u)==0)c->pop=(u16)(c->pop-(c->pop/100+1)); // fome: a cidade encolhe
-  if(c->pop<pc){
+  bool full=URBP[o]>=URBC[o];
+  // cidade demais p/ o pais: a maior perde gente devagar (exodo p/ o campo)
+  if(full&&c->pop>50&&URBP[o]>URBC[o]+URBC[o]/10&&((w->day+(u32)i)%90u)==0)c->pop=(u16)(c->pop-c->pop/100);
+  if(c->pop<pc&&!full){
    // crescimento realista: ~1,5%/ano sem obras, ate ~4%/ano com fazenda,
    // porto e ferrovia; desacelera perto do teto (logistica) e depende da
    // comida (mercado local + nacional, wecon.c) e do nivel de vida.
@@ -660,7 +768,7 @@ HOT_ARM void City_Day(World *w){
    c->grow=(u16)(c->grow+g);
    if(c->grow>=1000){c->grow-=1000;int add=c->pop/200;if(add<1)add=1;c->pop=(u16)(c->pop+add);if(c->pop>pc)c->pop=(u16)pc;}
   }
-  if(c->tier<CT_METROPOLE&&TierReq(c,(u8)(c->tier+1))){
+  if(c->tier<CT_COUNT-1&&TierReq(c,(u8)(c->tier+1))){
    c->tier++;
    if(C->player){char nm[40];City_Name(w,i,nm,40);World_Msg(w,Str(STR_CIDADE_CRESCE),nm);}
   }

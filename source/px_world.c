@@ -15,6 +15,8 @@
 #include "settings.h"
 #include "prof.h"
 #include "wfort.h"
+#include "wwar.h"
+#include "wsoc.h"
 // px_world.c — render da partida no mundo celular (DESIGN.md sec 4.2/4.3).
 // Tela do MAPA: barra de recursos 20px + mapa politico 256x172 em 5 zooms:
 //  Z0 mundo inteiro (2 celulas/px) .. Z4 detalhe (8 px/celula).
@@ -528,9 +530,10 @@ static void FmtPop(u32 k,char *o){
  Px_Itoa((int)(k/1000000),t);Cat(o,16,t);Cat(o,16,",");
  char q[3]={(char)('0'+(k%1000000)/100000),(char)('0'+(k%100000)/10000),0};Cat(o,16,q);Cat(o,16,"bi");
 }
-// Barra de estatisticas (tela do mapa): caixa (com seta do saldo da semana),
-// populacao, exercito, alfabetizacao, prestigio e data. Celulas de largura
-// fixa (SX) p/ nada pular de lugar quando o numero cresce.
+// Barra de estatisticas (tela do mapa): PIB anual, populacao, exercito,
+// alfabetizacao, prestigio e data (ADR-46: o PIB e' o numero do pais; o caixa
+// do Estado foi p/ o canto de baixo, GoldChip). Celulas de largura fixa (SX)
+// p/ nada pular de lugar quando o numero cresce.
 static void Bar(u16 *d,const World *w,const WGame *s){
  Px_Rect(d,0,0,256,19,C_NAVY);
  Px_Rect(d,0,19,256,1,C_GOLD);
@@ -538,16 +541,59 @@ static void Bar(u16 *d,const World *w,const WGame *s){
  static const s16 SX[7]={0,46,86,130,160,193,256};
  for(int i=1;i<6;i++)Px_Rect(d,SX[i],3,1,13,C_GOLD_DIM);
  char t[24];
- // caixa + seta do saldo fiscal da semana (verde sobe, vermelha desce)
- Ui_IconId(d,2,4,ICO_COIN_S,false);FmtK(me->gold,t);Px_Text2(d,16,6,t,&F_SERIF8,C_TEXT);
- {s32 wk=WEco_GoldWeek(w,s->me);int x=SX[1]-6;u16 c=wk<0?C_EVENT:C_PLAYER;
-  for(int k=0;k<3;k++)for(int j=-k;j<=k;j++)Px_PSet(d,x+j,wk<0?(10+k):(12-k),c);}
+ // PIB do ano (semana x 52, ouro de hoje)
+ Px_Text2(d,3,6,Str(STR_PIB),&F_SERIF8,C_GOLD);
+ {int x=5+Px_Width2(Str(STR_PIB),&F_SERIF8);FmtK(w->eco[s->me].gdp*52,t);Px_Text2(d,x,6,t,&F_SERIF8,C_TEXT);}
  Ui_IconId(d,SX[1]+2,4,ICO_PEOPLE_S,false);FmtPop(me->popK,t);Px_Text2(d,SX[1]+16,6,t,&F_SERIF8,C_TEXT);
  Ui_IconId(d,SX[2]+2,4,ICO_SWORDS_S,false);FmtK(me->troops+(me->atkOn?me->atkTroops:0),t);Px_Text2(d,SX[2]+16,6,t,&F_SERIF8,C_TEXT);
  Ui_IconId(d,SX[3]+2,4,ICO_BOOK_S,false);Px_Itoa(me->lit/10,t);Cat(t,24,"%");Px_Text2(d,SX[3]+16,6,t,&F_SERIF8,C_TEXT);
  Ui_IconId(d,SX[4]+2,4,ICO_CROWN_S,false);FmtK(me->prestige,t);Px_Text2(d,SX[4]+16,6,t,&F_SERIF8,C_TEXT);
  // data compacta: 27 mai 1800
  Cal_Format(&w->date,t,24);Px_Text2(d,253-Px_Width2(t,&F_SERIF8),6,t,&F_SERIF8,C_TEXT);
+}
+// caixa do Estado, pequeno, no canto de baixo-esquerdo do mapa (ADR-46):
+// moeda + valor + seta do saldo da semana (verde sobe, vermelha desce)
+static void GoldChip(u16 *d,const World *w,const WGame *s){
+ const WCountry *me=&w->c[s->me];
+ char t[16];FmtK(me->gold,t);
+ int tw=Px_Width2(t,&F_SERIF8),bw=tw+26,x0=2,y0=176;
+ Px_Rect(d,x0,y0,bw,14,C_NAVY);
+ Px_Border(d,x0,y0,bw,14,C_GOLD_DIM);
+ Ui_IconId(d,x0+1,y0-1,ICO_COIN_S,false);
+ Px_Text2(d,x0+15,y0+3,t,&F_SERIF8,me->gold<0?C_EVENT:C_TEXT);
+ s32 wk=WEco_GoldWeek(w,s->me);int x=x0+bw-5;u16 c=wk<0?C_EVENT:C_PLAYER;
+ for(int k=0;k<3;k++)for(int j=-k;j<=k;j++)Px_PSet(d,x+j,wk<0?(y0+5+k):(y0+8-k),c);
+}
+// Virada de seculo (ADR-46): o ano em numeros grandes sobre o mapa, com o
+// nome da era. Fonte Serifa 12 ampliada 3x com sombra (o pixel e' o desenho:
+// letra de cartaz, nao arte da concept). Entra e sai deslizando.
+static u16 BIG[256*16];
+static void CenturyCard(u16 *d,const WGame *s){
+ int t=s->centT;if(!t)return;
+ int age=330-t;                                     // VBlanks desde o comeco
+ int slide=age<20?(20-age)*6:(t<20?(20-t)*6:0);
+ int y0=50-slide;
+ if(y0+106<WG_MAP_Y)return;
+ Ui_Navy(d,20,y0,216,106);
+ Px_Border(d,22,y0+2,212,102,C_GOLD);
+ char yr[8];Px_Itoa(s->centY,yr);
+ for(int i=0;i<256*16;i++)BIG[i]=0;
+ Px_Text2(BIG,0,0,yr,&F_SERIF12,C_GOLD);
+ int tw=Px_Width2(yr,&F_SERIF12)*3,x0=128-tw/2,yb=y0+10;
+ for(int y=0;y<15;y++)for(int x=0;x<tw/3+1;x++){
+  if(!(BIG[y*256+x]&0x8000))continue;
+  for(int j=0;j<3;j++)for(int i=0;i<3;i++){
+   int px=x0+x*3+i,py=yb+y*3+j;
+   if(py+2<192&&px+2<256){Px_PSet(d,px+2,py+2,C_NAVY_BG);}
+   if(py<192&&py>WG_MAP_Y)Px_PSet(d,px,py,y*3+j<14?C_GOLD_HI:C_GOLD);
+  }
+ }
+ int c=(s->centY-1800)/100;if(c<0)c=0;
+ if(c>3)c=3;
+ const char *a=Str((u16)(STR_SEC_0+c*2)),*b=Str((u16)(STR_SEC_0+c*2+1));
+ int yt=yb+47;
+ if(yt>WG_MAP_Y)Px_Text2(d,128-Px_Width2(a,&F_SERIF12)/2,yt,a,&F_SERIF12,C_TEXT);
+ if(yt+15>WG_MAP_Y)Px_WrapN(d,30,yt+15,196,b,&F_SERIF8,C_TEXT_DIM,2,true);
 }
 // chip de velocidade/pausa no canto do mapa
 static void SpeedChip(u16 *d,const WGame *s){
@@ -580,14 +626,16 @@ void PxW_Map(u16 *d){
   Cursor(d,w,s);
   Minimap(d,w,s);
   SpeedChip(d,s);
-  if(s->bannerT&&w->msg[0])Banner(d,w);
+  if(s->bannerT&&w->msg[0]&&!s->centT)Banner(d,w);
+  CenturyCard(d,s);
+  GoldChip(d,w,s);
   Bar(d,w,s);
  });
  Prof_Draw(d);
 }
 
 // ---- painel ----
-static void StatLine(u16 *d,int x,int y,u8 ico,u8 lab,const char *val){
+static void StatLine(u16 *d,int x,int y,u8 ico,u16 lab,const char *val){
  Ui_IconId(d,x,y-1,ico,false);
  Px_Text2(d,x+16,y,Str(lab),&F_SERIF8,C_TEXT_DIM);
  Px_Text2(d,x+18+Px_Width2(Str(lab),&F_SERIF8),y,val,&F_SERIF8,C_TEXT);
@@ -610,7 +658,9 @@ static void Card(u16 *d,const World *w,const WGame *s,u8 ci){
  StatLine(d,10,47,ICO_SWORDS_S,STR_TROPAS,t);
  Ui_Bar(d,26,59,96,c->cap?(int)(c->troops*100/c->cap):0,C_GOLD);
  FmtK((s32)c->cells,a);StatLine(d,132,47,ICO_LAND_S,STR_TERRITORIO,a);
- FmtK(c->gold,a);StatLine(d,10,66,ICO_COIN_S,STR_OURO,a);
+ // o caixa dos outros e' segredo de Estado (ADR-46): deles so' o PIB, que e' publico
+ if(ci==s->me){FmtK(c->gold,a);StatLine(d,10,66,ICO_COIN_S,STR_OURO,a);}
+ else{FmtK(w->eco[ci].gdp*52,a);StatLine(d,10,66,ICO_COIN_S,STR_PIB,a);}
  FmtK(c->prestige,a);StatLine(d,132,66,ICO_CROWN_S,STR_PRESTIGIO,a);
  // relacao / frente
  char rel[96]={0};u16 rc=C_TEXT_DIM;
@@ -625,8 +675,11 @@ static void Card(u16 *d,const World *w,const WGame *s,u8 ci){
    if(!k)Cat(rel,96,Str(STR_NENHUMA));
   }
  }else{
-  if(World_AtWar(w,s->me,ci)){Cat(rel,96,Str(STR_EM_GUERRA));rc=C_EVENT;}
-  else Cat(rel,96,Str(STR_EM_PAZ));
+  {int k=War_Find(w,s->me,ci);
+   if(k>=0&&w->cr[k].st==CRS_CRISE){char q[8];Cat(rel,96,Str(STR_EM_CRISE));Px_Itoa(w->cr[k].days,q);Cat(rel,96,q);Cat(rel,96,Str(STR_DIAS));rc=C_EVENT;}
+   else if(World_AtWar(w,s->me,ci)){Cat(rel,96,Str(STR_EM_GUERRA));rc=C_EVENT;
+    if(k>=0){char q[8];Cat(rel,96," · ");Cat(rel,96,Str(STR_PLACAR));Cat(rel,96," ");int v=War_Score(w,k,s->me);if(v>0)Cat(rel,96,"+");Px_Itoa(v,q);Cat(rel,96,q);}}
+   else Cat(rel,96,Str(STR_EM_PAZ));}
   if(WDip_Allied(w,s->me,ci)){Cat(rel,96," · ");Cat(rel,96,Str(STR_ALIADO));rc=C_PLAYER;}
   if(c->rival==s->me){Cat(rel,96," · ");Cat(rel,96,Str(STR_RIVAL));}
   if(c->bloc&&c->bloc==w->c[s->me].bloc){Cat(rel,96," · ");Cat(rel,96,Str(STR_SEU_BLOCO));}
@@ -678,6 +731,14 @@ static void PropModal(u16 *d,const World *w){
  if(p->kind==PR_DECISAO){
   Cat(title,64,Rnd_Title(p->idx));Cat(body,200,Rnd_Body(p->idx));
   a=Rnd_Opt(p->idx,true);b=Rnd_Opt(p->idx,false);
+ }else if(p->kind==PR_BURGUES){
+  // a burguesia financia uma obra publica em troca de algo (ADR-42)
+  char nm[40],n[16];int city=p->idx&1023;
+  Cat(title,64,Str(STR_PR_BURG_T));
+  if(city<w->nCity)City_Name(w,city,nm,40);else nm[0]=0;
+  Cat(body,200,Str(STR_PR_BURG1));Cat(body,200,nm);Cat(body,200,Str(STR_PR_BURG2));
+  Cat(body,200,Str(BLD[p->about%BK_COUNT].nameStr));Cat(body,200," (");FmtK(p->gold,n);Cat(body,200,n);Cat(body,200,Str(STR_AC_OURO));
+  Cat(body,200,Str(STR_PR_BURG3));Cat(body,200,Str(Soc_LobbyStr((u8)(p->idx>>10))));Cat(body,200,".");
  }else{
   Cat(title,64,Str(STR_PR_TITULO));
   Cat(body,200,NatName(w,p->from));
@@ -686,7 +747,18 @@ static void PropModal(u16 *d,const World *w){
    case PR_BLOCO:Cat(body,200,Str(p->about?STR_PR_BLOCO_PEDE:STR_PR_BLOCO_CONV));break;
    case PR_AJUDA:Cat(body,200,Str(STR_PR_AJUDA));Cat(body,200,NatName(w,p->about));Cat(body,200,".");break;
    case PR_TRIBUTO:{char n[16];Px_Itoa((int)p->gold,n);Cat(body,200,Str(STR_PR_TRIBUTO));Cat(body,200,n);Cat(body,200,Str(STR_PR_TRIBUTO2));}break;
-   case PR_PAZ:Cat(body,200,Str(STR_PR_PAZ));break;
+   case PR_PAZ:{char n[16];Cat(body,200,Str(STR_PR_PAZ));
+    if(p->gold>0){FmtK(p->gold,n);Cat(body,200,Str(STR_PR_PAZ_PAGA));Cat(body,200,n);Cat(body,200,Str(STR_AC_OURO));Cat(body,200,".");}
+    else if(p->gold<0){FmtK(-p->gold,n);Cat(body,200,Str(STR_PR_PAZ_INDEN));Cat(body,200,n);Cat(body,200,Str(STR_AC_OURO));Cat(body,200,".");}
+   }break;
+   case PR_LADO:{const WCrisis *c=&w->cr[p->about%CR_MAX];u8 o=c->att==p->from?c->def:c->att;
+    Cat(body,200,Str(STR_PR_LADO));Cat(body,200,NatName(w,o));Cat(body,200,Str(STR_PR_LADO2));}break;
+   case PR_CRISE:{const WCrisis *c=&w->cr[p->about%CR_MAX];char n[16];
+    Cat(body,200,Str(p->idx?STR_PR_ACORDO:STR_PR_CRISE));Cat(body,200,Str(War_GoalStr(c->goal)));
+    if(c->goal==GL_TERRA){Cat(body,200," (");Px_Itoa((int)c->demand,n);Cat(body,200,n);Cat(body,200,Str(STR_CR_CELULAS));Cat(body,200,")");}
+    else if(c->goal==GL_TRIBUTO){Cat(body,200," (");FmtK(War_DemandGold(w,p->about%CR_MAX),n);Cat(body,200,n);Cat(body,200,Str(STR_AC_OURO));Cat(body,200,")");}
+    Cat(body,200,Str(p->idx?STR_PR_ACORDO2:STR_PR_CRISE2));
+    if(!p->idx){a=Str(STR_PR_CEDER);b=Str(STR_PR_RESISTIR);}}break;
    default:break;
   }
   if(p->from&&w->c[p->from].alive){FlagDef f;WDip_Flag(w,p->from,&f);Px_Rect(d,205,11,40,28,C_GOLD);Flag_Draw(d,256,207,13,36,24,&f);}
@@ -707,7 +779,8 @@ static void PropModal(u16 *d,const World *w){
 static void DipMenu(u16 *d,const World *w,const WGame *s){
  static const u16 LB[DM_COUNT]={STR_DM_PAZ,STR_DM_ALIANCA,STR_DM_ROMPER,STR_DM_ENTRAR,STR_DM_CONVIDAR,STR_DM_GUERRA,STR_CANCELAR,
   STR_DM_CIDADE,STR_DM_FUNDAR,STR_DM_RECRUTAR,STR_DM_ATACAR,STR_DM_COLONIZAR,
-  STR_DM_FORTE,STR_DM_TRINCHEIRA,STR_DM_BATERIA,STR_DM_ARMAS,STR_DM_ARMAS_FIM,STR_DM_INSTIGAR};
+  STR_DM_FORTE,STR_DM_TRINCHEIRA,STR_DM_BATERIA,STR_DM_ARMAS,STR_DM_ARMAS_FIM,STR_DM_INSTIGAR,
+  STR_DM_META_TERRA,STR_DM_META_TRIBUTO,STR_DM_META_HUMILHAR,STR_DM_CONCEDER};
  Ui_Navy(d,4,4,248,184);
  char t[64]={0};
  switch(s->actKind){
@@ -715,16 +788,17 @@ static void DipMenu(u16 *d,const World *w,const WGame *s){
   case AK_CIDADE:if(s->hcity>=0)City_Name(w,s->hcity,t,64);break;
   case AK_TERRA:Cat(t,64,Str(STR_AC_TERRA));break;
   case AK_OBRA:Cat(t,64,Str(STR_DM_OBRAS));break;
+  case AK_META:Cat(t,64,Str(STR_DM_EXIGIR_DE));Cat(t,64,NatName(w,s->dipTo));break;
   default:Cat(t,64,Str(STR_TERRA_LIVRE));break;
  }
- if(s->actKind==AK_PAIS&&s->dipTo){FlagDef f;WDip_Flag(w,s->dipTo,&f);Px_Rect(d,10,9,22,15,C_GOLD);Flag_Draw(d,256,11,10,20,13,&f);}
+ if((s->actKind==AK_PAIS||s->actKind==AK_META)&&s->dipTo){FlagDef f;WDip_Flag(w,s->dipTo,&f);Px_Rect(d,10,9,22,15,C_GOLD);Flag_Draw(d,256,11,10,20,13,&f);}
  else Ui_IconId(d,12,9,s->actKind==AK_LIVRE?ICO_LAND_S:ICO_HOUSE,false);
  Px_Text2(d,38,10,t,&F_SERIF12,C_TEXT);
  Px_Rect(d,10,WG_ACT_Y-4,236,1,C_GOLD_DIM);
  for(int i=0;i<s->dipN;i++){
   u8 it=s->dipIt[i];
   int y=WG_ACT_Y+i*WG_ACT_H;
-  bool war=it==DM_GUERRA, cancel=it==DM_CANCELAR;
+  bool war=it==DM_GUERRA||(it>=DM_META_TERRA&&it<=DM_META_HUMILHAR), cancel=it==DM_CANCELAR;
   Px_Rect(d,8,y,240,WG_ACT_H-3,war?C_CRIMSON:(cancel?C_NAVY_BG:C_NAVY_HI));
   Px_Border(d,8,y,240,WG_ACT_H-3,cancel?C_GOLD_DIM:C_GOLD);
   if(!cancel)for(int k=0;k<4;k++)for(int j=k;j<7-k;j++)Px_PSet(d,14+k,y+5+j,C_GOLD);
@@ -735,7 +809,63 @@ static void DipMenu(u16 *d,const World *w,const WGame *s){
   else if(it==DM_ATACAR||it==DM_COLONIZAR){Px_Itoa(s->pct,n);Cat(lb,80,n);Cat(lb,80,Str(STR_AC_RESERVA));}
   else if(it>=DM_FORTE&&it<=DM_BATERIA){u8 fk=(u8)(FT_FORTE+(it-DM_FORTE));Px_Itoa((int)Fort_Cost(w,s->me,fk),n);Cat(lb,80,n);Cat(lb,80,Str(STR_AC_OURO));}
   else if(it==DM_INSTIGAR){Px_Itoa((int)WEco_Nom(w,s->me,WDip_InstigateCost(w,s->dipTo)),n);Cat(lb,80,n);Cat(lb,80,Str(STR_AC_OURO));}
+  else if(it==DM_CONCEDER){int k=War_Find(w,s->me,s->dipTo);Px_Itoa((int)(k>=0?War_ConcedeCost(w,k,s->me):0),n);Cat(lb,80,n);Cat(lb,80,Str(STR_AC_OURO));}
   Px_Text2(d,24,y+5,lb,&F_SERIF8,cancel?C_TEXT_DIM:C_TEXT);
+ }
+}
+// unidade do numero do aviso
+static u16 ToastUnit(u16 id){
+ switch(id){
+  case STR_T_FORTE_OK:case STR_LEI_PROPOSTA:case STR_T_AMPLIA:return STR_DIAS;
+  case STR_T_JUROS:return STR_JUROS_AA;
+  case STR_T_ALIADOS_OK:return STR_T_ALIADOS2;
+  default:return STR_T_FUNDAR_CONF2;
+ }
+}
+// Faixa da crise (ADR-45), no lugar do despacho: quem contra quem, o que se
+// exige, o prazo/placar, a forca dos lados e 3 botoes (so' p/ o lider).
+static void CrisisStrip(u16 *d,const World *w,const WGame *s,const char *toast){
+ int k=War_Of(w,s->me);const WCrisis *c=&w->cr[k];
+ bool war=c->st==CRS_GUERRA,lead=c->att==s->me||c->def==s->me;
+ int side=War_Side(w,k,s->me);
+ u8 o=side==0?c->def:c->att;
+ Ui_Navy(d,4,CR_Y,248,42);
+ Px_Border(d,4,CR_Y,248,42,war?C_CRIMSON_HI:C_GOLD);
+ char t[112]={0},n[16];
+ if(toast&&toast[0])Cat(t,112,toast);
+ else{
+  Cat(t,112,Str(war?STR_CR_GUERRA_UP:STR_CR_CRISE_UP));
+  if(!lead){Cat(t,112,NatName(w,c->att));Cat(t,112," x ");Cat(t,112,NatName(w,c->def));}
+  else Cat(t,112,NatName(w,o));
+  Cat(t,112," · ");Cat(t,112,Str(War_GoalStr(c->goal)));
+  if(c->goal==GL_TERRA){Cat(t,112," ");Px_Itoa((int)c->demand,n);Cat(t,112,n);Cat(t,112,Str(STR_CR_CELULAS));}
+  else if(c->goal==GL_TRIBUTO){Cat(t,112," ");FmtK(War_DemandGold(w,k),n);Cat(t,112,n);}
+  Cat(t,112," · ");
+  if(war){Cat(t,112,Str(STR_PLACAR));Cat(t,112," ");int v=War_Score(w,k,s->me);if(v>0)Cat(t,112,"+");Px_Itoa(v,n);Cat(t,112,n);}
+  else{Px_Itoa(c->days,n);Cat(t,112,n);Cat(t,112,Str(STR_DIAS));}
+ }
+ Px_WrapN(d,10,CR_Y+4,236,t,&F_SERIF8,war?C_EVENT:C_GOLD,1,false);
+ // forca dos lados (aliados incluidos) e o custo da mobilizacao
+ t[0]=0;
+ Cat(t,112,Str(STR_CR_NOS));FmtK(War_Strength(w,k,side<0?0:side),n);Cat(t,112,n);
+ {int na=0;for(int i=0;i<CR_SIDE;i++)if(c->side[side<0?0:side][i])na++;if(na){Cat(t,112," (+");Px_Itoa(na,n);Cat(t,112,n);Cat(t,112,")");}}
+ Cat(t,112,Str(STR_CR_ELES));FmtK(War_Strength(w,k,side==1?0:1),n);Cat(t,112,n);
+ {int na=0;for(int i=0;i<CR_SIDE;i++)if(c->side[side==1?0:1][i])na++;if(na){Cat(t,112," (+");Px_Itoa(na,n);Cat(t,112,n);Cat(t,112,")");}}
+ if(w->eco[s->me].mobX){Cat(t,112," · ");Cat(t,112,Str(STR_CR_MOB));FmtK(w->eco[s->me].mobX,n);Cat(t,112,n);Cat(t,112,Str(STR_POR_SEM));}
+ Px_WrapN(d,10,CR_Y+14,236,t,&F_SERIF8,C_TEXT_DIM,1,false);
+ if(!lead)return;
+ u16 lb[3];
+ lb[0]=(c->flags&(side?CRF_CALL1:CRF_CALL0))?STR_CR_B_CHAMADOS:STR_CR_B_ALIADOS;
+ if(war){lb[1]=STR_CR_B_PAZ;lb[2]=STR_CR_B_COMPRAR;}
+ else{lb[1]=STR_CR_B_ACORDO;lb[2]=c->def==s->me?STR_CR_B_CEDER:STR_CR_B_RECUAR;}
+ for(int i=0;i<3;i++){
+  int x=CR_BX0+i*CR_BDX;
+  bool dim=(i==0&&(c->flags&(side?CRF_CALL1:CRF_CALL0)))||(i==1&&c->talkCd);
+  Px_Rect(d,x,CR_BY,CR_BW,CR_BH,i==2?C_CRIMSON:(dim?C_NAVY_BG:C_NAVY_HI));
+  Px_Border(d,x,CR_BY,CR_BW,CR_BH,dim?C_GOLD_DIM:C_GOLD);
+  char q[40]={0};Cat(q,40,Str(lb[i]));
+  if(war&&i==2){Cat(q,40," ");FmtK(War_ConcedeCost(w,k,s->me),n);Cat(q,40,n);}
+  Ui_TextC(d,x+CR_BW/2,CR_BY+4,q,0,dim?C_TEXT_DIM:C_TEXT);
  }
 }
 void PxW_Panel(u16 *d){
@@ -754,18 +884,19 @@ void PxW_Panel(u16 *d){
   Px_WrapN(d,10,48,236,Str(STR_DESC_TERRA),&F_SERIF8,C_TEXT_DIM,2,false);
   if(w->c[s->me].atkOn&&!w->c[s->me].atkTo)Px_Text2(d,10,80,Str(STR_COLONIZANDO),&F_SERIF8,C_GOLD);
  }else Card(d,w,s,s->me);
- // despacho: aviso da ultima acao, senao a ultima noticia do mundo
- Ui_Parch(d,4,106,248,42);
+ // despacho: aviso da ultima acao, senao a ultima noticia do mundo; com
+ // crise/guerra com objetivo em curso, a faixa da crise toma o lugar (ADR-45)
  char t[160]={0};
  if(s->toastT){Cat(t,160,Str(s->toastId));if(s->toastArg)Cat(t,160,NatName(w,s->toastArg));
-  if(s->toastNum>=0){char n[16];Px_Itoa((int)s->toastNum,n);Cat(t,160,n);Cat(t,160,Str((s->toastId==STR_T_FORTE_OK||s->toastId==STR_LEI_PROPOSTA)?STR_DIAS:STR_T_FUNDAR_CONF2));}
-  if(s->toastCity>=0){char n[40];City_Name(w,s->toastCity,n,40);Cat(t,160,n);}
-  Px_WrapN(d,12,113,232,t,&F_SERIF8,C_INK,3,false);}
- else if(w->msg[0]){
+  if(s->toastNum>=0){char n[16];Px_Itoa((int)s->toastNum,n);Cat(t,160,n);Cat(t,160,Str(ToastUnit(s->toastId)));}
+  if(s->toastCity>=0){char n[40];City_Name(w,s->toastCity,n,40);Cat(t,160,n);}}
+ if(!s->dead&&War_Of(w,s->me)>=0){CrisisStrip(d,w,s,t);t[0]=0;}
+ else if(s->toastT){Ui_Parch(d,4,106,248,42);Px_WrapN(d,12,113,232,t,&F_SERIF8,C_INK,3,false);}
+ else if(w->msg[0]){Ui_Parch(d,4,106,248,42);
   Date dt=Cal_Date(w->msgDay);char ds[24];Cal_Format(&dt,ds,24);
   Cat(t,160,ds);Cat(t,160," — ");Cat(t,160,w->msg);
   Px_WrapN(d,12,113,232,t,&F_SERIF8,C_INK,3,false);
- }else Px_WrapN(d,12,113,232,Str(STR_DICA_JOGO),&F_SERIF8,C_INK,3,false);
+ }else{Ui_Parch(d,4,106,248,42);Px_WrapN(d,12,113,232,Str(STR_DICA_JOGO),&F_SERIF8,C_INK,3,false);}
  // acoes
  const WCountry *me=&w->c[s->me];
  bool target=!s->dead&&((s->selLand)||(s->sel&&s->sel!=s->me));

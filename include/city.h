@@ -47,7 +47,10 @@ u8 City_Style(const World *w,int city);   // estilo arquitetonico (px_city.c)
 // O traçado (agua do lado do mar, rio, avenidas, ruas e praca) sai de um hash
 // da posicao da cidade: fixo, sem estado. Cada obra ocupa um lote (bpos); o
 // jogador escolhe onde, a IA usa City_AutoLot. Casas/bairros sao do render.
-enum { CG_W=16, CG_H=10, CG_N=CG_W*CG_H };
+// ADR-44: 20x12 lotes (a tela mostra 16x10 e rola com a mira); o limite
+// urbano (City_Radius) cresce com o nivel: o povoado ocupa o miolo, a
+// megalopole o mapa inteiro. bpos/bqLot sao u8: CG_N tem que caber em 0..254.
+enum { CG_W=20, CG_H=12, CG_N=CG_W*CG_H };
 enum { LK_TERRA=0, LK_AGUA, LK_RUA, LK_PRACA };
 u8 City_LotBase(const World *w,int city,int lot);   // LK_* do tracado
 bool City_LotCoast(const World *w,int city,int lot);// terra encostada na agua
@@ -57,4 +60,14 @@ bool City_CanBuildAt(const World *w,int city,int lot,u8 k);
 bool City_BuildAt(World *w,int city,int lot,u8 k);  // jogador escolhe o lote
 int City_AutoLot(const World *w,int city,u8 k);     // melhor lote livre (IA/inicio), -1
 int City_IndustryBonus(const WCity *c,int slot);    // % extra por vizinhanca (ferrovia/porto)
+int City_Radius(u8 tier);                           // limite urbano em lotes a partir da praca
+bool City_LotInside(const World *w,int city,int lot);// lote dentro do limite urbano
+// ---- niveis e ampliacao (ADR-44) ----
+int City_Level(const WCity *c,int slot);            // 1.. (0 = slot vazio)
+int City_MaxLevel(u8 tier);                         // tier+1
+s32 City_UpCost(const World *w,int city,int slot);
+u16 City_UpWhy(const World *w,int city,int slot);   // 0 = pode ampliar; senao StrId do motivo
+bool City_Upgrade(World *w,int city,int slot);      // paga e poe a ampliacao na fila
+bool City_Grant(World *w,int city,u8 k);            // obra doada (burguesia): fila sem cobrar
+u8 City_StyleOf(const World *w,u8 owner);           // estilo/cultura de um pais (ST_*)
 enum { ST_EURO=0, ST_ASIA, ST_ISLAM, ST_AFRICA, ST_NATIVE, ST_COUNT };

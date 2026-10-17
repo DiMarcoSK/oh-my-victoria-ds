@@ -26,9 +26,10 @@ static u32 Hh(u32 a,u32 b){u32 h=a*2654435761u^b*40503u^0x7F4A7C15u;h^=h>>15;h*=
 // ---- pintor em unidades de projeto: (ux,uy) com uy subindo do chao ----
 static u16 *D;static int OX,OY,UW;static int CY0=0,CY1=192;  // recorte vertical
 static int YOFF=0;  // fundo da cena: desenha no LAYER (linha 20 da tela = 0)
+static int SW=256,SH=192;   // alvo: tela 256x192 ou o fundo da cidade 320x198 no LAYER (ADR-44)
 static inline int SX(int u){return OX+u*UW/32;}
 static inline int SY(int u){return OY-u*UW/32;}
-static void Put(int x,int y,u16 c){if(y>=CY0&&y<CY1)Px_PSet(D,x,y-YOFF,c);}
+static void Put(int x,int y,u16 c){if(y>=CY0&&y<CY1){int yy=y-YOFF;if(x>=0&&x<SW&&yy>=0&&yy<SH)D[yy*SW+x]=c;}}
 static void Fill(int x0,int y0,int x1,int y1,u16 c){for(int y=y0;y<y1;y++)for(int x=x0;x<x1;x++)Put(x,y,c);}
 // caixa com contorno 1px mais escuro (o "outline" da pixel art)
 static void Box(int ux,int uy,int uw,int uh,u16 c){
@@ -420,7 +421,7 @@ static inline bool ScreenOf(const World *w,const WGame *s,int cx,int cy,int *px,
  return *px>-30&&*px<286&&*py>WG_MAP_Y-20&&*py<212;
 }
 void PxC_MapCities(u16 *d,const World *w,const WGame *s){
- D=d;YOFF=0;CY0=WG_MAP_Y;CY1=192;
+ D=d;YOFF=0;CY0=WG_MAP_Y;CY1=192;SW=256;SH=192;
  int ppc=s->zoom?1<<(s->zoom-1):0;
  townBud=s->zoom==3?120:(s->zoom==4?240:200);
  for(int i=0;i<w->nCity;i++){
@@ -439,7 +440,7 @@ void PxC_MapCities(u16 *d,const World *w,const WGame *s){
    // continente: so' cidades e metropoles ganham casinha; vilarejo = ponto
    if(c->tier==CT_POVOADO)continue;
    if(c->tier==CT_VILAREJO){Put(px,py,C3(10,8,7));Put(px+1,py,C3(24,22,18));continue;}
-   D=d;OX=px-3;OY=py+2;UW=c->tier==CT_METROPOLE?8:6;House(st,year,0,seed);
+   D=d;OX=px-3;OY=py+2;UW=c->tier>=CT_METROPOLE?8:6;House(st,year,0,seed);
    continue;
   }
   // Z3+: a cidade cresce organica, casa colada em casa (ADR-39)
@@ -452,25 +453,27 @@ void PxC_MapCities(u16 *d,const World *w,const WGame *s){
 
 // ======================= mapa da cidade (ADR-35) =======================
 // Tela de cima do SCR_CITY: a cidade vista do alto em CG_W x CG_H lotes de
-// 16x16 px (y 26..186). Fundo (chao, agua, ruas, praca, campos, bairros e
+// 16x16 px. ADR-44: o mapa (320x192) e' maior que a tela (256x166): o fundo
+// fica inteiro no LAYER (largura BW) e a camera segue o lote da mira. Fundo (chao, agua, ruas, praca, campos, bairros e
 // obras) e' pintado 1x no LAYER emprestado do mapa (PxM_Scratch) e so' volta
 // a ser pintado quando a cidade muda (assinatura); por quadro so' entram os
 // vivos: gente nas avenidas, carroca/carro, barcos, fumaca e a mira do lote.
 // Bairros nascem sozinhos: sementes ativadas pela populacao puxam casas para
 // perto delas (hash fixo: o mesmo bairro aparece na mesma hora em toda partida).
-enum { MX=0, MY=26, LS=16 };
+enum { LS=16, MY0=26, BW=CG_W*LS, BH=6+CG_H*LS };
+static int MX=0,MY=MY0;      // origem dos lotes (fundo: 0,26 no LAYER; vivos: menos a camera)
 static u32 sceneSig;static int sceneCity=-1;
 static u8 DEN[CG_N];          // 0 nada, 1-3 casas (densidade), 4 campo, 5 mata
 static int roadRow=4,roadCol=7;
 static u32 SceneSig(const World *w,int ci){
  const WCity *c=&w->city[ci];
  u32 h=Hh(ci,c->tier)^(c->pop/10)^((u32)c->bq<<12)^((u32)c->bqLot<<20)^((u32)(c->bqDays/10)<<16)^(w->date.y/10);
- for(int s=0;s<CITY_SLOTS;s++)h=h*31+c->bld[s]*977u+c->bpos[s];
+ for(int s=0;s<CITY_SLOTS;s++)h=h*31+c->bld[s]*977u+c->bpos[s]+c->blv[s]*131071u;
  return h^((u32)c->owner<<24);
 }
 // ---- pintura: helpers (so' inteiro; tudo cai no LAYER em cache) ----
 static const u8 B4[4][4]={{0,8,2,10},{12,4,14,6},{3,11,1,9},{15,7,13,5}};
-static u16 Get(int x,int y){if(x<0||x>255||y<CY0||y>=CY1)return 0;return D[(y-YOFF)*256+x];}
+static u16 Get(int x,int y){if(x<0||x>=SW||y<CY0||y>=CY1||y-YOFF>=SH)return 0;return D[(y-YOFF)*SW+x];}
 static void Darken(int x,int y,int num,int den){u16 c=Get(x,y);if(c)Put(x,y,Dk(c,num,den));}
 // arvore por clima: 0 copa redonda, 1 conifera, 2 palmeira, 3 choupo
 static void Tree(int x,int yb,int sz,int kind,u32 h){
@@ -522,6 +525,7 @@ static void Quarters(const World *w,int ci){
  for(int i=0;i<CG_N;i++){
   DEN[i]=0;sc[i]=0xFFFF;
   if(City_LotBase(w,ci,i)!=LK_TERRA||City_LotSlot(c,i)>=0||(c->bq&&c->bqLot==i))continue;
+  if(!City_LotInside(w,ci,i)){sc[i]=0xFFFE;continue;}       // alem do limite urbano: campo/mata (ADR-44)
   int x=i%CG_W,y=i/CG_W,best=1<<30;
   for(int k=0;k<K;k++){int dx=x-sx[k],dy=y-sy[k];int d=(dx*dx+dy*dy)*(k?3:2);if(d<best)best=d;}
   sc[i]=(u16)(best*8+(int)(Hh(seed,i)%11));land++;
@@ -538,6 +542,7 @@ static void Quarters(const World *w,int ci){
  // arredores: campos perto da cidade (se a terra da' lavoura), mata alem
  for(int i=0;i<CG_N;i++){
   if(DEN[i]||sc[i]==0xFFFF)continue;
+  if(sc[i]==0xFFFE&&c->agri<8){DEN[i]=(Hh(seed,i+900)&3)?5:0;continue;}
   int x=i%CG_W-px,y=i/CG_W-py,d2=x*x+y*y;
   u32 h=Hh(seed,i+500);
   int rin=c->tier>=CT_METROPOLE?3:0;          // metropole: jardins no centro, campo so' fora
@@ -666,13 +671,13 @@ static void Shadow(int lot){
  for(int k=3;k<LS;k++){Darken(x0+k,y0+LS-1,12,16);Darken(x0+LS-1,y0+k,12,16);}
 }
 static void CityBg(u16 *L,const World *w,int ci){
- u16 *d=L;YOFF=20;D=d;CY0=20;CY1=192;
+ u16 *d=L;YOFF=20;D=d;CY0=20;CY1=20+BH;SW=BW;SH=BH;MX=0;MY=MY0;
  const WCity *c=&w->city[ci];
  u8 st=City_Style(w,ci);u16 year=w->date.y;u32 seed=Hh(c->x,c->y);
  u8 terr=W_TERR[World_Idx(w,c->x,c->y)];
  Quarters(w,ci);
  // faixa de 6px acima do mapa: horizonte
- for(int y=20;y<MY;y++)for(int x=0;x<256;x++)Put(x,y,C3(14+(y-20),19+(y-20),26));
+ for(int y=20;y<MY;y++)for(int x=0;x<BW;x++)Put(x,y,C3(14+(y-20),19+(y-20),26));
  for(int i=0;i<CG_N;i++)Ground(w,ci,i,terr,year,seed);
  u8 nat=c->owner?w->c[c->owner].nat:255;
  // objetos de cima p/ baixo (quem esta' mais embaixo cobre o de cima)
@@ -684,18 +689,24 @@ static void CityBg(u16 *L,const World *w,int ci){
   else if(s>=0){
    if(c->bld[s]!=BK_PARQUE&&c->bld[s]!=BK_FAZENDA)Shadow(i);
    PxC_Building(d,x0,yb,LS,c->bld[s],st,year,seed+s,-1,nat);
+   // nivel da obra (ADR-44): 1 losango de ouro por nivel acima do 1o
+   for(int k=1;k<City_Level(c,s);k++){int px=x0+1+(k-1)*4,py=yb-14;
+    Put(px+1,py,C_GOLD_HI);Put(px,py+1,C_GOLD);Put(px+1,py+1,C_GOLD_HI);Put(px+2,py+1,C_GOLD);Put(px+1,py+2,C3(16,10,2));}
   }
   else if(City_LotBase(w,ci,i)==LK_TERRA){if(DEN[i]>=1&&DEN[i]<=3)Shadow(i);Houses(w,ci,i,st,year,seed,c->tier,terr);}
  }
- // faixa de baixo (186..191)
- for(int y=MY+CG_H*LS;y<192;y++)for(int x=0;x<256;x++)Put(x,y,C_NAVY);
- for(int x=0;x<256;x++)Put(x,MY+CG_H*LS,C_GOLD_DIM);
- CY0=0;CY1=192;YOFF=0;
+ CY0=0;CY1=192;YOFF=0;SW=256;SH=192;
 }
 // vivos: gente nas avenidas, carroca/carro, barcos, fumaca, mira do lote
-static void CityLive(u16 *d,const World *w,int ci,int tick,int sel){
+static void CityLive(u16 *d,const World *w,int ci,int tick,int sel,int camX,int camY){
  const WCity *c=&w->city[ci];u32 seed=Hh(c->x,c->y);u16 year=w->date.y;
- D=d;YOFF=0;CY0=MY;CY1=MY+CG_H*LS;
+ D=d;YOFF=0;CY0=MY0;CY1=192;SW=256;SH=192;MX=-camX;MY=MY0-camY;
+ // limite urbano (ADR-44): tracejado ouro em volta do miolo que pode crescer
+ {int R=City_Radius(c->tier);
+  if(R<CG_W){int pl=City_Plaza(w,ci),x0=MX+(pl%CG_W-R)*LS,y0=MY+(pl/CG_W-R)*LS,x1=MX+(pl%CG_W+R+1)*LS-1,y1=MY+(pl/CG_W+R+1)*LS-1;
+   u16 col=((tick/20)&1)?C_GOLD:C_GOLD_DIM;
+   for(int x=x0;x<=x1;x++)if(((x+tick/8)&7)<4){Put(x,y0,col);Put(x,y1,col);}
+   for(int y=y0;y<=y1;y++)if(((y+tick/8)&7)<4){Put(x0,y,col);Put(x1,y,col);}}}
  static const u8 SKIN[4][3]={{28,22,16},{24,17,11},{18,12,8},{12,8,5}};
  u8 st=City_Style(w,ci);
  int sk0=st==ST_AFRICA?2:(st==ST_ASIA||st==ST_NATIVE||st==ST_ISLAM?1:0);
@@ -755,14 +766,32 @@ static void CityLive(u16 *d,const World *w,int ci,int tick,int sel){
  CY0=0;CY1=192;
 }
 void PxC_Scene(u16 *d,int ci){
- const World *w=WG_World();
+ const World *w=WG_World();WGame *gs=WG_Ptr();
  if(ci<0||ci>=w->nCity)return;
  u16 *L=PxM_Scratch();
  u32 sig=SceneSig(w,ci);
  if(sceneCity!=ci||sceneSig!=sig){CityBg(L,w,ci);sceneCity=ci;sceneSig=sig;}
- Px_Copy16(d+WG_MAP_Y*256,L,WG_MAP_H*256);   // VRAM: so' 16/32 bits
- Quarters(w,ci);      // DEN/avenidas da cidade aberta (baratinho: 160 lotes)
- CityLive(d,w,ci,(int)WG_Ptr()->tick,WG_Ptr()->cityLot);
+ // camera: o lote da mira no centro, sem sair do mapa; desliza ate' la'
+ // (0xFFFF = cidade recem-aberta: pula direto). x par: copia em 32 bits.
+ {int lot=gs->cityLot%CG_N,tx=(lot%CG_W)*LS+LS/2-128,ty=(lot/CG_W)*LS+LS/2-83;
+  int mxX=BW-256,mxY=CG_H*LS-(192-MY0);
+  if(tx<0)tx=0;
+  if(tx>mxX)tx=mxX;
+  if(ty<0)ty=0;
+  if(ty>mxY)ty=mxY;
+  tx&=~1;
+  if(gs->cityCamX==0xFFFF){gs->cityCamX=(u16)tx;gs->cityCamY=(u16)ty;}
+  else{int cx=gs->cityCamX,cy=gs->cityCamY;
+   cx+=(tx-cx)/2;cy+=(ty-cy)/2;
+   if(tx-cx<3&&cx-tx<3)cx=tx;
+   if(ty-cy<3&&cy-ty<3)cy=ty;
+   gs->cityCamX=(u16)(cx&~1);gs->cityCamY=(u16)cy;}}
+ int camX=gs->cityCamX,camY=gs->cityCamY;
+ // VRAM: so' 16/32 bits. Horizonte (6 linhas) segue so' o x da camera.
+ for(int y=WG_MAP_Y;y<MY0;y++)Px_Copy16(d+y*256,L+(y-WG_MAP_Y)*BW+camX,256);
+ for(int y=MY0;y<192;y++)Px_Copy16(d+y*256,L+(y-WG_MAP_Y+camY)*BW+camX,256);
+ Quarters(w,ci);      // DEN/avenidas da cidade aberta (baratinho: 240 lotes)
+ CityLive(d,w,ci,(int)gs->tick,gs->cityLot,camX,camY);
  // faixa do titulo: nome + nivel + bandeira
  const WCity *c=&w->city[ci];
  Px_Rect(d,0,0,256,20,C_NAVY);Px_Rect(d,0,19,256,1,C_GOLD);
@@ -772,7 +801,7 @@ void PxC_Scene(u16 *d,int ci){
  const char *tn=Str((u16)(STR_TIER_0+c->tier));
  Px_Text2(d,250-Px_Width2(tn,&F_SERIF8),6,tn,&F_SERIF8,C_GOLD);
 }
-void PxC_SceneReset(void){sceneCity=-1;}
+void PxC_SceneReset(void){sceneCity=-1;WG_Ptr()->cityCamX=0xFFFF;}
 u8 PxC_LotDen(const World *w,int ci,int lot){
  if(sceneCity!=ci)Quarters(w,ci);
  return lot>=0&&lot<CG_N?DEN[lot]:0;
@@ -803,6 +832,7 @@ static u16 WhyNot(const World *w,int ci,int lot,u8 k,u16 *year){
  if(City_LotBase(w,ci,lot)!=LK_TERRA)return STR_D_LOTE_RUA;
  if(City_LotSlot(c,lot)>=0||(c->bq&&c->bqLot==lot))return STR_LOTE_OCUPADO;
  if((b->flags&BF_COAST)&&!City_LotCoast(w,ci,lot))return STR_SO_LOTE_AGUA;
+ if(!City_CanBuildAt(w,ci,lot,k))return STR_FORA_LIMITE;     // alem do limite urbano (ADR-44)
  return 0;
 }
 static u16 LotCol(const World *w,int ci,int i){
@@ -815,8 +845,10 @@ static u16 LotCol(const World *w,int ci,int i){
   case LK_PRACA:return C3(25,23,19);
   default:break;
  }
- switch(DEN[i]){case 1:return C3(20,12,8);case 2:return C3(17,9,6);case 3:return C3(13,7,5);
-  case 4:return C3(20,20,7);case 5:return C3(5,12,5);default:return C3(10,17,8);}
+ u16 col;
+ switch(DEN[i]){case 1:col=C3(20,12,8);break;case 2:col=C3(17,9,6);break;case 3:col=C3(13,7,5);break;
+  case 4:col=C3(20,20,7);break;case 5:col=C3(5,12,5);break;default:col=C3(10,17,8);break;}
+ return City_LotInside(w,ci,i)?col:Dk(col,2,3);     // alem do limite urbano: mais escuro
 }
 void PxC_Panel(u16 *d,int ci,int lot,bool picking,u8 pk){
  const World *w=WG_World();
@@ -831,13 +863,13 @@ void PxC_Panel(u16 *d,int ci,int lot,bool picking,u8 pk){
  char t[112];
  t[0]=0;Cat(t,112,Str(STR_POPULACAO));Cat(t,112," ");char p[24];FmtPop(p,24,c->pop);Cat(t,112,p);
  Px_Text2(d,8,6,t,&F_SERIF8,C_TEXT);
- int gold=c->tier;for(int s=0;s<CITY_SLOTS;s++)if(c->bld[s])gold+=BLD[c->bld[s]].gold;
+ int gold=c->tier;for(int s=0;s<CITY_SLOTS;s++)if(c->bld[s])gold+=BLD[c->bld[s]].gold*City_Level(c,s);
  t[0]=0;Cat(t,112,Str(STR_COMIDA));Cat(t,112," ");Num(t,112,c->food);Cat(t,112,"% · +");Num(t,112,gold);Cat(t,112,Str(STR_OURO_DIA));
  Px_Text2(d,248-Px_Width2(t,&F_SERIF8),6,t,&F_SERIF8,c->food<60?C_EVENT:C_GOLD);
  int np=City_NextPop(c->tier);
  if(np){t[0]=0;Cat(t,112,Str(STR_RUMO));Cat(t,112,Str((u16)(STR_TIER_0+c->tier+1)));Cat(t,112,": ");Num(t,112,c->pop);Cat(t,112,"/");Num(t,112,np);Cat(t,112,Str(STR_MIL));
   Px_Text2(d,8,18,t,&F_SERIF8,C_TEXT_DIM);Ui_Bar(d,8,31,240,c->pop*100/np,C_GOLD);}
- else{Px_Text2(d,8,18,Str(STR_TIER_3),&F_SERIF8,C_GOLD);Ui_Bar(d,8,31,240,100,C_GOLD);}
+ else{Px_Text2(d,8,18,Str((u16)(STR_TIER_0+CT_COUNT-1)),&F_SERIF8,C_GOLD);Ui_Bar(d,8,31,240,100,C_GOLD);}
  // minimapa dos lotes (toque escolhe o lote)
  Px_Rect(d,CY_MINI_X-2,CY_MINI_Y-2,CG_W*CY_CELL+4,CG_H*CY_CELL+4,C_GOLD_DIM);
  for(int i=0;i<CG_N;i++){
@@ -853,7 +885,7 @@ void PxC_Panel(u16 *d,int ci,int lot,bool picking,u8 pk){
  int s=City_LotSlot(c,lot);u8 base=City_LotBase(w,ci,lot);
  u16 tt,dd;
  bool bq=c->bq&&c->bqLot==lot;
- if(bq){tt=BLD[c->bq].nameStr;dd=BLD[c->bq].descStr;}
+ if(bq){tt=BLD[c->bq].nameStr;dd=c->bqUp?STR_D_AMPLIANDO:BLD[c->bq].descStr;}
  else if(s>=0){tt=BLD[c->bld[s]].nameStr;dd=BLD[c->bld[s]].descStr;}
  else if(base==LK_AGUA){tt=STR_LOTE_AGUA;dd=STR_D_LOTE_RUA;}
  else if(base==LK_RUA){tt=STR_LOTE_RUA;dd=STR_D_LOTE_RUA;}
@@ -866,6 +898,8 @@ void PxC_Panel(u16 *d,int ci,int lot,bool picking,u8 pk){
   Px_WrapN(d,ix+5,CY_MINI_Y+14,iw-10,t,&F_SERIF8,C_TEXT,1,false);}
  Px_WrapN(d,ix+5,CY_MINI_Y+(bq?26:14),iw-10,Str(dd),&F_SERIF8,C_TEXT_DIM,bq?3:4,false);
  if(s>=0&&City_IndustryBonus(c,s))Px_WrapN(d,ix+5,CY_MINI_Y+58,iw-10,Str(STR_VIZ_BONUS),&F_SERIF8,C_PLAYER,1,false);
+ if(s>=0&&!bq){t[0]=0;Cat(t,112,Str(STR_NIVEL));Cat(t,112," ");Num(t,112,City_Level(c,s));Cat(t,112,"/");Num(t,112,City_MaxLevel(c->tier));
+  Px_Text2(d,ix+5,CY_MINI_Y+62,t,&F_SERIF8,C_GOLD_HI);}
  // acao / catalogo
  if(picking){
   const BldDef *b=&BLD[pk];
@@ -896,6 +930,15 @@ void PxC_Panel(u16 *d,int ci,int lot,bool picking,u8 pk){
   t[0]=0;Cat(t,112,Str(STR_A_NAVIO));Cat(t,112," · ");Num(t,112,WEco_ShipCost(w,c->owner));Cat(t,112," ");Cat(t,112,Str(STR_OURO));
   Px_Rect(d,4,CY_BTN_Y,248,CY_BTN_H,C->shipQ?C_NAVY_HI:C_CRIMSON);Px_Border(d,4,CY_BTN_Y,248,CY_BTN_H,C_GOLD);
   Ui_TextC(d,128,CY_BTN_Y+8,t,0,C_TEXT);
+ }else if(s>=0&&!bq){
+  // ampliar (ADR-44): preco no botao; o motivo quando nao da'
+  u16 why=City_UpWhy(w,ci,s);bool ok=!why&&w->c[c->owner].gold>=City_UpCost(w,ci,s);
+  t[0]=0;
+  if(why==STR_REQ_ANO){Cat(t,112,Str(why));Num(t,112,BLD[c->bld[s]].minYear);}
+  else if(why)Cat(t,112,Str(why));
+  else{Cat(t,112,Str(STR_AMPLIAR));Num(t,112,City_Level(c,s)+1);Cat(t,112," · ");Num(t,112,City_UpCost(w,ci,s));Cat(t,112," ");Cat(t,112,Str(STR_OURO));}
+  Px_Rect(d,4,CY_BTN_Y,248,CY_BTN_H,ok?C_CRIMSON:C_NAVY_HI);Px_Border(d,4,CY_BTN_Y,248,CY_BTN_H,ok?C_GOLD:C_GOLD_DIM);
+  Ui_TextC(d,128,CY_BTN_Y+8,t,0,ok?C_TEXT:C_TEXT_DIM);
  }else if(canHere){
   Px_Rect(d,4,CY_BTN_Y,248,CY_BTN_H,C_CRIMSON);Px_Border(d,4,CY_BTN_Y,248,CY_BTN_H,C_GOLD);
   for(int k=1;k<247;k++)Px_PSet(d,4+k,CY_BTN_Y+1,C_CRIMSON_HI);
