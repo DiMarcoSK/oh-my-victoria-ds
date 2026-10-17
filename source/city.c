@@ -30,6 +30,12 @@ const BldDef BLD[BK_COUNT]={
  [BK_ARSENAL]    ={STR_BK_ARSENAL,    260, 80,1,   0,0,0,15,0, 5,BK_OFICINA,0,STR_BD_ARSENAL},
  [BK_ESTALEIRO]  ={STR_BK_ESTALEIRO,  240, 90,1,   0,1,0, 0,1, 0,BK_PORTO, BF_COAST,STR_BD_ESTALEIRO},
  [BK_POCO]       ={STR_BK_POCO,       300, 90,0,1860,2,0, 0,0, 0,0,    BF_OIL,STR_BD_POCO},
+ [BK_ESCOLA]     ={STR_BK_ESCOLA,      90, 40,0,   0,0,0, 0,1, 0,0,          0,STR_BD_ESCOLA},
+ [BK_HOSPITAL]   ={STR_BK_HOSPITAL,   220, 70,1,1850,0,2, 0,1, 0,0,          0,STR_BD_HOSPITAL},
+ [BK_BANCO]      ={STR_BK_BANCO,      260, 70,1,   0,4,0, 0,1, 0,BK_MERCADO, 0,STR_BD_BANCO},
+ [BK_TEATRO]     ={STR_BK_TEATRO,     200, 60,2,   0,1,0, 0,3, 0,0,          0,STR_BD_TEATRO},
+ [BK_PARQUE]     ={STR_BK_PARQUE,      80, 30,1,1830,0,1, 0,1, 0,0,          0,STR_BD_PARQUE},
+ [BK_USINA]      ={STR_BK_USINA,      380,100,2,1890,3,0, 0,0, 0,0,          0,STR_BD_USINA},
 };
 
 // Cidades de 1800 (populacao aproximada em milhares). Grafia em PT quando
@@ -120,7 +126,7 @@ static const char *const SY1[ST_COUNT][16]={
 static u8 StyleOf(const World *w,u8 owner);
 static u16 GenName(const World *w,u8 owner,u32 h){return (u16)(((u32)StyleOf(w,owner)<<13)|(h&0xFF));}
 
-int City_Slots(u8 tier){static const u8 S[CT_COUNT]={2,3,5,8};return tier<CT_COUNT?S[tier]:2;}
+int City_Slots(u8 tier){static const u8 S[CT_COUNT]={3,5,8,12};return tier<CT_COUNT?S[tier]:3;}
 int City_NextPop(u8 tier){static const u16 N[CT_COUNT]={10,50,400,0};return tier<CT_COUNT?N[tier]:0;}
 static bool Has(const WCity *c,u8 k){for(int s=0;s<CITY_SLOTS;s++)if(c->bld[s]==k)return true;return false;}
 static int Count(const WCity *c,u8 k){int n=0;for(int s=0;s<CITY_SLOTS;s++)if(c->bld[s]==k)n++;return n;}
@@ -200,12 +206,127 @@ static void Survey(const World *w,WCity *c){
  if(oil>=4&&(Hs((u32)c->x*977u+c->y,w->seed^0x0117u)%3)!=0)c->res|=RS_OLEO;
  c->food=100;
 }
+// ---------------- mapa da cidade: tracado ----------------
+// lado do mar: conta agua em volta (raio 2) por lado; 0 = sem mar
+enum { SD_NONE=0, SD_E, SD_W, SD_N, SD_S };
+static int SeaSide(const World *w,const WCity *c){
+ if(!(c->flags&CF_COASTAL))return SD_NONE;
+ int n[5]={0,0,0,0,0};
+ for(int dy=-2;dy<=2;dy++)for(int dx=-2;dx<=2;dx++){
+  int x=c->x+dx,y=c->y+dy;if(y<0||y>=w->h)continue;
+  if(x<0||x>=w->w){if(!w->wrap)continue;x=(x+w->w)%w->w;}
+  if(W_TERR[World_Idx(w,x,y)]!=WT_WATER)continue;
+  if(dx>0)n[SD_E]++;
+  if(dx<0)n[SD_W]++;
+  if(dy<0)n[SD_N]++;
+  if(dy>0)n[SD_S]++;
+ }
+ int b=SD_E;for(int k=SD_E;k<=SD_S;k++)if(n[k]>n[b])b=k;
+ return n[b]?b:SD_E;
+}
+static u8 LAY[CG_N];static int layCity=-1;static u32 layKey=0;
+static void Layout(const World *w,int ci){
+ const WCity *c=&w->city[ci];
+ u32 key=((u32)c->x<<16)^c->y^((u32)c->flags<<28)^w->seed;
+ if(layCity==ci&&layKey==key)return;
+ layCity=ci;layKey=key;
+ u32 h=Hs(c->x*7919u+c->y,w->seed^0xC17Au);
+ for(int i=0;i<CG_N;i++)LAY[i]=LK_TERRA;
+ // mar num dos lados (costa irregular) ou rio atravessando (1 em 3)
+ int sd=SeaSide(w,c);
+ for(int y=0;y<CG_H;y++)for(int x=0;x<CG_W;x++){
+  u32 q=Hs(h,(u32)(sd==SD_N||sd==SD_S?x:y));int dep=3+(int)(q%2);
+  bool wat=(sd==SD_E&&x>=CG_W-dep)||(sd==SD_W&&x<dep)||(sd==SD_N&&y<dep-1)||(sd==SD_S&&y>=CG_H-dep+1);
+  if(wat)LAY[y*CG_W+x]=LK_AGUA;
+ }
+ if(sd==SD_NONE&&(h%3)==0){
+  int rx=3+(int)((h>>4)%10);
+  for(int y=0;y<CG_H;y++){LAY[y*CG_W+rx]=LK_AGUA;u32 q=Hs(h,(u32)y+50);if((q&3)==0&&rx<CG_W-2)rx++;else if((q&3)==1&&rx>1)rx--;}
+ }
+ // avenidas (cruz) + ruas secundarias; ponte onde cruza o rio
+ int r0=4+(int)((h>>8)%2),c0=6+(int)((h>>10)%4);
+ for(int x=0;x<CG_W;x++){int i=r0*CG_W+x;if(LAY[i]!=LK_AGUA||sd==SD_NONE)LAY[i]=LK_RUA;}
+ for(int y=0;y<CG_H;y++){int i=y*CG_W+c0;if(LAY[i]!=LK_AGUA||sd==SD_NONE)LAY[i]=LK_RUA;}
+ static const s8 SR[2]={-3,3},SC[2]={-4,4};
+ for(int k=0;k<2;k++){
+  int r=r0+SR[k];if(r>=0&&r<CG_H)for(int x=c0-6;x<=c0+6;x++)if(x>=0&&x<CG_W&&LAY[r*CG_W+x]==LK_TERRA)LAY[r*CG_W+x]=LK_RUA;
+  int cc=c0+SC[k];if(cc>=0&&cc<CG_W)for(int y=r0-3;y<=r0+3;y++)if(y>=0&&y<CG_H&&LAY[y*CG_W+cc]==LK_TERRA)LAY[y*CG_W+cc]=LK_RUA;
+ }
+ int pl=(r0-1)*CG_W+c0+1;if(LAY[pl]==LK_TERRA)LAY[pl]=LK_PRACA;
+}
+u8 City_LotBase(const World *w,int ci,int lot){
+ if(lot<0||lot>=CG_N)return LK_AGUA;
+ Layout(w,ci);return LAY[lot];
+}
+bool City_LotCoast(const World *w,int ci,int lot){
+ if(City_LotBase(w,ci,lot)!=LK_TERRA)return false;
+ int x=lot%CG_W,y=lot/CG_W;
+ static const s8 D4[4][2]={{1,0},{-1,0},{0,1},{0,-1}};
+ for(int k=0;k<4;k++){int nx=x+D4[k][0],ny=y+D4[k][1];
+  if(nx<0||ny<0||nx>=CG_W||ny>=CG_H)continue;
+  if(LAY[ny*CG_W+nx]==LK_AGUA)return true;}
+ return false;
+}
+int City_Plaza(const World *w,int ci){
+ Layout(w,ci);
+ for(int i=0;i<CG_N;i++)if(LAY[i]==LK_PRACA)return i;
+ return 4*CG_W+7;
+}
+int City_LotSlot(const WCity *c,int lot){
+ for(int s=0;s<CITY_SLOTS;s++)if(c->bld[s]&&c->bpos[s]==lot)return s;
+ return -1;
+}
+static bool LotFree(const World *w,int ci,int lot){
+ const WCity *c=&w->city[ci];
+ if(City_LotBase(w,ci,lot)!=LK_TERRA||City_LotSlot(c,lot)>=0)return false;
+ if(c->bq&&c->bqLot==lot)return false;
+ return true;
+}
+// lote livre mais perto da praca (porto/estaleiro: na beira d'agua); hash
+// desempata p/ a cidade nao virar um tabuleiro
+int City_AutoLot(const World *w,int ci,u8 k){
+ int pl=City_Plaza(w,ci),px=pl%CG_W,py=pl/CG_W;
+ bool coast=k<BK_COUNT&&(BLD[k].flags&BF_COAST);
+ int best=-1,bd=1<<30;
+ for(int i=0;i<CG_N;i++){
+  if(!LotFree(w,ci,i))continue;
+  if(coast&&!City_LotCoast(w,ci,i))continue;
+  int dx=i%CG_W-px,dy=i/CG_W-py;
+  int d=(dx*dx+dy*dy)*8+(int)(Hs((u32)ci*131u+(u32)i,k)%7);
+  if(k==BK_FAZENDA||k==BK_MINA||k==BK_SERRARIA||k==BK_POCO)d=-d;    // campo e extracao: nos arredores
+  if(d<bd){bd=d;best=i;}
+ }
+ return best;
+}
+bool City_CanBuildAt(const World *w,int ci,int lot,u8 k){
+ if(!City_CanBuild(w,ci,k)||!LotFree(w,ci,lot))return false;
+ if((BLD[k].flags&BF_COAST)&&!City_LotCoast(w,ci,lot))return false;
+ return true;
+}
+static bool Has(const WCity *c,u8 k);
+// industria (oficina, fabrica, arsenal, usina) colada (8 vizinhos) numa
+// ferrovia ou porto produz +25%: o lugar da obra importa
+int City_IndustryBonus(const WCity *c,int slot){
+ u8 k=c->bld[slot];
+ if(k!=BK_OFICINA&&k!=BK_FABRICA&&k!=BK_ARSENAL&&k!=BK_USINA)return 0;
+ int lx=c->bpos[slot]%CG_W,ly=c->bpos[slot]/CG_W;
+ if(c->bpos[slot]>=CG_N)return 0;
+ for(int s=0;s<CITY_SLOTS;s++){
+  u8 b=c->bld[s];if(b!=BK_FERROVIA&&b!=BK_PORTO)continue;
+  if(c->bpos[s]>=CG_N)continue;
+  int dx=c->bpos[s]%CG_W-lx,dy=c->bpos[s]/CG_W-ly;
+  if(dx>=-1&&dx<=1&&dy>=-1&&dy<=1)return 25;
+ }
+ return 0;
+}
 static int Add(World *w,int x,int y,u16 pop,u8 flags,u16 name){
  if(w->nCity>=W_MAXCITY)return -1;
  u32 i=World_Idx(w,x,y);
  WCity *c=&w->city[w->nCity];
  u8 *p=(u8*)c;for(unsigned k=0;k<sizeof *c;k++)p[k]=0;
  c->x=(u16)x;c->y=(u16)y;c->owner=W_OWNER[i];c->pop=pop;c->name=name;
+ for(int s=0;s<CITY_SLOTS;s++){c->bpos[s]=0xFF;}
+ c->bqLot=0xFF;
  c->flags=(u8)(flags|(Coastal(w,x,y)?CF_COASTAL:0));
  Survey(w,c);
  SetB(i);
@@ -236,6 +357,9 @@ static void InitCity(World *w,int i){
  if(c->tier>=CT_VILAREJO&&c->ore>=24&&s<City_Slots(c->tier)-2)c->bld[s++]=BK_MINA;
  else if(c->tier>=CT_VILAREJO&&c->wood>=30&&s<City_Slots(c->tier)-2)c->bld[s++]=BK_SERRARIA;
  if(c->tier>=CT_METROPOLE&&City_IsCapital(w,i)&&s<City_Slots(c->tier)-1)c->bld[s++]=BK_PALACIO;
+ if(c->tier>=CT_CIDADE&&s<City_Slots(c->tier)-2)c->bld[s++]=BK_ESCOLA;
+ // cada obra inicial ganha um lote no mapa da cidade
+ for(int k=0;k<CITY_SLOTS;k++)if(c->bld[k]){int l=City_AutoLot(w,i,c->bld[k]);c->bpos[k]=(u8)(l<0?0xFF:l);}
 }
 // terra mais proxima (ate r) de (x,y)
 static bool NearLand(const World *w,int *x,int *y,int r){
@@ -303,7 +427,7 @@ int City_Found(World *w,u8 ci,int x,int y){
  if(!City_CanFound(w,ci,x,y)||w->c[ci].gold<cost)return -1;
  w->c[ci].gold-=cost;
  int i=Add(w,x,y,3,CF_FOUNDED,GenName(w,ci,Hs((u32)x*131u+(u32)y,w->day)));
- if(i>=0){w->city[i].bld[0]=BK_FAZENDA;w->c[ci].nCity++;}
+ if(i>=0){w->city[i].bld[0]=BK_FAZENDA;{int l=City_AutoLot(w,i,BK_FAZENDA);w->city[i].bpos[0]=(u8)(l<0?0xFF:l);}w->c[ci].nCity++;}
  return i;
 }
 bool City_CanBuild(const World *w,int i,u8 k){
@@ -338,8 +462,19 @@ bool City_Build(World *w,int i,int slot,u8 k){
   slot=-1;for(int s=0;s<City_Slots(c->tier);s++)if(!c->bld[s]){slot=s;break;}
   if(slot<0)return false;
  }
+ int lot=City_AutoLot(w,i,k);
+ if(lot<0&&(BLD[k].flags&BF_COAST))return false;
  w->c[c->owner].gold-=City_Cost(w,i,k);
- c->bq=k;c->bqDays=BLD[k].days;c->bqSlot=(u8)slot;
+ c->bq=k;c->bqDays=BLD[k].days;c->bqSlot=(u8)slot;c->bqLot=(u8)(lot<0?0xFF:lot);
+ return true;
+}
+bool City_BuildAt(World *w,int i,int lot,u8 k){
+ WCity *c=&w->city[i];
+ if(!c->owner||!City_CanBuildAt(w,i,lot,k)||w->c[c->owner].gold<City_Cost(w,i,k))return false;
+ int slot=-1;for(int s=0;s<City_Slots(c->tier);s++)if(!c->bld[s]){slot=s;break;}
+ if(slot<0)return false;
+ w->c[c->owner].gold-=City_Cost(w,i,k);
+ c->bq=k;c->bqDays=BLD[k].days;c->bqSlot=(u8)slot;c->bqLot=(u8)lot;
  return true;
 }
 void City_Name(const World *w,int i,char *out,int max){
@@ -395,6 +530,12 @@ static int AiScore(const World *w,int i,u8 k){
   case BK_QUARTEL:s=C->warN?110:40;break;
   case BK_MURALHA:s=C->warN?80:20;break;
   case BK_PALACIO:s=60;break;
+  case BK_ESCOLA:s=55+(w->eco[c->owner].edu?25:0);break;
+  case BK_HOSPITAL:s=50+(c->food<80?20:0);break;
+  case BK_BANCO:s=45+(w->eco[c->owner].debt>0?50:0);break;
+  case BK_TEATRO:s=35+(C->happy<55?40:0);break;
+  case BK_PARQUE:s=30+(C->happy<55?30:0);break;
+  case BK_USINA:s=70+Want(e,GD_TEXTEIS)/4;break;
   default:break;
  }
  return s;
@@ -435,7 +576,7 @@ void City_Day(World *w){
    if(!c->bqDays){
     int s=c->bqSlot;
     if(s>=CITY_SLOTS||c->bld[s]){s=-1;for(int k=0;k<CITY_SLOTS;k++)if(!c->bld[k]){s=k;break;}}
-    if(s>=0)c->bld[s]=c->bq;
+    if(s>=0){c->bld[s]=c->bq;c->bpos[s]=c->bqLot;}
     if(C->player){char nm[40];City_Name(w,i,nm,40);World_Msg(w,Str(STR_OBRA_PRONTA),nm);}
     c->bq=0;
    }

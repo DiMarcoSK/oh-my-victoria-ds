@@ -1,3 +1,4 @@
+#include <string.h>
 #include "wgame.h"
 #include "city.h"
 #include "wecon.h"
@@ -127,6 +128,7 @@ static void NatFlag(u8 nat,int x,int y,int w,int h){
  if(ci)WDip_Flag(W,ci,&f);else f=NATIONS[nat].flag;
  Flag_Draw(D,256,x,y,w,h,&f);
 }
+static void Tree(int x,int yb,int sz,int kind,u32 h);
 void PxC_Building(u16 *d,int x,int yb,int w,u8 k,u8 st,u16 year,u32 seed,int tick,u8 natFlag){
  D=d;OX=x;OY=yb;UW=w;
  Pal p=StylePal(st,year,seed);
@@ -246,6 +248,35 @@ void PxC_Building(u16 *d,int x,int yb,int w,u8 k,u8 st,u16 year,u32 seed,int tic
    Box(9,26,3,2,C3(8,8,9));
    Box(20,0,11,9,C3(24,24,22));Box(20,9,11,1,C3(14,14,15));Box(21,4,9,1,C3(22,6,4));
   }break;
+  case BK_ESCOLA:{ // casinha escolar com sineira e patio
+   Box(4,0,22,12,p.wall);Tri(2,28,12,7,p.roof);Wins(4,3,22,6,3,1,C3(9,10,14));
+   Box(13,0,4,6,Dk(p.wall,1,2));Box(13,19,4,6,STONE);Tri(12,18,25,4,p.roof);Put(SX(15),SY(22),C3(25,20,9));
+   for(int i=0;i<3;i++)Box(27+i*2,0,1,4,WOOD);
+  }break;
+  case BK_HOSPITAL:{ // pavilhao branco com a cruz vermelha
+   Box(1,0,30,16,WHITE);Box(1,16,30,2,C3(20,20,22));Wins(1,3,30,10,5,2,C3(12,16,20));
+   Box(13,0,6,8,C3(14,18,22));Box(14,20,4,10,RED);Box(11,23,10,4,RED);
+  }break;
+  case BK_BANCO:{ // fachada classica: frontao, colunas e portas de bronze
+   Box(2,0,28,3,STONE);Box(3,3,26,14,C3(25,24,21));
+   for(int i=0;i<5;i++)Box(5+i*5,3,2,12,C3(29,28,26));
+   Tri(2,30,17,7,C3(25,24,21));Box(13,0,6,7,C3(16,12,5));Put(SX(16),SY(20),C3(28,22,8));
+  }break;
+  case BK_TEATRO:{ // casa de opera: arcos, cupula e cortina vermelha
+   Box(0,0,32,14,C3(26,23,17));for(int i=0;i<4;i++){Box(3+i*7,0,5,9,C3(18,4,6));Dome(5+i*7,9,2,C3(26,23,17));}
+   Box(0,14,32,2,STONE);Dome(16,16,9,st==ST_ISLAM?p.trim:C3(13,17,15));Pole(16,25,4,C3(25,20,9));
+  }break;
+  case BK_PARQUE:{ // gramado, lago, arvores e um banco
+   for(int j=0;j<4;j++)Box(0,j,32,1,C3(11+j,20,8));
+   Dome(10,1,6,C3(10,17,26));
+   D=d;Tree(SX(23),SY(0),3,0,seed);Tree(SX(30),SY(0),2,0,seed>>4);Tree(SX(3),SY(0),2,3,seed>>8);
+   Box(17,0,6,2,WOOD);
+  }break;
+  case BK_USINA:{ // galpao de tijolo, chamine alta e torre de transmissao
+   Box(0,0,22,14,C3(21,10,7));Tri(0,22,14,5,C3(12,12,14));Wins(0,3,22,8,4,1,GLASS_LIT);
+   Box(24,0,5,38,C3(18,9,6));Box(23,38,7,2,C3(14,7,5));
+   for(int j=0;j<20;j+=4){Put(SX(31),SY(j),C3(10,10,11));Put(SX(30),SY(j+2),C3(10,10,11));}
+  }break;
   default:break;
  }
 }
@@ -278,7 +309,7 @@ static inline bool ScreenOf(const World *w,const WGame *s,int cx,int cy,int *px,
  int rx=cx-s->camX;if(w->wrap){rx%=w->w;if(rx<0)rx+=w->w;}
  int ry=cy-s->camY;
  if(s->zoom==0){*px=rx/2;*py=ry/2;}
- else{int ppc=1<<(s->zoom-1);*px=rx*ppc+ppc/2;*py=ry*ppc+ppc/2;}
+ else{int ppc=1<<(s->zoom-1);*px=rx*ppc+ppc/2-s->subX;*py=ry*ppc+ppc/2-s->subY;}
  *py+=WG_MAP_Y;
  return *px>-30&&*px<286&&*py>WG_MAP_Y-20&&*py<212;
 }
@@ -327,315 +358,307 @@ void PxC_MapCities(u16 *d,const World *w,const WGame *s){
  CY0=0;CY1=192;
 }
 
-// ======================= cena da cidade (Imperator) =======================
-// layout em coordenadas da tela (0..191); o fundo estatico vive no LAYER
-// (linhas 20..191 da tela) e o titulo 0..19 e' desenhado ao vivo.
-enum { HORIZ=82, HOUSE_Y=106, BACK_Y=128, ROAD_Y0=130, ROAD_Y1=144, RAIL_Y=148, FRONT_Y=190 };
-static const s16 SLOT_X[CITY_SLOTS]={4,67,130,193, 16,74,132,190};
-static const u8 SLOT_W[CITY_SLOTS]={56,56,56,56, 46,46,46,46};
-static int SlotBase(int s){return s<4?FRONT_Y:BACK_Y;}
+// ======================= mapa da cidade (ADR-35) =======================
+// Tela de cima do SCR_CITY: a cidade vista do alto em CG_W x CG_H lotes de
+// 16x16 px (y 26..186). Fundo (chao, agua, ruas, praca, campos, bairros e
+// obras) e' pintado 1x no LAYER emprestado do mapa (PxM_Scratch) e so' volta
+// a ser pintado quando a cidade muda (assinatura); por quadro so' entram os
+// vivos: gente nas avenidas, carroca/carro, barcos, fumaca e a mira do lote.
+// Bairros nascem sozinhos: sementes ativadas pela populacao puxam casas para
+// perto delas (hash fixo: o mesmo bairro aparece na mesma hora em toda partida).
+enum { MX=0, MY=26, LS=16 };
 static u32 sceneSig;static int sceneCity=-1;
+static u8 DEN[CG_N];          // 0 nada, 1-3 casas (densidade), 4 campo, 5 mata
+static int roadRow=4,roadCol=7;
 static u32 SceneSig(const World *w,int ci){
  const WCity *c=&w->city[ci];
- u32 h=Hh(ci,c->tier)^(c->pop/8)^((u32)c->bq<<12)^((u32)(c->bqDays/10)<<16)^(w->date.y/10);
- for(int s=0;s<CITY_SLOTS;s++)h=h*31+c->bld[s];
+ u32 h=Hh(ci,c->tier)^(c->pop/10)^((u32)c->bq<<12)^((u32)c->bqLot<<20)^((u32)(c->bqDays/10)<<16)^(w->date.y/10);
+ for(int s=0;s<CITY_SLOTS;s++)h=h*31+c->bld[s]*977u+c->bpos[s];
  return h^((u32)c->owner<<24);
 }
-// ---- pintura da cena: helpers (so' inteiro; tudo cai no LAYER em cache) ----
+// ---- pintura: helpers (so' inteiro; tudo cai no LAYER em cache) ----
 static const u8 B4[4][4]={{0,8,2,10},{12,4,14,6},{3,11,1,9},{15,7,13,5}};
-// cor em 1/16 de passo por canal + Bayer 4x4: degrade liso em 15 bits
-static u16 Dth(int r16,int g16,int b16,int x,int y){
- int t=B4[y&3][x&3];
- return C3((r16+t)>>4,(g16+t)>>4,(b16+t)>>4);
-}
-// mistura a->b em t/n (canais 0..31) devolvida em 1/16 de passo
-static void Mix16(const u8 *a,const u8 *b,int t,int n,int *o){
- for(int k=0;k<3;k++)o[k]=(a[k]*16*(n-t)+b[k]*16*t)/(n?n:1);
-}
 static u16 Get(int x,int y){if(x<0||x>255||y<CY0||y>=CY1)return 0;return D[(y-YOFF)*256+x];}
 static void Darken(int x,int y,int num,int den){u16 c=Get(x,y);if(c)Put(x,y,Dk(c,num,den));}
 // arvore por clima: 0 copa redonda, 1 conifera, 2 palmeira, 3 choupo
 static void Tree(int x,int yb,int sz,int kind,u32 h){
  u16 trunk=C3(10,7,4);
- if(kind==2){                                   // palmeira: tronco curvo + leque
-  sz+=3;
-  for(int k=0;k<sz*2;k++){Put(x+(k*k)/(sz*6),yb-k,trunk);Put(x+1+(k*k)/(sz*6),yb-k,C3(14,10,6));}
+ if(kind==2){
+  sz+=2;
+  for(int k=0;k<sz*2;k++){Put(x+(k*k)/(sz*6),yb-k,trunk);}
   int tx=x+(4*sz*sz)/(sz*6),ty=yb-sz*2;
   static const s8 FX[6]={-5,-3,0,3,5,1},FY[6]={2,-2,-3,-2,2,3};
   for(int f=0;f<6;f++)for(int k=0;k<=sz;k++)Put(tx+FX[f]*k/5,ty+FY[f]*k/5+(k*k)/(sz*3),k<2?C3(6,13,5):C3(8,17,6));
   return;
  }
- if(kind==1){                                   // conifera: triangulos empilhados
-  for(int y=0;y<sz*2;y++){int hw=1+(y%(sz/2+1))*sz/(sz/2+2)/2+y/4;
+ if(kind==1){
+  for(int y=0;y<sz*2;y++){int hw=y/3+(y%3==2);
    for(int i=-hw;i<=hw;i++)Put(x+i,yb-sz*2-1+y,i<0?C3(5,11,7):C3(3,8,5));}
-  Put(x,yb,trunk);Put(x,yb-1,trunk);return;
+  Put(x,yb,trunk);return;
  }
- if(kind==3){                                   // choupo: elipse alta
-  for(int y=-sz*2;y<=0;y++){int hw=(sz*(sz*2-(y<0?-y:y)/1))/(sz*2)/2+1;if(y<-sz*2+2)hw=1;
-   for(int i=-hw;i<=hw;i++)Put(x+i,yb-3+y,i<0?C3(9,17,7):C3(6,12,5));}
-  Put(x,yb-1,trunk);Put(x,yb-2,trunk);return;
+ if(kind==3){
+  for(int y=-sz*2;y<=0;y++){int hw=y<-sz*2+2?0:1;for(int i=-hw;i<=hw;i++)Put(x+i,yb-2+y,i<0?C3(9,17,7):C3(6,12,5));}
+  Put(x,yb-1,trunk);return;
  }
- for(int k=0;k<3;k++)Put(x,yb-k,trunk);       // copa redonda: 3 bolas com luz NO
+ Put(x,yb,trunk);Put(x,yb-1,trunk);
  int r=sz;
- static const s8 OX[3]={-1,1,0},OY[3]={0,0,-1};
- for(int b=0;b<3;b++){int cx=x+OX[b]*r*2/3,cy=yb-2-r+OY[b]*r*2/3;
-  for(int y=-r;y<=r;y++)for(int i=-r;i<=r;i++){int q=i*i+y*y;if(q>r*r)continue;
-   int lit=(i+y)<-r/2,dark=(i+y)>r/2;
-   u16 c=lit?C3(11,20,8):dark?C3(5,11,4):C3(8,16,6);
-   if(((h>>(b*3+(i&3)))&5)==0&&q<r*r-r)c=C3(10,18,7);
-   Put(cx+i,cy+y,c);}}
+ for(int y=-r;y<=r;y++)for(int i=-r;i<=r;i++){int q=i*i+y*y;if(q>r*r)continue;
+  int lit=(i+y)<-r/2,dark=(i+y)>r/2;
+  u16 c=lit?C3(11,20,8):dark?C3(5,11,4):C3(8,16,6);
+  if(((h>>((i&3)*2))&3)==0&&q<r*r-r)c=C3(10,18,7);
+  Put(x+i,yb-2-r+y,c);}
 }
-static void Cloud(int cx,int cy,int w,u32 h){
- int n=3+(int)(h%3);
- for(int k=0;k<n;k++){
-  int r=4+(int)((h>>(k*3))%5)+(k==n/2?3:0),x=cx-w/2+k*w/(n-1?n-1:1),y=cy-(k==n/2?2:0);
-  for(int j=-r;j<=r/2;j++)for(int i=-r;i<=r;i++){if(i*i+j*j>r*r)continue;
-   int sh=j>r/4?2:(j>-r/3?1:0);
-   u16 c=sh==0?C3(31,31,30):sh==1?C3(28,28,29):C3(23,24,27);
-   Put(x+i,y+j,c);}
+// ---- bairros: densidade de casas por lote ----
+static void Quarters(const World *w,int ci){
+ const WCity *c=&w->city[ci];
+ int pl=City_Plaza(w,ci),px=pl%CG_W,py=pl/CG_W;
+ u32 seed=Hh(c->x*31u,c->y);
+ // sementes de bairro: a praca e mais 1 a cada ~60 mil habitantes (ate 7)
+ int K=1+c->pop/60;if(K>8)K=8;
+ int sx[8],sy[8];sx[0]=px;sy[0]=py;
+ for(int k=1;k<K;k++){
+  sx[k]=px;sy[k]=py;
+  for(int t=0;t<12;t++){u32 h=Hh(seed,k*16+t);int x=(int)(h%CG_W),y=(int)((h>>8)%CG_H);
+   int l=y*CG_W+x;if(City_LotBase(w,ci,l)!=LK_TERRA)continue;
+   bool nearRoad=false;
+   for(int dy=-1;dy<=1;dy++)for(int dx=-1;dx<=1;dx++){int nx=x+dx,ny=y+dy;
+    if(nx>=0&&ny>=0&&nx<CG_W&&ny<CG_H&&City_LotBase(w,ci,ny*CG_W+nx)==LK_RUA)nearRoad=true;}
+   if(nearRoad){sx[k]=x;sy[k]=y;break;}}
+ }
+ static u16 sc[CG_N];
+ int land=0;
+ for(int i=0;i<CG_N;i++){
+  DEN[i]=0;sc[i]=0xFFFF;
+  if(City_LotBase(w,ci,i)!=LK_TERRA||City_LotSlot(c,i)>=0||(c->bq&&c->bqLot==i))continue;
+  int x=i%CG_W,y=i/CG_W,best=1<<30;
+  for(int k=0;k<K;k++){int dx=x-sx[k],dy=y-sy[k];int d=(dx*dx+dy*dy)*(k?3:2);if(d<best)best=d;}
+  sc[i]=(u16)(best*8+(int)(Hh(seed,i)%11));land++;
+ }
+ // casas: tantos lotes quanto a populacao pede, dos mais "atraentes" p/ fora
+ int H=c->pop/7+c->tier*3+2;if(H>land*3/4)H=land*3/4;
+ int dense=c->tier>=CT_CIDADE?H/4:0;
+ for(int r=0;r<H;r++){
+  int bi=-1;u16 bv=0xFFFF;
+  for(int i=0;i<CG_N;i++)if(!DEN[i]&&sc[i]<bv){bv=sc[i];bi=i;}
+  if(bi<0)break;
+  DEN[bi]=(u8)(r<dense?3:(r<H/2?2:1));
+ }
+ // arredores: campos perto da cidade (se a terra da' lavoura), mata alem
+ for(int i=0;i<CG_N;i++){
+  if(DEN[i]||sc[i]==0xFFFF)continue;
+  int x=i%CG_W-px,y=i/CG_W-py,d2=x*x+y*y;
+  u32 h=Hh(seed,i+500);
+  int rin=c->tier>=CT_METROPOLE?3:0;          // metropole: jardins no centro, campo so' fora
+  if(d2<=rin*rin)DEN[i]=5;
+  else if(d2<=(5+c->tier)*(5+c->tier)&&c->agri>=8)DEN[i]=4;
+  else if((c->wood>=8&&(h&3)!=0)||(h&7)==0)DEN[i]=5;
+ }
+ // avenidas principais (gente e carroca andam nelas)
+ int bestR=0,bestC=0;roadRow=4;roadCol=7;
+ for(int y=0;y<CG_H;y++){int n=0;for(int x=0;x<CG_W;x++)if(City_LotBase(w,ci,y*CG_W+x)==LK_RUA)n++;if(n>bestR){bestR=n;roadRow=y;}}
+ for(int x=0;x<CG_W;x++){int n=0;for(int y=0;y<CG_H;y++)if(City_LotBase(w,ci,y*CG_W+x)==LK_RUA)n++;if(n>bestC){bestC=n;roadCol=x;}}
+}
+static bool IsRoad(const World *w,int ci,int x,int y){
+ if(x<0||y<0||x>=CG_W||y>=CG_H)return false;
+ u8 b=City_LotBase(w,ci,y*CG_W+x);return b==LK_RUA||b==LK_PRACA;
+}
+static bool IsWater(const World *w,int ci,int x,int y){
+ if(x<0||y<0||x>=CG_W||y>=CG_H)return false;
+ return City_LotBase(w,ci,y*CG_W+x)==LK_AGUA;
+}
+// chao de um lote (x0,y0 = canto da tela)
+static void Ground(const World *w,int ci,int lot,u8 terr,u16 year,u32 seed){
+ int lx=lot%CG_W,ly=lot/CG_W,x0=MX+lx*LS,y0=MY+ly*LS;
+ u8 base=City_LotBase(w,ci,lot);
+ int gr=13,gg=20,gb=9;
+ if(terr==WT_DESERT){gr=27;gg=23;gb=14;}else if(terr==WT_TUNDRA||terr==WT_ICE){gr=24;gg=26;gb=26;}
+ else if(terr==WT_JUNGLE){gr=8;gg=17;gb=6;}else if(terr==WT_STEPPE){gr=18;gg=20;gb=10;}
+ if(base==LK_AGUA){
+  for(int y=0;y<LS;y++)for(int x=0;x<LS;x++){
+   int X=x0+x,Y=y0+y;int t=B4[Y&3][X&3];
+   // agua continua (sem degrau por lote): ondinha pela diagonal + Bayer
+   int wv=((X+Y*2)>>2)&3;
+   u16 c=C3(8+(t>12)+(wv==0),14+(t>13)+(wv==0),23+(wv==0));
+   if(((X*3+Y*7)&31)==0)c=C3(22,26,28);
+   Put(X,Y,c);
+  }
+  // espuma/areia nas bordas com terra
+  for(int k=0;k<LS;k++){
+   if(!IsWater(w,ci,lx-1,ly)&&lx>0)Put(x0,y0+k,C3(26,27,26));
+   if(!IsWater(w,ci,lx+1,ly)&&lx<CG_W-1)Put(x0+LS-1,y0+k,C3(26,27,26));
+   if(!IsWater(w,ci,lx,ly-1)&&ly>0)Put(x0+k,y0,C3(26,27,26));
+   if(!IsWater(w,ci,lx,ly+1)&&ly<CG_H-1)Put(x0+k,y0+LS-1,C3(26,27,26));
+  }
+  return;
+ }
+ // terra: grama pontilhada com tufos
+ for(int y=0;y<LS;y++)for(int x=0;x<LS;x++){
+  int X=x0+x,Y=y0+y;u32 h=Hh(X*7+Y*131,seed);int v=(h&15)==0?-3:((h&15)==1?2:0);
+  int t=B4[Y&3][X&3]>>3;
+  Put(X,Y,C3(gr+v+t,gg+v+t,gb+v));
+ }
+ // praia: terra encostada na agua
+ for(int k=0;k<LS;k++){
+  if(IsWater(w,ci,lx-1,ly)){Put(x0,y0+k,C3(27,25,18));Put(x0+1,y0+k,C3(25,23,16));}
+  if(IsWater(w,ci,lx+1,ly)){Put(x0+LS-1,y0+k,C3(27,25,18));Put(x0+LS-2,y0+k,C3(25,23,16));}
+  if(IsWater(w,ci,lx,ly-1)){Put(x0+k,y0,C3(27,25,18));Put(x0+k,y0+1,C3(25,23,16));}
+  if(IsWater(w,ci,lx,ly+1)){Put(x0+k,y0+LS-1,C3(27,25,18));Put(x0+k,y0+LS-2,C3(25,23,16));}
+ }
+ if(base==LK_RUA||base==LK_PRACA){
+  bool n=IsRoad(w,ci,lx,ly-1),s=IsRoad(w,ci,lx,ly+1),e=IsRoad(w,ci,lx+1,ly),o=IsRoad(w,ci,lx-1,ly);
+  bool asf=year>=1910;
+  // leito: faixa de 8px no centro + bracos ate' os vizinhos
+  for(int y=0;y<LS;y++)for(int x=0;x<LS;x++){
+   bool on=(x>=4&&x<12&&y>=4&&y<12)||(n&&x>=4&&x<12&&y<4)||(s&&x>=4&&x<12&&y>=12)||(o&&y>=4&&y<12&&x<4)||(e&&y>=4&&y<12&&x>=12);
+   if(base==LK_PRACA)on=x>=1&&x<15&&y>=1&&y<15;
+   if(!on)continue;
+   int X=x0+x,Y=y0+y;u16 c;
+   if(base==LK_PRACA){c=((X>>1)+(Y>>1))&1?C3(25,23,19):C3(23,21,17);}
+   else if(asf)c=C3(9,9,10);
+   else{int row=Y/3,off=(row&1)*2;c=((X+off)%4==3||Y%3==2)?C3(13,12,10):C3(19,17,14);}
+   Put(X,Y,c);
+  }
+  // meio-fio
+  if(base==LK_RUA){
+   u16 cb=C3(24,23,20);
+   for(int k=4;k<12;k++){
+    if(!n){Put(x0+k,y0+3,cb);}
+    if(!s){Put(x0+k,y0+12,cb);}
+    if(!o){Put(x0+3,y0+k,cb);}
+    if(!e){Put(x0+12,y0+k,cb);}
+   }
+   if(asf&&(e||o)&&!(n||s))for(int k=1;k<LS;k+=4)Put(x0+k,y0+8,C3(27,25,14));
+  }else{
+   // praca: chafariz (ou estatua depois de 1850)
+   int cx=x0+8,cy=y0+8;
+   for(int y=-4;y<=4;y++)for(int x=-4;x<=4;x++){int q=x*x+y*y;
+    if(q<=16)Put(cx+x,cy+y,q>=12?C3(20,19,17):C3(10,17,26));}
+   Put(cx,cy-2,C3(28,30,31));Put(cx,cy-3,C3(28,30,31));
+   if(year>=1850){Put(cx,cy-4,C3(25,20,9));Put(cx,cy-5,C3(25,20,9));}
+  }
+  return;
+ }
+ // terra livre: campo (fileiras) ou mata
+ u8 dn=DEN[lot];
+ if(dn==4){
+  u32 h=Hh(seed,lot);bool gold=(h&1);
+  for(int y=1;y<LS-1;y++)for(int x=1;x<LS-1;x++){
+   if((y&1)==0)Put(x0+x,y0+y,gold?C3(25,21,8):C3(11,20,6));
+   else if((x+y)%5==0)Put(x0+x,y0+y,gold?C3(21,17,5):C3(8,16,5));
+  }
+  for(int k=0;k<LS;k+=3){Put(x0+k,y0,C3(16,12,7));}
  }
 }
-static void SceneBg(u16 *L,const World *w,int ci){
- // L e' um buffer 256x172 = linhas 20..191 da tela; desenhamos num alvo
- // de tela "virtual": D aponta 20 linhas antes p/ usar coordenadas de tela
- u16 *d=L;YOFF=20;
+// casas do lote (densidade 1-3) e a mata (5)
+static void Houses(const World *w,int ci,int lot,u8 st,u16 year,u32 seed,int tier,u8 terr){
+ int lx=lot%CG_W,ly=lot/CG_W,x0=MX+lx*LS,y0=MY+ly*LS;
+ u8 dn=DEN[lot];u32 h=Hh(seed,lot+77);
+ int tk=(terr==WT_DESERT||terr==WT_JUNGLE||st==ST_AFRICA||st==ST_ISLAM)?2:(terr==WT_TUNDRA?1:((h>>6)&1?0:3));
+ if(dn==5){Tree(x0+4,y0+12,3,tk,h);Tree(x0+11,y0+14,3,tk,h>>4);if(h&1)Tree(x0+8,y0+8,2,tk,h>>8);return;}
+ if(dn<1||dn>3)return;
+ (void)w;(void)ci;
+ if(dn==1){
+  OX=x0+2+(int)(h%3);OY=y0+14;UW=11;House(st,year,0,h);
+  Tree(x0+13,y0+14,2,tk,h>>3);
+ }else if(dn==2){
+  OX=x0;OY=y0+15;UW=8;House(st,year,(u8)(tier>1?1:0),h);
+  OX=x0+8;OY=y0+15;UW=8;House(st,year,(u8)(tier>1?1:0),h>>5);
+ }else{
+  // quarteirao denso: predio de 2-4 andares (ou torre depois de 1950)
+  OX=x0;OY=y0+15;UW=16;House(st,year,(u8)(tier>=CT_METROPOLE?3:2),h|1);
+ }
+}
+// sombra curta a sudeste de quem tem altura
+static void Shadow(int lot){
+ int x0=MX+(lot%CG_W)*LS,y0=MY+(lot/CG_W)*LS;
+ for(int k=3;k<LS;k++){Darken(x0+k,y0+LS-1,12,16);Darken(x0+LS-1,y0+k,12,16);}
+}
+static void CityBg(u16 *L,const World *w,int ci){
+ u16 *d=L;YOFF=20;D=d;CY0=20;CY1=192;
  const WCity *c=&w->city[ci];
  u8 st=City_Style(w,ci);u16 year=w->date.y;u32 seed=Hh(c->x,c->y);
- CY0=20;CY1=192;D=d;
- u8 t=W_TERR[World_Idx(w,c->x,c->y)];
- bool mount=false,hills=false,forest=false,desert=t==WT_DESERT,cold=t==WT_TUNDRA||t==WT_ICE,jungle=t==WT_JUNGLE;
- for(int dy=-6;dy<=6;dy++)for(int dx=-6;dx<=6;dx++){
-  int x=c->x+dx,y=c->y+dy;if(y<0||y>=w->h)continue;if(x<0||x>=w->w){if(!w->wrap)continue;x=(x+w->w)%w->w;}
-  u8 q=W_TERR[World_Idx(w,x,y)];if(q==WT_MOUNTAIN)mount=true;if(q==WT_HILLS)hills=true;if(q==WT_FOREST||q==WT_JUNGLE)forest=true;}
- // ceu: azul fundo -> azul claro -> bruma quente no horizonte (Bayer em 1/16)
- static const u8 SK0[3]={7,12,23},SK1[3]={15,21,29},SK2[3]={27,26,23};
- const u8 *HZ=desert?(const u8[3]){29,25,19}:SK2;
- int o[3];
- for(int y=20;y<HORIZ;y++){
-  int f=y-20,n=HORIZ-20;
-  if(f<n*2/3)Mix16(SK0,SK1,f,n*2/3,o);else Mix16(SK1,HZ,f-n*2/3,n-n*2/3,o);
-  for(int x=0;x<256;x++)Put(x,y,Dth(o[0],o[1],o[2],x,y));
- }
- // sol com halo (mistura com o ceu por distancia)
- int sx=150+(int)(seed%80),sy=34+(int)((seed>>8)%10);
- for(int y=sy-22;y<sy+22&&y<HORIZ;y++)for(int x=sx-22;x<sx+22;x++){
-  int q=(x-sx)*(x-sx)+(y-sy)*(y-sy);if(q>22*22)continue;
-  if(q<=36){Put(x,y,C3(31,31,26));continue;}
-  u16 cc=Get(x,y);int k=(22*22-q)*6/(22*22);
-  int r=(cc&31)*16+k*((31-(cc&31))*16)/8,g=((cc>>5)&31)*16+k*((30-((cc>>5)&31))*16)/8,b=((cc>>10)&31)*16+k*((22-((cc>>10)&31))*16)/8;
-  Put(x,y,Dth(r<0?0:r,g<0?0:g,b<0?0:b,x,y));
- }
- // nuvens fofas (3 tons, luz de cima)
- for(int n=0;n<4;n++){u32 h=Hh(seed,n);Cloud((int)(h%256),30+(int)((h>>8)%22),20+(int)((h>>16)%20),h>>4);}
- // 2 camadas de relevo: a distante some na bruma (perspectiva aerea)
- static const s8 WAVE[16]={0,2,4,5,6,5,4,2,0,-2,-4,-5,-6,-5,-4,-2};
- for(int layer=0;layer<2;layer++){
-  int haze=layer?5:10;   // de 16
-  u8 base[3];
-  if(mount){base[0]=13;base[1]=15;base[2]=20;}
-  else if(desert){base[0]=24;base[1]=19;base[2]=13;}
-  else if(cold){base[0]=22;base[1]=24;base[2]=26;}
-  else{base[0]=10;base[1]=16;base[2]=12;}
-  for(int x=0;x<256;x++){
-   int hh;
-   if(layer==0)hh=mount?(int)(16+((Hh(x/22,seed)%24))*(1+(x%22<11?x%22:22-x%22))/11):(hills?13:8)+WAVE[(x/9+(int)(seed%16))&15]+WAVE[(x/23)&15]/2;
-   else hh=(hills||mount?8:4)+WAVE[(x/6+(int)(seed>>4)%16)&15]/2+WAVE[(x/17+3)&15]/2;
-   if(hh<1)hh=1;
-   for(int y=HORIZ-hh;y<HORIZ;y++){
-    int m[3];Mix16(base,HZ,haze,16,m);
-    // sombra no lado direito das encostas + neve no pico das montanhas
-    int slope=layer==0&&mount&&(x%22)>=11;
-    if(slope){m[0]=m[0]*13/16;m[1]=m[1]*13/16;m[2]=m[2]*14/16;}
-    if(layer==0&&mount&&y<HORIZ-hh+3&&hh>22){m[0]=29*16;m[1]=30*16;m[2]=31*16;}
-    Put(x,y,Dth(m[0],m[1],m[2],x,y));
-   }
-   // fileira de mata na camada da frente
-   if(layer==1&&(forest||jungle)&&!desert&&(Hh(x,seed+3)&3)==0){int r=2+(int)(Hh(x,seed)%2);
-    for(int j=-r;j<=0;j++)for(int i=-r;i<=r;i++)if(i*i+j*j<=r*r)Put(x+i,HORIZ-hh+j,cold?C3(6,12,9):C3(7,13,7));}
-  }
- }
- // chao: bruma clara no horizonte -> cor cheia na frente, tufos de grama
- u8 g0[3],g1[3];
- if(desert){g0[0]=28;g0[1]=24;g0[2]=17;g1[0]=26;g1[1]=20;g1[2]=12;}
- else if(cold){g0[0]=25;g0[1]=27;g0[2]=27;g1[0]=21;g1[1]=24;g1[2]=24;}
- else if(jungle){g0[0]=12;g0[1]=19;g0[2]=10;g1[0]=6;g1[1]=14;g1[2]=5;}
- else if(t==WT_STEPPE){g0[0]=20;g0[1]=21;g0[2]=12;g1[0]=16;g1[1]=17;g1[2]=7;}
- else{g0[0]=16;g0[1]=22;g0[2]=12;g1[0]=9;g1[1]=17;g1[2]=6;}
- for(int y=HORIZ;y<192;y++){
-  Mix16(g0,g1,y-HORIZ,192-HORIZ,o);
-  for(int x=0;x<256;x++){
-   u32 h=Hh(x*7+y*131,seed);int v=0;
-   if((h&15)==0)v=-24;else if((h&15)==1)v=20;           // tufo escuro / folha clara
-   else if((h&511)==2&&y>150&&!desert&&!cold){Put(x,y,(h>>8)&1?C3(30,28,10):C3(30,30,28));continue;}  // florzinha
-   Put(x,y,Dth(o[0]+v,o[1]+v,o[2]+v,x,y));
-  }
- }
- // mar (cidade costeira): agua com reflexo do ceu, cintilacao e o sol na agua
- if(c->flags&CF_COASTAL){
-  static const u8 W0[3]={17,22,27},W1[3]={6,12,21};
-  for(int y=HORIZ-1;y<ROAD_Y0-2;y++){
-   int x0=180-(y-HORIZ)/2;
-   Mix16(W0,W1,y-HORIZ+1,ROAD_Y0-1-HORIZ,o);
-   for(int x=x0;x<256;x++){
-    u32 h=Hh(x/3+y*977,seed);
-    u16 col=Dth(o[0],o[1],o[2],x,y);
-    if((h&31)==0)col=C3(27,29,30);                     // crista
-    int ds=x-sx;if(ds<0)ds=-ds;
-    if(ds<6+(y-HORIZ)/3&&((h>>5)&3)==0)col=C3(31,29,20);  // reflexo do sol
-    Put(x,y,col);
-   }
-   Put(x0,y,C3(28,25,18));Put(x0+1,y,C3(26,23,16));    // praia
-  }
- }
- // casario ao fundo (cidade grande): fileira de predios menores, mais densa
- if(c->tier>=CT_CIDADE){
-  int n2=c->tier*10;
-  for(int i=0;i<n2;i++){u32 h=Hh(seed,i+300);
-   int x=(int)(h%250),y=HOUSE_Y-14-(int)((h>>8)%4);
-   if((c->flags&CF_COASTAL)&&x>165)x-=100;
-   OX=x;OY=y;UW=9+(int)((h>>16)%4)+c->tier;D=d;House(st,year,c->tier,h);}
- }
- int tk=desert||st==ST_ISLAM?2:(jungle||st==ST_AFRICA?2:(cold?1:((seed&1)?0:3)));
- // arvores entre as casas (atras)
- for(int i=0;i<6;i++){u32 h=Hh(seed,i+40);int x=(int)(h%250);
-  if((c->flags&CF_COASTAL)&&x>165)x-=110;
-  Tree(x,HOUSE_Y-2-(int)((h>>8)%6),3,tk,h);}
- // casario: quantidade e altura seguem a populacao e o nivel
- int nh=4+c->pop/6;if(nh>34)nh=34;
- for(int i=0;i<nh;i++){
-  u32 h=Hh(seed,i+7);
-  int x=(int)(h%240),y=HOUSE_Y-(int)((h>>8)%14);
-  if((c->flags&CF_COASTAL)&&x>165)x-=90;
-  OX=x;OY=y;UW=12+(int)((h>>16)%6)+c->tier*2;D=d;
-  // sombra curta no chao a' direita (sol a oeste/alto)
-  for(int k=0;k<UW*28/32;k++){Darken(x+4+k,y,13,16);Darken(x+5+k,y+1,14,16);}
-  House(st,year,c->tier,h);
- }
- // calcadas + rua (paralelepipedo em fiadas; asfalto com faixa apos 1910)
- for(int x=0;x<256;x++){Put(x,ROAD_Y0-2,C3(24,23,20));Put(x,ROAD_Y0-1,C3(19,18,16));Put(x,ROAD_Y1,C3(24,23,20));Put(x,ROAD_Y1+1,C3(17,16,14));}
- for(int y=ROAD_Y0;y<ROAD_Y1;y++)for(int x=0;x<256;x++){
-  u16 col;
-  if(year>=1910){u32 h=Hh(x+y*256,seed);int v=(h&7)==0?1:0;col=C3(9+v,9+v,10+v);
-   if(y==(ROAD_Y0+ROAD_Y1)/2&&(x&8))col=C3(27,25,15);}
-  else{
-   int row=(y-ROAD_Y0)/3,off=(row&1)*3,sx2=(x+off)%6;
-   if((y-ROAD_Y0)%3==2||sx2==5)col=C3(12,11,10);          // rejunte
-   else{u32 h=Hh((x+off)/6+row*61,seed);int v=(int)(h%4);col=C3(17+v,15+v,12+v);}
-   if(sx2==0&&(y-ROAD_Y0)%3==0)col=C3(22,20,17);           // brilho na quina
-  }
-  Put(x,y,col);
- }
- // lampioes na calcada de tras (gas ate' 1900, eletricos depois)
- if(year>=1820)for(int x=10+(int)(seed%20);x<256;x+=52){
-  if((c->flags&CF_COASTAL)&&x>176)break;
-  for(int y=ROAD_Y0-13;y<ROAD_Y0-1;y++)Put(x,y,C3(5,5,6));
-  Put(x-1,ROAD_Y0-2,C3(5,5,6));Put(x+1,ROAD_Y0-2,C3(5,5,6));
-  Fill(x-1,ROAD_Y0-16,x+2,ROAD_Y0-13,year>=1900?C3(31,31,26):C3(31,27,14));
-  Put(x-1,ROAD_Y0-17,C3(5,5,6));Put(x,ROAD_Y0-17,C3(5,5,6));Put(x+1,ROAD_Y0-17,C3(5,5,6));
- }
- bool rail=false;for(int s=0;s<CITY_SLOTS;s++)if(c->bld[s]==BK_FERROVIA)rail=true;
- if(rail){
-  for(int x=0;x<256;x++){for(int y=RAIL_Y-1;y<=RAIL_Y+4;y++)Put(x,y,((x+y)&3)?C3(14,13,12):C3(17,16,14));}  // brita
-  for(int x=0;x<256;x++){if((x&3)==0)for(int y=RAIL_Y;y<=RAIL_Y+3;y++)Put(x,y,C3(14,10,6));
-   Put(x,RAIL_Y,C3(20,20,22));Put(x,RAIL_Y+3,C3(20,20,22));}
- }
- // arvores nos vaos entre os lotes de tras
- static const u8 GAP[5]={6,66,124,182,244};
- for(int i=0;i<5;i++){u32 h=Hh(seed,i+90);if((h&3)==0)continue;Tree(GAP[i],BACK_Y,4,tk,h);}
- // obras: fileira de tras primeiro, depois a da frente (profundidade); cada
- // obra projeta uma sombra no chao antes de ser pintada
+ u8 terr=W_TERR[World_Idx(w,c->x,c->y)];
+ Quarters(w,ci);
+ // faixa de 6px acima do mapa: horizonte
+ for(int y=20;y<MY;y++)for(int x=0;x<256;x++)Put(x,y,C3(14+(y-20),19+(y-20),26));
+ for(int i=0;i<CG_N;i++)Ground(w,ci,i,terr,year,seed);
  u8 nat=c->owner?w->c[c->owner].nat:255;
- for(int pass=0;pass<2;pass++)for(int s=pass?0:4;s<(pass?4:8);s++){
-  if(s>=City_Slots(c->tier)&&!(c->bq&&c->bqSlot==s))continue;
-  int x=SLOT_X[s],wid=SLOT_W[s],yb=SlotBase(s);
+ // objetos de cima p/ baixo (quem esta' mais embaixo cobre o de cima)
+ for(int ly=0;ly<CG_H;ly++)for(int lx=0;lx<CG_W;lx++){
+  int i=ly*CG_W+lx,x0=MX+lx*LS,yb=MY+ly*LS+15;
+  int s=City_LotSlot(c,i);
   D=d;
-  if(c->bld[s]||(c->bq&&c->bqSlot==s))for(int k=2;k<wid-2;k++)for(int j=0;j<3;j++)Darken(x+k+j+2,yb-1+j,11+j,16);
-  if(c->bq&&c->bqSlot==s)Scaffold(d,x,yb,wid,100-c->bqDays*100/(BLD[c->bq].days?BLD[c->bq].days:1));
-  else if(c->bld[s])PxC_Building(d,x,yb,wid,c->bld[s],st,year,seed+s,-1,nat);
-  else{ // lote vazio: cerquinha + terra batida
-   D=d;
-   for(int y=yb-3;y<yb;y++)for(int xx=x+5;xx<x+wid-5;xx++)if(Hh(xx,y)&1)Put(xx,y,C3(16,13,8));
-   for(int xx=x+4;xx<x+wid-4;xx+=3)for(int y=yb-6;y<yb;y++)Put(xx,y,C3(18,13,8));
-   for(int xx=x+4;xx<x+wid-4;xx++)Put(xx,yb-5,C3(20,15,9));
+  if(c->bq&&c->bqLot==i){Shadow(i);Scaffold(d,x0,yb,LS,100-c->bqDays*100/(BLD[c->bq].days?BLD[c->bq].days:1));}
+  else if(s>=0){
+   if(c->bld[s]!=BK_PARQUE&&c->bld[s]!=BK_FAZENDA)Shadow(i);
+   PxC_Building(d,x0,yb,LS,c->bld[s],st,year,seed+s,-1,nat);
   }
+  else if(City_LotBase(w,ci,i)==LK_TERRA){if(DEN[i]>=1&&DEN[i]<=3)Shadow(i);Houses(w,ci,i,st,year,seed,c->tier,terr);}
  }
+ // faixa de baixo (186..191)
+ for(int y=MY+CG_H*LS;y<192;y++)for(int x=0;x<256;x++)Put(x,y,C_NAVY);
+ for(int x=0;x<256;x++)Put(x,MY+CG_H*LS,C_GOLD_DIM);
  CY0=0;CY1=192;YOFF=0;
 }
-// sprites vivos: pessoas, carroca/carro, fumaca, trem, barcos
-static void SceneLive(u16 *d,const World *w,int ci,int tick){
- const WCity *c=&w->city[ci];u32 seed=Hh(c->x,c->y);u16 year=w->date.y;u8 st=City_Style(w,ci);
- CY0=20;CY1=192;D=d;
- // fumaca das chamines (por cima do fundo)
- for(int s=0;s<CITY_SLOTS;s++){
-  u8 k=c->bld[s];if(k!=BK_OFICINA&&k!=BK_FABRICA)continue;
-  OX=SLOT_X[s];OY=SlotBase(s);UW=SLOT_W[s];
-  if(k==BK_OFICINA)Smoke(22,26,tick,seed+s);else{Smoke(6,34,tick,seed+s);Smoke(23,40,tick,seed+s+5);}
- }
- // barcos no porto
- if(c->flags&CF_COASTAL){
-  int nb=1+c->tier;
-  for(int i=0;i<nb;i++){
-   int x=196+i*18,y=HORIZ+12+i*9+((tick/20+i)&1);
-   u16 hull=C3(12,8,5),sail=C3(29,28,24);
-   for(int k=0;k<12;k++){Put(x+k,y,hull);}
-   for(int k=1;k<11;k++){Put(x+k,y+1,hull);}
-   if(year<1880){for(int j=1;j<9;j++)for(int k=0;k<j/2+1;k++)Put(x+6-k,y-j,sail);for(int j=0;j<10;j++)Put(x+6,y-j,hull);}
-   else{Fill(x+3,y-4,x+9,y,C3(20,20,22));Fill(x+5,y-8,x+7,y-4,C3(22,7,5));}
-  }
- }
- // trem
- bool rail=false;for(int s=0;s<CITY_SLOTS;s++)if(c->bld[s]==BK_FERROVIA)rail=true;
- if(rail){
-  int x=(tick*2)%420-110;
-  for(int k=0;k<4;k++){
-   int wx=x+k*22;u16 col=k==0?C3(6,6,8):C3(18,6,5);
-   Fill(wx,RAIL_Y-8,wx+20,RAIL_Y,col);Fill(wx+2,RAIL_Y-6,wx+18,RAIL_Y-4,k?C3(26,24,16):C3(12,12,14));
-   Put(wx+4,RAIL_Y,C3(4,4,4));Put(wx+15,RAIL_Y,C3(4,4,4));
-   if(k==0){Fill(wx+14,RAIL_Y-12,wx+17,RAIL_Y-8,C3(6,6,8));OX=wx;OY=RAIL_Y-12;UW=32;Smoke(16,0,tick,seed);}
-  }
- }
- // pessoas (e uma carroca ou carro) na estrada: a sociedade em movimento.
- // 9px de altura, sombra no chao, chapeu/vestido; desenhadas de tras p/ frente
- int np=3+c->pop/12;if(np>22)np=22;
+// vivos: gente nas avenidas, carroca/carro, barcos, fumaca, mira do lote
+static void CityLive(u16 *d,const World *w,int ci,int tick,int sel){
+ const WCity *c=&w->city[ci];u32 seed=Hh(c->x,c->y);u16 year=w->date.y;
+ D=d;YOFF=0;CY0=MY;CY1=MY+CG_H*LS;
  static const u8 SKIN[4][3]={{28,22,16},{24,17,11},{18,12,8},{12,8,5}};
+ u8 st=City_Style(w,ci);
  int sk0=st==ST_AFRICA?2:(st==ST_ASIA||st==ST_NATIVE||st==ST_ISLAM?1:0);
- s16 px[22],py[22];u8 ord[22];
+ // gente: metade na avenida horizontal, metade na vertical; so' pinta em rua
+ int np=4+c->pop/25;if(np>28)np=28;
  for(int i=0;i<np;i++){
   u32 h=Hh(seed,i+1000);
-  int dir=(h&1)?1:-1,sp=1+(int)((h>>1)%2);
-  int x=(int)((h>>3)%300)+dir*(tick*sp/3);x=((x%300)+300)%300-20;
-  px[i]=(s16)x;py[i]=(s16)(ROAD_Y0+3+(int)((h>>12)%9));ord[i]=(u8)i;
+  bool hor=i&1;int len=hor?CG_W*LS:CG_H*LS;
+  int dir=(h&2)?1:-1,sp=1+(int)((h>>2)%2);
+  int p=(int)((h>>4)%(u32)len)+dir*(tick*sp/4);p=((p%len)+len)%len;
+  int lane=(int)((h>>12)%5)-2;
+  int x=hor?MX+p:MX+roadCol*LS+8+lane,y=hor?MY+roadRow*LS+8+lane:MY+p;
+  int lx=(x-MX)/LS,ly=(y-MY)/LS;
+  if(!IsRoad(w,ci,lx,ly))continue;
+  const u8 *k=SKIN[(sk0+(int)((h>>16)&1))&3];
+  u16 cl=C3(6+(int)((h>>18)%22),6+(int)((h>>22)%16),6+(int)((h>>26)%20));
+  Put(x,y-2,C3(k[0],k[1],k[2]));Put(x,y-1,cl);Put(x,y,cl);Put(x+1,y,Dk(cl,3,4));
+  Put(x,y+1,((tick/6+i)&1)?C3(5,5,6):cl);
  }
- for(int i=1;i<np;i++){u8 k=ord[i];int j=i;while(j>0&&py[ord[j-1]]>py[k]){ord[j]=ord[j-1];j--;}ord[j]=k;}
- for(int n=0;n<np;n++){
-  int i=ord[n];u32 h=Hh(seed,i+1000);
-  int x=px[i],y=py[i];
-  const u8 *skc=SKIN[(sk0+(int)((h>>16)%2))&3];
-  u16 skin=C3(skc[0],skc[1],skc[2]);
-  int cr=6+(int)((h>>18)%20),cg=6+(int)((h>>22)%14),cb=6+(int)((h>>26)%18);
-  u16 cloth=C3(cr,cg,cb),clothL=C3(cr+4,cg+4,cb+4),clothD=C3(cr*3/4,cg*3/4,cb*3/4);
-  bool dress=(h>>5)&1,hat=!dress&&((h>>6)&1);
-  int fr=((tick/6)+i)&1;
-  for(int k=-1;k<=3;k++)Darken(x+k,y+1,10,16);          // sombra
-  if(dress){
-   for(int r=0;r<4;r++)for(int k=-r/2;k<3+r/2;k++)Put(x+k,y-1-3+r,k<=0?clothL:(k>=2+r/2?clothD:cloth));
-   Put(x+(fr?0:2),y,C3(6,5,4));
-   Fill(x,y-7,x+3,y-4,cloth);Put(x,y-6,clothL);
-  }else{
-   u16 leg=C3(6,6,8);
-   Put(x+(fr?0:1),y-1,leg);Put(x+(fr?2:1),y-1,leg);Put(x+(fr?0:1),y,leg);Put(x+(fr?2:1),y,leg);
-   Fill(x,y-6,x+3,y-2,cloth);for(int r=y-6;r<y-2;r++){Put(x,r,clothL);Put(x+2,r,clothD);}
-   Put(x+(fr?-1:3),y-4,skin);                         // mao balancando
-  }
-  Put(x+1,y-8,skin);Put(x+2,y-8,skin);Put(x+1,y-7,skin);Put(x+2,y-7,Dk(skin,13,16));
-  if(hat){Fill(x,y-9,x+4,y-8,C3(4,4,5));Put(x+1,y-10,C3(4,4,5));Put(x+2,y-10,C3(4,4,5));}
-  else Put(x+1,y-9,(h>>7)&1?C3(6,4,3):C3(18,14,6));    // cabelo
- }
+ // carroca (carro depois de 1910) na avenida horizontal
  if(c->tier>=CT_VILAREJO){
-  int x=(tick+(int)(seed%200))%320-30,y=ROAD_Y0+8;
-  if(year>=1910){Fill(x,y-5,x+12,y-1,C3(18,4,4));Fill(x+3,y-8,x+9,y-5,C3(14,16,18));Put(x+2,y,C3(3,3,3));Put(x+9,y,C3(3,3,3));}
-  else{Fill(x,y-5,x+9,y-1,C3(18,12,6));Put(x+2,y,C3(6,4,2));Put(x+7,y,C3(6,4,2));
-   Fill(x+10,y-6,x+16,y-2,C3(14,9,5));Put(x+16,y-7,C3(14,9,5));Put(x+11,y-1,C3(6,4,2));Put(x+15,y-1,C3(6,4,2));}
+  int len=CG_W*LS,p=(tick/2+(int)(seed%len))%len,x=MX+p,y=MY+roadRow*LS+5;
+  if(IsRoad(w,ci,(x-MX)/LS,roadRow)){
+   if(year>=1910){Fill(x,y,x+6,y+3,C3(20,4,4));Fill(x+1,y-2,x+5,y,C3(14,16,18));}
+   else{Fill(x,y,x+5,y+3,C3(18,12,6));Fill(x+5,y,x+8,y+2,C3(14,9,5));}
+  }
+ }
+ // barcos: ate' 3 lotes de agua (sorteio fixo), balancando
+ int nb=0;
+ for(int i=0;i<CG_N&&nb<1+c->tier;i++){
+  if(City_LotBase(w,ci,i)!=LK_AGUA||(Hh(seed,i+3000)%5))continue;
+  int x=MX+(i%CG_W)*LS+4+((tick/30+i)%5),y=MY+(i/CG_W)*LS+10+((tick/20+i)&1);
+  for(int k=0;k<8;k++)Put(x+k,y,C3(12,8,5));
+  for(int k=1;k<7;k++)Put(x+k,y+1,C3(12,8,5));
+  if(year<1880){for(int j=1;j<6;j++)for(int k=0;k<j/2+1;k++)Put(x+4-k,y-j,C3(29,28,24));}
+  else{Fill(x+2,y-3,x+6,y,C3(20,20,22));Put(x+4,y-4,C3(22,7,5));}
+  nb++;
+ }
+ // fumaca das chamines
+ for(int s=0;s<CITY_SLOTS;s++){
+  u8 k=c->bld[s];if(c->bpos[s]>=CG_N)continue;
+  if(k!=BK_OFICINA&&k!=BK_FABRICA&&k!=BK_USINA&&k!=BK_ARSENAL&&k!=BK_SERRARIA)continue;
+  OX=MX+(c->bpos[s]%CG_W)*LS;OY=MY+(c->bpos[s]/CG_W)*LS+15;UW=LS;
+  if(k==BK_FABRICA){Smoke(6,34,tick,seed+s);Smoke(23,40,tick,seed+s+5);}
+  else if(k==BK_USINA)Smoke(26,40,tick,seed+s);
+  else Smoke(22,26,tick,seed+s);
+ }
+ // mira do lote: moldura ouro que pulsa
+ if(sel>=0&&sel<CG_N){
+  int x0=MX+(sel%CG_W)*LS,y0=MY+(sel/CG_W)*LS;bool ph=(tick/16)&1;
+  u16 a=ph?C_GOLD_HI:C_WHITE;
+  for(int k=0;k<LS;k++){
+   if(k<4||k>=LS-4){Put(x0+k,y0,a);Put(x0+k,y0+LS-1,a);Put(x0,y0+k,a);Put(x0+LS-1,y0+k,a);}
+  }
+  for(int k=1;k<LS-1;k++){if(k<4||k>=LS-4){Put(x0+k,y0+1,C_INK);Put(x0+k,y0+LS-2,C_INK);Put(x0+1,y0+k,C_INK);Put(x0+LS-2,y0+k,C_INK);}}
  }
  CY0=0;CY1=192;
 }
@@ -644,9 +667,10 @@ void PxC_Scene(u16 *d,int ci){
  if(ci<0||ci>=w->nCity)return;
  u16 *L=PxM_Scratch();
  u32 sig=SceneSig(w,ci);
- if(sceneCity!=ci||sceneSig!=sig){SceneBg(L,w,ci);sceneCity=ci;sceneSig=sig;}
- for(int i=0;i<WG_MAP_H*256;i++)d[WG_MAP_Y*256+i]=L[i];
- SceneLive(d,w,ci,(int)WG_Ptr()->tick);
+ if(sceneCity!=ci||sceneSig!=sig){CityBg(L,w,ci);sceneCity=ci;sceneSig=sig;}
+ memcpy(d+WG_MAP_Y*256,L,WG_MAP_H*256*2);
+ Quarters(w,ci);      // DEN/avenidas da cidade aberta (baratinho: 160 lotes)
+ CityLive(d,w,ci,(int)WG_Ptr()->tick,WG_Ptr()->cityLot);
  // faixa do titulo: nome + nivel + bandeira
  const WCity *c=&w->city[ci];
  Px_Rect(d,0,0,256,20,C_NAVY);Px_Rect(d,0,19,256,1,C_GOLD);
@@ -657,6 +681,10 @@ void PxC_Scene(u16 *d,int ci){
  Px_Text2(d,250-Px_Width2(tn,&F_SERIF8),6,tn,&F_SERIF8,C_GOLD);
 }
 void PxC_SceneReset(void){sceneCity=-1;}
+u8 PxC_LotDen(const World *w,int ci,int lot){
+ if(sceneCity!=ci)Quarters(w,ci);
+ return lot>=0&&lot<CG_N?DEN[lot]:0;
+}
 
 // ======================= painel da cidade (tela de baixo) =======================
 static void Cat(char *dst,int max,const char *s){int n=0;while(dst[n])n++;while(*s&&n<max-1)dst[n++]=*s++;dst[n]=0;}
@@ -666,8 +694,8 @@ static void FmtPop(char *o,int max,u16 pop){
  if(pop>=1000){Num(o,max,pop/1000);Cat(o,max,",");char t[4]={(char)('0'+(pop%1000)/100),0};Cat(o,max,t);Cat(o,max," M");}
  else{Num(o,max,pop);Cat(o,max,Str(STR_MIL));}
 }
-// por que a obra k nao pode ser feita (StrId) ou 0
-static u16 WhyNot(const World *w,int ci,u8 k,u16 *year){
+// por que a obra k nao pode ser feita no lote (StrId) ou 0
+static u16 WhyNot(const World *w,int ci,int lot,u8 k,u16 *year){
  const WCity *c=&w->city[ci];const BldDef *b=&BLD[k];
  for(int s=0;s<CITY_SLOTS;s++)if(c->bld[s]==k)return STR_JA_TEM;
  if(c->tier<b->minTier)return STR_REQ_NIVEL;
@@ -680,89 +708,118 @@ static u16 WhyNot(const World *w,int ci,u8 k,u16 *year){
  if((b->flags&BF_OIL)&&!(c->res&RS_OLEO))return STR_REQ_RECURSO;
  int used=0;for(int s=0;s<City_Slots(c->tier);s++)if(c->bld[s])used++;
  if(used>=City_Slots(c->tier))return STR_SEM_SLOT;
+ if(City_LotBase(w,ci,lot)!=LK_TERRA)return STR_D_LOTE_RUA;
+ if(City_LotSlot(c,lot)>=0||(c->bq&&c->bqLot==lot))return STR_LOTE_OCUPADO;
+ if((b->flags&BF_COAST)&&!City_LotCoast(w,ci,lot))return STR_SO_LOTE_AGUA;
  return 0;
 }
-void PxC_Panel(u16 *d,int ci,int slot,bool picking,u8 pk){
+static u16 LotCol(const World *w,int ci,int i){
+ const WCity *c=&w->city[ci];
+ if(c->bq&&c->bqLot==i)return C3(28,16,6);
+ if(City_LotSlot(c,i)>=0)return C_GOLD;
+ switch(City_LotBase(w,ci,i)){
+  case LK_AGUA:return C3(8,14,24);
+  case LK_RUA:return C3(18,17,15);
+  case LK_PRACA:return C3(25,23,19);
+  default:break;
+ }
+ switch(DEN[i]){case 1:return C3(20,12,8);case 2:return C3(17,9,6);case 3:return C3(13,7,5);
+  case 4:return C3(20,20,7);case 5:return C3(5,12,5);default:return C3(10,17,8);}
+}
+void PxC_Panel(u16 *d,int ci,int lot,bool picking,u8 pk){
  const World *w=WG_World();
  Ui_Backdrop(d);
  if(ci<0||ci>=w->nCity)return;
  const WCity *c=&w->city[ci];
  u8 st=City_Style(w,ci);u16 year=w->date.y;u32 seed=Hh(c->x,c->y);
  u8 nat=c->owner?w->c[c->owner].nat:255;
- Ui_Navy(d,4,4,248,58);
- char t[96];
- // populacao e crescimento
- t[0]=0;Cat(t,96,Str(STR_POPULACAO));Cat(t,96," ");char p[24];FmtPop(p,24,c->pop);Cat(t,96,p);
- Px_Text2(d,10,9,t,&F_SERIF8,C_TEXT);
- int gold=c->tier,cap=c->pop/8;
- for(int s=0;s<CITY_SLOTS;s++)if(c->bld[s]){gold+=BLD[c->bld[s]].gold;cap+=BLD[c->bld[s]].cap;}
- t[0]=0;Cat(t,96,Str(STR_COMIDA));Cat(t,96," ");Num(t,96,c->food);Cat(t,96,"% · +");Num(t,96,gold);Cat(t,96,Str(STR_OURO_DIA));
- Px_Text2(d,246-Px_Width2(t,&F_SERIF8),9,t,&F_SERIF8,c->food<60?C_EVENT:C_GOLD);
- (void)cap;
+ if(sceneCity!=ci)Quarters(w,ci);
+ // cabecalho: populacao, comida, ouro e rumo ao proximo nivel
+ Ui_Navy(d,2,2,252,38);
+ char t[112];
+ t[0]=0;Cat(t,112,Str(STR_POPULACAO));Cat(t,112," ");char p[24];FmtPop(p,24,c->pop);Cat(t,112,p);
+ Px_Text2(d,8,6,t,&F_SERIF8,C_TEXT);
+ int gold=c->tier;for(int s=0;s<CITY_SLOTS;s++)if(c->bld[s])gold+=BLD[c->bld[s]].gold;
+ t[0]=0;Cat(t,112,Str(STR_COMIDA));Cat(t,112," ");Num(t,112,c->food);Cat(t,112,"% · +");Num(t,112,gold);Cat(t,112,Str(STR_OURO_DIA));
+ Px_Text2(d,248-Px_Width2(t,&F_SERIF8),6,t,&F_SERIF8,c->food<60?C_EVENT:C_GOLD);
  int np=City_NextPop(c->tier);
- if(np){
-  t[0]=0;Cat(t,96,Str(STR_RUMO));Cat(t,96,Str((u16)(STR_TIER_0+c->tier+1)));Cat(t,96,": ");Num(t,96,c->pop);Cat(t,96,"/");Num(t,96,np);Cat(t,96,Str(STR_MIL));
-  Px_Text2(d,10,23,t,&F_SERIF8,C_TEXT_DIM);
-  Ui_Bar(d,10,36,236,c->pop*100/np,C_GOLD);
- }else{Px_Text2(d,10,23,Str(STR_TIER_3),&F_SERIF8,C_GOLD);Ui_Bar(d,10,36,236,100,C_GOLD);}
- // obra em andamento
- if(c->bq){t[0]=0;Cat(t,96,Str(STR_EM_OBRA));Cat(t,96,": ");Cat(t,96,Str(BLD[c->bq].nameStr));Cat(t,96," · ");Num(t,96,c->bqDays);Cat(t,96,Str(STR_DIAS));
-  Px_Text2(d,10,45,t,&F_SERIF8,C_TEXT);}
- else{
-  // o que a cidade produz por semana (ate 3 bens)
-  s32 pr[GD_COUNT],nd[GD_COUNT],dm[GD_COUNT];WEco_CityFlows(w,ci,pr,nd,dm);
-  t[0]=0;Cat(t,96,Str(STR_PRODUZ));Cat(t,96,":");int sh=0;
-  for(int r=0;r<3;r++){
-   int bg=-1;s32 bv=0;
-   for(int g=0;g<GD_COUNT;g++)if(pr[g]>bv){bv=pr[g];bg=g;}
-   if(bg<0)break;
-   Cat(t,96," ");Cat(t,96,Str(Gd_Str((u8)bg)));Cat(t,96," +");Num(t,96,bv);pr[bg]=0;sh++;
-  }
-  if(!sh)Cat(t,96," —");
-  Cat(t,96,Str(STR_POR_SEM));
-  Px_Text2(d,10,45,t,&F_SERIF8,C_TEXT_DIM);
+ if(np){t[0]=0;Cat(t,112,Str(STR_RUMO));Cat(t,112,Str((u16)(STR_TIER_0+c->tier+1)));Cat(t,112,": ");Num(t,112,c->pop);Cat(t,112,"/");Num(t,112,np);Cat(t,112,Str(STR_MIL));
+  Px_Text2(d,8,18,t,&F_SERIF8,C_TEXT_DIM);Ui_Bar(d,8,31,240,c->pop*100/np,C_GOLD);}
+ else{Px_Text2(d,8,18,Str(STR_TIER_3),&F_SERIF8,C_GOLD);Ui_Bar(d,8,31,240,100,C_GOLD);}
+ // minimapa dos lotes (toque escolhe o lote)
+ Px_Rect(d,CY_MINI_X-2,CY_MINI_Y-2,CG_W*CY_CELL+4,CG_H*CY_CELL+4,C_GOLD_DIM);
+ for(int i=0;i<CG_N;i++){
+  int x=CY_MINI_X+(i%CG_W)*CY_CELL,y=CY_MINI_Y+(i/CG_W)*CY_CELL;
+  Px_Rect(d,x,y,CY_CELL,CY_CELL,LotCol(w,ci,i));
+  if(City_LotSlot(c,i)>=0)Px_Border(d,x,y,CY_CELL,CY_CELL,C3(14,10,4));
  }
- // slots 4x2
- for(int s=0;s<CITY_SLOTS;s++){
-  int x=4+(s%4)*62,y=66+(s/4)*40;
-  bool open=s<City_Slots(c->tier),sel=s==slot;
-  Px_Rect(d,x,y,60,38,open?C_NAVY:C_NAVY_BG);
-  Px_Border(d,x,y,60,38,sel?C_CRIMSON:(open?C_GOLD_DIM:C_NAVY));
-  if(sel)Px_Border(d,x+1,y+1,58,36,C_CRIMSON_HI);
-  if(!open){Ui_TextC(d,x+30,y+14,"—",0,C_TEXT_DIM);continue;}
-  u8 k=c->bld[s];
-  if(c->bq&&c->bqSlot==s){Scaffold(d,x+17,y+26,26,100-c->bqDays*100/(BLD[c->bq].days?BLD[c->bq].days:1));k=c->bq;}
-  else if(k)PxC_Building(d,x+17,y+26,26,k,st,year,seed+s,-1,nat);
-  const char *nm=k?Str(BLD[k].nameStr):Str(STR_VAZIO);
-  Ui_TextC(d,x+30,y+27,nm,0,k?C_TEXT:C_TEXT_DIM);
- }
- // faixa de contexto: obra escolhida ou explicacao
- Ui_Navy(d,4,148,248,40);
+ if(lot>=0&&lot<CG_N){int x=CY_MINI_X+(lot%CG_W)*CY_CELL,y=CY_MINI_Y+(lot/CG_W)*CY_CELL;
+  Px_Border(d,x-1,y-1,CY_CELL+2,CY_CELL+2,C_CRIMSON_HI);Px_Border(d,x-2,y-2,CY_CELL+4,CY_CELL+4,C_INK);}
+ // ficha do lote
+ int ix=CY_MINI_X+CG_W*CY_CELL+6,iw=252-ix;
+ Ui_Navy(d,ix,CY_MINI_Y-2,iw,CG_H*CY_CELL+4);
+ int s=City_LotSlot(c,lot);u8 base=City_LotBase(w,ci,lot);
+ u16 tt,dd;
+ bool bq=c->bq&&c->bqLot==lot;
+ if(bq){tt=BLD[c->bq].nameStr;dd=BLD[c->bq].descStr;}
+ else if(s>=0){tt=BLD[c->bld[s]].nameStr;dd=BLD[c->bld[s]].descStr;}
+ else if(base==LK_AGUA){tt=STR_LOTE_AGUA;dd=STR_D_LOTE_RUA;}
+ else if(base==LK_RUA){tt=STR_LOTE_RUA;dd=STR_D_LOTE_RUA;}
+ else if(base==LK_PRACA){tt=STR_LOTE_PRACA;dd=STR_D_LOTE_RUA;}
+ else if(DEN[lot]>=1&&DEN[lot]<=3){tt=STR_LOTE_CASAS;dd=STR_D_LOTE_CASAS;}
+ else if(DEN[lot]==4){tt=STR_LOTE_CAMPO;dd=STR_D_LOTE_LIVRE;}
+ else{tt=STR_LOTE_LIVRE;dd=STR_D_LOTE_LIVRE;}
+ Px_WrapN(d,ix+5,CY_MINI_Y+2,iw-10,Str(tt),&F_SERIF8,C_GOLD,1,false);
+ if(bq){t[0]=0;Cat(t,112,Str(STR_EM_OBRA));Cat(t,112,": ");Num(t,112,c->bqDays);Cat(t,112,Str(STR_DIAS));
+  Px_WrapN(d,ix+5,CY_MINI_Y+14,iw-10,t,&F_SERIF8,C_TEXT,1,false);}
+ Px_WrapN(d,ix+5,CY_MINI_Y+(bq?26:14),iw-10,Str(dd),&F_SERIF8,C_TEXT_DIM,bq?3:4,false);
+ if(s>=0&&City_IndustryBonus(c,s))Px_WrapN(d,ix+5,CY_MINI_Y+58,iw-10,Str(STR_VIZ_BONUS),&F_SERIF8,C_PLAYER,1,false);
+ // acao / catalogo
  if(picking){
   const BldDef *b=&BLD[pk];
-  Ui_Arrows(d,10,240,154,C_GOLD);
-  t[0]=0;Cat(t,96,Str(b->nameStr));Cat(t,96," · ");Num(t,96,City_Cost(w,ci,pk));Cat(t,96," ");Cat(t,96,Str(STR_OURO));
-  Cat(t,96," · ");Num(t,96,b->days);Cat(t,96,Str(STR_DIAS));
-  Ui_TextC(d,128,153,t,0,C_TEXT);
-  u16 yr=0;u16 why=WhyNot(w,ci,pk,&yr);
-  if(why){t[0]=0;Cat(t,96,Str(why));if(why==STR_REQ_ANO)Num(t,96,yr);
-   else if(why==STR_REQ_NIVEL)Cat(t,96,Str((u16)(STR_TIER_0+b->minTier)));
-   else if(why==STR_REQ_OBRA)Cat(t,96,Str(BLD[b->need].nameStr));
-   Ui_TextC(d,128,166,t,0,C_EVENT);}
-  else Ui_TextC(d,128,166,Str(b->descStr),0,C_TEXT_DIM);
-  Ui_TextC(d,128,177,Str(STR_A_CONFIRMA),0,C_GOLD_DIM);
- }else{
-  bool open=slot<City_Slots(c->tier);u8 k=c->bld[slot];
-  if(!open)Ui_TextC(d,128,160,Str(STR_SLOT_FECHADO),0,C_TEXT_DIM);
-  else if(k==BK_ESTALEIRO){
-   const WCountry *C=&w->c[c->owner];
-   t[0]=0;Cat(t,96,Str(STR_FROTA));Cat(t,96,": ");Num(t,96,C->ships);Cat(t,96," ");Cat(t,96,Str(STR_NAVIOS));
-   if(C->shipQ){Cat(t,96," · ");Cat(t,96,Str(STR_NAVIO_FILA));Num(t,96,C->shipQ);Cat(t,96,Str(STR_DIAS));}
-   Ui_TextC(d,128,155,t,0,C_TEXT);
-   t[0]=0;Cat(t,96,Str(STR_A_NAVIO));Cat(t,96," · ");Num(t,96,WEco_ShipCost(w,c->owner));Cat(t,96," ");Cat(t,96,Str(STR_OURO));
-   Ui_TextC(d,128,170,t,0,C->shipQ?C_TEXT_DIM:C_GOLD);
-  }
-  else if(k){Ui_TextC(d,128,155,Str(BLD[k].nameStr),1,C_TEXT);Ui_TextC(d,128,172,Str(BLD[k].descStr),0,C_TEXT_DIM);}
-  else Ui_TextC(d,128,160,Str(STR_A_CONSTRUIR),0,C_TEXT);
+  Ui_Navy(d,2,CY_PICK_Y,252,190-CY_PICK_Y);
+  Ui_Arrows(d,10,240,CY_PICK_Y+18,C_GOLD);
+  PxC_Building(d,24,CY_PICK_Y+34,26,pk,st,year,seed,-1,nat);
+  t[0]=0;Cat(t,112,Str(b->nameStr));
+  Px_Text2(d,56,CY_PICK_Y+5,t,&F_SERIF12,C_TEXT);
+  t[0]=0;Num(t,112,City_Cost(w,ci,pk));Cat(t,112," ");Cat(t,112,Str(STR_OURO));Cat(t,112," · ");Num(t,112,b->days);Cat(t,112,Str(STR_DIAS));
+  Px_Text2(d,56,CY_PICK_Y+20,t,&F_SERIF8,C_GOLD);
+  u16 yr=0;u16 why=WhyNot(w,ci,lot,pk,&yr);
+  if(why){t[0]=0;Cat(t,112,Str(why));if(why==STR_REQ_ANO)Num(t,112,yr);
+   else if(why==STR_REQ_NIVEL)Cat(t,112,Str((u16)(STR_TIER_0+b->minTier)));
+   else if(why==STR_REQ_OBRA)Cat(t,112,Str(BLD[b->need].nameStr));
+   Px_WrapN(d,56,CY_PICK_Y+31,186,t,&F_SERIF8,C_EVENT,1,false);}
+  else Px_WrapN(d,56,CY_PICK_Y+31,186,Str(b->descStr),&F_SERIF8,C_TEXT_DIM,1,false);
+  bool ok=!why&&w->c[c->owner].gold>=City_Cost(w,ci,pk);
+  Px_Rect(d,CY_OK_X,CY_OK_Y,CY_OK_W,CY_OK_H,ok?C_CRIMSON:C_NAVY_HI);Px_Border(d,CY_OK_X,CY_OK_Y,CY_OK_W,CY_OK_H,C_GOLD);
+  Ui_TextC(d,CY_OK_X+CY_OK_W/2,CY_OK_Y+7,Str(STR_CONSTRUIR),0,ok?C_TEXT:C_TEXT_DIM);
+  Px_Rect(d,CY_NO_X,CY_OK_Y,CY_NO_W,CY_OK_H,C_NAVY);Px_Border(d,CY_NO_X,CY_OK_Y,CY_NO_W,CY_OK_H,C_GOLD_DIM);
+  Ui_TextC(d,CY_NO_X+CY_NO_W/2,CY_OK_Y+7,Str(STR_CANCELAR),0,C_TEXT);
+  return;
  }
+ // botao do lote: construir aqui / lancar navio
+ bool canHere=!bq&&s<0&&base==LK_TERRA;
+ if(s>=0&&c->bld[s]==BK_ESTALEIRO){
+  const WCountry *C=&w->c[c->owner];
+  t[0]=0;Cat(t,112,Str(STR_A_NAVIO));Cat(t,112," · ");Num(t,112,WEco_ShipCost(w,c->owner));Cat(t,112," ");Cat(t,112,Str(STR_OURO));
+  Px_Rect(d,4,CY_BTN_Y,248,CY_BTN_H,C->shipQ?C_NAVY_HI:C_CRIMSON);Px_Border(d,4,CY_BTN_Y,248,CY_BTN_H,C_GOLD);
+  Ui_TextC(d,128,CY_BTN_Y+8,t,0,C_TEXT);
+ }else if(canHere){
+  Px_Rect(d,4,CY_BTN_Y,248,CY_BTN_H,C_CRIMSON);Px_Border(d,4,CY_BTN_Y,248,CY_BTN_H,C_GOLD);
+  for(int k=1;k<247;k++)Px_PSet(d,4+k,CY_BTN_Y+1,C_CRIMSON_HI);
+  Ui_TextC(d,128,CY_BTN_Y+8,Str(STR_CONSTRUIR_AQUI),0,C_TEXT);
+ }
+ // producao da cidade + dica
+ s32 pr[GD_COUNT],nd[GD_COUNT],dm[GD_COUNT];WEco_CityFlows(w,ci,pr,nd,dm);
+ t[0]=0;Cat(t,112,Str(STR_PRODUZ));Cat(t,112,":");int sh=0;
+ for(int r=0;r<3;r++){
+  int bg=-1;s32 bv=0;
+  for(int g=0;g<GD_COUNT;g++)if(pr[g]>bv){bv=pr[g];bg=g;}
+  if(bg<0)break;
+  Cat(t,112," ");Cat(t,112,Str(Gd_Str((u8)bg)));Cat(t,112," +");Num(t,112,bv);pr[bg]=0;sh++;
+ }
+ if(!sh)Cat(t,112," —");
+ Cat(t,112,Str(STR_POR_SEM));
+ Px_WrapN(d,6,CY_BTN_Y+CY_BTN_H+5,244,t,&F_SERIF8,C_TEXT_DIM,1,false);
+ Px_WrapN(d,6,CY_BTN_Y+CY_BTN_H+18,244,Str(STR_DICA_CIDADE),&F_SERIF8,C_GOLD_DIM,2,false);
 }

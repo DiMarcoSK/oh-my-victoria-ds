@@ -40,4 +40,18 @@ int City_PopCap(const WCity *c);
 int City_NextPop(u8 tier);                // populacao p/ o proximo nivel (0 = topo)
 void City_Name(const World *w,int city,char *out,int max);
 u8 City_Style(const World *w,int city);   // estilo arquitetonico (px_city.c)
+// ---- mapa da cidade (ADR-35, DESIGN 4.7): grade de lotes CG_W x CG_H ----
+// O traçado (agua do lado do mar, rio, avenidas, ruas e praca) sai de um hash
+// da posicao da cidade: fixo, sem estado. Cada obra ocupa um lote (bpos); o
+// jogador escolhe onde, a IA usa City_AutoLot. Casas/bairros sao do render.
+enum { CG_W=16, CG_H=10, CG_N=CG_W*CG_H };
+enum { LK_TERRA=0, LK_AGUA, LK_RUA, LK_PRACA };
+u8 City_LotBase(const World *w,int city,int lot);   // LK_* do tracado
+bool City_LotCoast(const World *w,int city,int lot);// terra encostada na agua
+int City_LotSlot(const WCity *c,int lot);           // slot da obra no lote, -1 = nenhuma
+int City_Plaza(const World *w,int city);            // lote da praca central
+bool City_CanBuildAt(const World *w,int city,int lot,u8 k);
+bool City_BuildAt(World *w,int city,int lot,u8 k);  // jogador escolhe o lote
+int City_AutoLot(const World *w,int city,u8 k);     // melhor lote livre (IA/inicio), -1
+int City_IndustryBonus(const WCity *c,int slot);    // % extra por vizinhanca (ferrovia/porto)
 enum { ST_EURO=0, ST_ASIA, ST_ISLAM, ST_AFRICA, ST_NATIVE, ST_COUNT };
