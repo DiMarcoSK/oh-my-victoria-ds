@@ -13,7 +13,8 @@ typedef enum {
  UI_TRADE=2,  // aba MERCADO (8 bens x compra int/ext+venda)
  UI_DIPLO=3,  // aba RELACOES (Norte/Sul: paz/uniao)
  UI_SYS=4,    // aba SISTEMA (gov, imposto, vel, save/load)
- UI_MENU=5    // menu inicial (caneta): dificuldade/seed/comecar
+ UI_MENU=5,   // menu inicial (caneta): dificuldade/seed/comecar
+ UI_WORLD=6   // painel do mapa-mundi (SCR_WORLD, wgame.c)
 } UiPage;
 // IDs de botao (u8). Esquema:
 // 10..29 dock/chips do mapa; 30..39 acoes contextuais do tile;
@@ -31,6 +32,7 @@ enum {
  UI_SP_IMPT=144, // imposto: 0..2 sequencial (tap cicla)
  UI_SP_SAVE=145, UI_SP_LOAD=146, UI_SP_NEW=147,
  UI_GV_MON=148, UI_GV_DEM=149, UI_GV_TEO=150,
+ UI_W_ATK=160, UI_W_PEACE=161, UI_W_REC=162, UI_W_MODE=163, UI_W_PCT=164, UI_W_SPEED=165, UI_W_CITY=166,
  UI_MN_PREVD=152, UI_MN_NEXTD=153, UI_MN_SEED=154, UI_MN_START=155,
  UI_CLOSE=0xFF
 };
@@ -40,3 +42,26 @@ const Btn *Ui_Tbl(u8 page);   // tabela da pagina ( termina em id==0)
 int Ui_Hit(u8 page,int px,int py); // id do botao sob o toque, -1 se nada
 void Ui_Open(GameState *g,u8 page);
 void Ui_Close(GameState *g);
+// desenhadores (source/px_ui.c): dock/abas sobre o mapa vivo + menu caneta
+void Ui_DrawBot(GameState *g,u16 *d);
+void Ui_DrawMenu(GameState *g,u16 *d);
+const Btn *Ui_Ctx(void); // botoes contextuais do tile (faixa acima do dock)
+
+// ---- v0.9 componentes da concept (SDD sec 14.1), em source/px_ui.c ----
+enum { ICO_NONE=0, ICO_CROWN, ICO_SWORD, ICO_SWORDS, ICO_PEOPLE, ICO_FLAG,
+ ICO_SHIELD, ICO_GLOBE, ICO_COIN_S, ICO_SWORDS_S, ICO_CROWN_S, ICO_CAL_S, ICO_LAND_S, ICO_HOUSE };
+void Ui_Parch(u16*d,int x,int y,int w,int h);   // pergaminho + borda dupla + cantos
+void Ui_Navy(u16*d,int x,int y,int w,int h);    // painel navy + borda ouro
+void Ui_Backdrop(u16*d);                        // fundo navy com grao
+void Ui_TextC(u16*d,int cx,int y,const char*s,int big,u16 col); // Serifa centrada
+void Ui_Div(u16*d,int cx,int y,u16 col);        // divisor 48x5
+void Ui_Crown(u16*d,int x,int y);               // coroa 16x12
+void Ui_Icon(u16*d,int x,int y,const char*const*rows,int h,bool dim);
+void Ui_IconId(u16*d,int x,int y,u8 id,bool dim);
+void Ui_Item(u16*d,int x,int y,int w,const char*s,bool sel,bool dim,bool pulse,bool star);
+void Ui_BigBtn(u16*d,int x,int y,const char*s,u8 icon,bool sel,bool dim,bool pulse);
+void Ui_IconBtn(u16*d,int x,int y,u8 icon,bool pressed,bool dim);
+void Ui_ValueRow(u16*d,int x,int y,int w,const char*lab,const char*val,bool sel);
+void Ui_Slider(u16*d,int x,int y,int v);
+void Ui_Arrows(u16*d,int xl,int xr,int y,u16 c); // ◂ em xl, ▸ em xr (4x7)
+void Ui_Bar(u16*d,int x,int y,int w,int pct,u16 col);

@@ -52,6 +52,18 @@ static const Btn T_MENU[]={
  {0,0,0,0,0,0,0}
 };
 
+// Painel do mapa-mundi (SCR_WORLD): 4 botoes icone 34x34 + % + velocidade.
+// px_world.c desenha daqui; wgame.c despacha daqui.
+static const Btn T_WORLD[]={
+ {6,152,34,34,UI_W_ATK,0,0},
+ {44,152,34,34,UI_W_PEACE,0,0},
+ {82,152,34,34,UI_W_REC,0,0},
+ {120,152,34,34,UI_W_CITY,0,0},
+ {160,152,44,34,UI_W_PCT,0,0},
+ {208,152,44,34,UI_W_SPEED,0,0},
+ {0,0,0,0,0,0,0}
+};
+
 // Grades geradas 1x (tabelas de 23 obras e 8 bens ficam grandes de escrever)
 static Btn gbuild[BLD_COUNT]; // id==BuildingKind (1..22); slot 0 = fim
 static Btn gtrade[GOOD_COUNT+1]; // id = UI_TR_SHOP + good*3
@@ -86,6 +98,7 @@ const Btn *Ui_Tbl(u8 page){
   case UI_DIPLO: return T_DIPLO;
   case UI_SYS:   return T_SYS;
   case UI_MENU:  return T_MENU;
+  case UI_WORLD: return T_WORLD;
   default:       return T_MAP;
  }
 }
