@@ -1,9 +1,11 @@
 #include <nds.h>
 #include "game.h"
 #include "px.h"
-// OH MY VICTORIA DS! v0.7: pixel-art 100% procedural, sem console.
-// make -> ohmyvictoria_ds.nds -> cartao/flashcard ou melonDS.
+#include "settings.h"
+// OH MY VICTORIA DS! v0.8: mapa cartografico cozido (buffer-mundo) na tela
+// baixo tocavel + HUD na cima. make -> ohmyvictoria_ds.nds (melonDS/DS).
 int main(void){
+ Settings_Init();
  Px_Init();
  GameState *g=Game_Ptr();
  Game_Init(g);
@@ -12,11 +14,14 @@ int main(void){
  while(1){
   In_Handle(g);
   Game_Frame(g);
-  // OTIMIZACAO DS (a maior economia do jogo): so redesenha quando algo
-  // mudou (dirty) ou 1x/15 frames p/ animacoes (cursor/agua/evento).
-  // Antes: 2x dmaCopy 100KB + ~50k pixels TODO frame (60Hz).
-  // Depois: ~4Hz + sob demanda -> ~93% menos DMA e pixels. VRAM retém.
-  if(g->dirty||(frame%15)==0){Px_Top(g);Px_Bot(g);}
+  // bake do buffer-mundo: espalhado (budget) — barato por frame; e o unico
+  // custo de pixel novo, pan/grafismos sao so copia+overlay.
+  Px_Tick(g);
+  // RENDER SOB DEMANDA: dirty (tudo), dirtyBot (so mapa, pan da caneta) ou
+  // pulso 1x/15 frames p/ animacoes (agua/cursor/menu). Nada a 60Hz parado.
+  if(g->dirty){Px_Top(g);Px_Bot(g);g->dirty=false;g->dirtyBot=false;}
+  else if(g->dirtyBot){Px_Bot(g);g->dirtyBot=false;}
+  else if((frame%15)==0){Px_Top(g);Px_Bot(g);}
   frame++;
   swiWaitForVBlank();
  }

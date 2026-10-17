@@ -1,9 +1,10 @@
 #pragma once
 #include <nds.h>
-// OH MY VICTORIA DS! v0.7 — sociedade completa + governos: 8 bens, 23 obras, 3 govs,
-// cadeias produtivas, mercados interno+externo+uniao, RTS Vic-like no DS.
+// OH MY VICTORIA DS! v0.8 — v0.7 (8 bens, 23 obras, 3 governos, mercados,
+// uniao, tarifa) + CARTOGRAFIA cozida + interface de CANETA (dock de abas,
+// pan arrastando, mercado/obras/diplomacia/sistema em abas).
 #define GAME_TITLE "OH MY VICTORIA DS!"
-#define GAME_VERSION "0.7.0"
+#define GAME_VERSION "0.8.0"
 #define DEFAULT_SEED 0x0CC1A6u
 #define MAP_W 32
 #define MAP_H 24

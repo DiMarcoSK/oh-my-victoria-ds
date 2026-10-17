@@ -30,6 +30,15 @@ typedef enum { DIP_WAR=1, DIP_PEACE=2, DIP_ALLY=3 } DipStance;
 // Governo/leis (v0.7): cada faccao escolhe 1 forma de governo com buffs/debuffs.
 // Troca via SELECT+L (custa 50 ouro, cooldown 15 dias). Ver gov.h/gov.c.
 typedef enum { GOV_MONARCHY=0, GOV_DEMOCRACY=1, GOV_THEOCRACY=2, GOV_COUNT=3 } GovKind;
+// Maquina de telas (SDD sec 14.2, ADR-17): g->screen substitui o antigo bool
+// inMenu. Toda troca de tela seta dirty + dirtyBot (SDD sec 14.2).
+typedef enum {
+ SCR_MAIN=0, SCR_MODE, SCR_SETUP, SCR_NATION, SCR_GAME,
+ SCR_PAUSE, SCR_OPTIONS, SCR_LOAD, SCR_CREDITS, SCR_END,
+ SCR_WORLD,  // partida no mundo celular (mapa-mundi/aleatorio, wgame.c)
+ SCR_CITY,   // cidade aberta (cena viva + slots de obras, px_city.c)
+ SCR_COUNT
+} Screen;
 typedef struct {
  u8 owner, troops, terrain, building, site, happiness;
  u8 popA, popB; // peas|work, burg|nobl (0..15 cada)
@@ -57,10 +66,11 @@ typedef struct {
  u32 seed, day, rng; u16 frameAcc;
  u8 selX, selY, camX, camY, diff, speed, winner, weather, evtCd, lastEvt;
  u8 evtX, evtY;
- // v0.8 UI de caneta: pagina aberta (UiPage) + modo de entrada (1=marcha
- // esperando destino) + flags de redraw seletivo (caneta pan so redesenha mapa)
- u8 uiPage, uiPick;
- bool gameOver, dirty, dirtyBot, inMenu, paused;
+ // v0.9 UI: tela corrente (Screen, ADR-17) + quem abriu Configuracoes; pagina
+ // aberta (UiPage, v0.8 de caneta) + entrada (1=marcha esperando destino) +
+ // flags de redraw seletivo (caneta pan so redesenha o mapa).
+ u8 screen, scrPrev, uiPage, uiPick;
+ bool gameOver, dirty, dirtyBot, paused;
  char status[64];
  char evtMsg[64];
 } GameState;

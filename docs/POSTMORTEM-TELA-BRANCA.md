@@ -275,3 +275,66 @@ framebuffer. Ver sec 4/6 deste doc para a prova.
 assumir o formato; (2) em bisect de video, o teste minimo deve vir de um caminho
 independente (exemplo oficial); (3) tela "funciona mas invisivel" existe, e ela cheira
 a transparencia/alpha; (4) teste com o mesmo bug do sistema nao valida nada.*
+
+---
+
+## 10. INCIDENTE 2 (v0.8): "tela preta" de novo — mas a causa NAO era alpha
+
+**Sintoma:** as **duas** telas pretas desde o ligar no melonDS (v0.8 touch-first).
+Identico ao incidente 1 na cara. **NAO era o mesmo bug.**
+
+### 10.1 Por que o sintoma enganava
+
+Tela preta = "BG de bitmap ativo + todos os pixels transparentes" (sec 2). Mas ha'
+uma segunda maneira de chegar na MESMA imagem: **o jogo nunca chega a desenhar**.
+O `Px_Init` pinta o backbuffer de preto (`RGB15(0,0,0)`, a excecao consciente da
+sec 6) e faz o primeiro DMA. Se o primeiro frame travar ANTES do bloco de render,
+as duas telas ficam com esse preto e o resultado e' indistinguivel do bug de alpha.
+
+### 10.2 A causa raiz (duas, na mesma feature de bake)
+
+O loop do `main` faz `Px_Tick(g)` (o *bake* do buffer-mundo) **antes** de
+`Px_Top`/`Px_Bot`. Logo, um travamento no bake = nenhum render = tela preta.
+
+1. **Laco infinito no `LineP` (Bresenham de `px_map.c`).** A versao antiga so'
+   parava quando `x==x1 && y==y1`; em retas a **45 graus** (`|dx|==|dy|`) ela nunca
+   chega no destino, `err` estoura o `int` (UBSan acusa *signed integer overflow*)
+   e o `while(1)` roda para sempre. O `BLD_FARM` (presente no mapa padrao) desenha
+   exatamente uma diagonal 45 — o bake do frame 0 travava ali.
+2. **`SNAP` x `TileKey()` = 0.** O cache de bake `SNAP[]` nasce zerado em `.bss`
+   e `TileKey()` de um tile "vazio" (dono 0, `TER_PLAINS`) tambem e' 0. Como
+   `BakePass` pula o tile quando `SNAP==key`, esses tiles **nunca eram baked** ->
+   ficavam transparentes (preto) no mapa. Isso nao trava: deixa o mapa salpicado
+   de preto (no smoke host eram ~20k pixels do fundo).
+
+### 10.3 O fix
+
+- `LineP` reescrito com **terminacao garantida por contador** (`passos = max(|dx|,|dy|)`,
+  `for i in [0..passos]`), Bresenham canonico (`err=adx-ady`, `e2>=-ady` / `e2<=adx`).
+  Termina sempre, `err` fica limitado, desenho correto (ver sec 10.4).
+- `TileKey()` passa a devolver `0x80000000u | ...` (bit 31 sempre setado): uma chave
+  valida nunca vale 0, entao o `SNAP` zerado do boot nao colide e todo tile e' baked
+  pelo menos 1x.
+
+### 10.4 Como foi provado (sem melonDS): o smoke host de render
+
+Nao havia emulador nem gdb no ambiente (postmortem sec 7 item 3 nao se aplicava).
+Em vez de inventar teoria, compilamos **o jogo de verdade para x86** com um stub
+minimo de `<nds.h>` (`tools/hostpx/`), sob **ASan + UBSan**, rodando menu e jogo:
+
+- **Antes do fix:** `timeout` → o processo **travava** no frame 0; UBSan apontava
+  `source/px_map.c:48` (*signed integer overflow* em `err*2`) — o laco infinito.
+- **Depois do fix:** termina, e a checagem de pixel diz **0 transparente** nas duas
+  telas, no menu E no jogo.
+
+Esse teste (`tools/hostpx/run.sh`) fica no repo como **regressao de "tela preta"**:
+falha se travar (timeout) ou se sobrar pixel com bit 15 = 0. Roda em segundos, sem
+ROM, sem emulador.
+
+### 10.5 Licao nova (soma as 4 da sec 9)
+
+**"Tela preta" tem (pelo menos) duas familias: pixel transparente (ADR-13) e "nunca
+desenhou" (trava/excecao antes do render).** Antes de caçar alpha, prove que o bloco
+de render *roda* — o smoke host faz isso de graca. E: o `Px_Init` preto e' um
+*tell* — se o preto e' uniforme nas duas telas desde o ligar, suspeite de travamento
+antes do primeiro `Px_Top`, nao de transparencia. Ver ADR-21 no `docs/SDD.md`.

@@ -77,6 +77,7 @@ static void GlyphSc(u16 *dst,int gx,int gy,int sc,const u8 *gl,u16 col){
    for(int r2=0;r2<sc;r2++)for(int c3=0;c3<sc;c3++)
     Px_PSet(dst,gx+c2*sc+c3,gy+r*sc+r2,col);
 }
+const u8 *Px_Glyph(char c){return Glyph(c);}
 static void GlyphTo(u16 *dst,int x,int y,const char c,u16 col){
  const u8 *gl=Glyph(c);
  for(int r=0;r<5;r++)for(int c2=0;c2<3;c2++)

@@ -10,6 +10,7 @@
 #include "px.h"
 #include "map.h"
 #include "ui.h"
+#include "menu.h"
 
 static u16 WORLD[PX_WORLD_W*PX_WORLD_H]; // .bss 384KB
 static u32 SNAP[MAP_H*MAP_W];
@@ -21,7 +22,8 @@ static inline u16 Shc(int r,int g,int b,int d){
  return Px_Col((u8)Clamp31(r+d),(u8)Clamp31(g+d),(u8)Clamp31(b+d));
 }
 static inline u16 Mix(u16 a,u16 b,int num,int den){
- if(num<=0)return a; if(num>=den)return b;
+ if(num<=0)return a;
+ if(num>=den)return b;
  int ar=a&31,ag=(a>>5)&31,ab=(a>>10)&31;
  int br=b&31,bg=(b>>5)&31,bb=(b>>10)&31;
  return Shc(ar+((br-ar)*num)/den,ag+((bg-ag)*num)/den,ab+((bb-ab)*num)/den,0);
@@ -33,7 +35,6 @@ static inline int H2u(int x,int y){
 }
 #define H15(x,y) (H2u(x,y)&15)
 static inline void WSET1(int x,int y,u16 c){WORLD[(y)*PX_WORLD_W+(x)]=c;}
-static inline u16 WGET1(int x,int y){return WORLD[(y)*PX_WORLD_W+(x)];}
 // pixel LOCAL ao tile (clip 0..15; nunca vaza para o vizinho)
 static inline void Lpx(int bx,int by,int dx,int dy,u16 c){
  if((unsigned)dx<16&&(unsigned)dy<16)WSET1(bx+dx,by+dy,c);
@@ -41,11 +42,21 @@ static inline void Lpx(int bx,int by,int dx,int dy,u16 c){
 static void MiniFill(int bx,int by,int x0,int y0,int x1,int y1,u16 c){
  for(int y=y0;y<=y1;y++)for(int x=x0;x<=x1;x++)Lpx(bx,by,x,y,c);
 }
+// Bresenham inteiro com terminacao GARANTIDA por contador (passos+1). A versao
+// antiga so' parava em x==x1&&y==y1, mas em retas a 45 graus (adx==ady) ela
+// nunca chega no destino: err estoura o int e o laco vira infinito. Como o bake
+// do mapa (Px_Tick) roda ANTES do render, isso travava o frame 0 e deixava as
+// duas telas pretas (o BLD_FARM desenha exatamente uma diagonal 45).
 static void LineP(int bx,int by,int x0,int y0,int x1,int y1,u16 c){
- int dx=x1-x0,dy=y1-y0,sx=dx<0?-1:1,sy=dy<0?-1:1;
- dx=sx*dx;dy=sy*dy;int err=dx+dy,x=x0,y=y0;
- while(1){Lpx(bx,by,x,y,c);if(x==x1&&y==y1)break;
-  int e2=err*2;if(e2>=dy){err-=dy;x+=sx;}if(e2<=dx){err+=dx;y+=sy;}}
+ int dx=x1-x0,dy=y1-y0,adx=dx<0?-dx:dx,ady=dy<0?-dy:dy;
+ int sx=dx<0?-1:1,sy=dy<0?-1:1,steps=adx>ady?adx:ady;
+ int err=adx-ady,x=x0,y=y0;
+ for(int i=0;i<=steps;i++){
+  Lpx(bx,by,x,y,c);
+  int e2=err*2;
+  if(e2>=-ady){err-=ady;x+=sx;}
+  if(e2<=adx){err+=adx;y+=sy;}
+ }
 }
 
 // ============ terreno: cor base + textura ============
@@ -105,7 +116,8 @@ static int TerTex(u8 ter,int tx,int ty,int fx,int fy){
   }
   case TER_DESERT:{
    int wv=(fx+((fy*13)&15))&15;
-   if(wv==3)return -3; if(wv==4)return 2;
+   if(wv==3)return -3;
+   if(wv==4)return 2;
    if((fx&3)==0&&(fy&3)==3)return 1;
    return 0;
   }
@@ -345,11 +357,10 @@ static void ArmyShield(u8 owner,int troops,int dirx,int diry,int bx,int by,bool 
   int cx=(x0+x1)/2, cy=(y0+y1)/2;
   if(dirx){
    LineP(bx,by,cx-1,cy,cx+1,cy,flg);
-   Lpx(bx,by,cx+dirx*2,cy,flg);
-   Lpx(bx,by,cx+dirx,cy+diry?0:1,flg);
+   Lpx(bx,by,cx+2*dirx,cy,flg);
   }else{
    LineP(bx,by,cx,cy-1,cx,cy+1,flg);
-   Lpx(bx,by,cx,cy+diry*2,flg);
+   Lpx(bx,by,cx,cy+2*diry,flg);
   }
  }
 }
@@ -362,7 +373,10 @@ static u32 TileKey(GameState*g,int tx,int ty){
   int dx=(int)t->dstX-tx,dy=(int)t->dstY-ty;
   dst=(1u<<19)|((dx>0?1u:dx<0?2u:0)<<20)|((dy>0?1u:dy<0?2u:0)<<22);
  }
- return (u32)t->owner|(u32)t->terrain<<3|(u32)t->building<<7
+ // bit 31 sempre setado: TileKey() de tile "vazio" (dono 0, planicie) seria 0 e
+ // colidiria com SNAP[] zerado em .bss -> o tile nunca era baked (ficava
+ // transparente = preto no mapa). Com o bit 31, chave 0 nunca acontece.
+ return 0x80000000u|(u32)t->owner|(u32)t->terrain<<3|(u32)t->building<<7
   |(u32)t->site<<12|(u32)t->troops<<15|dst;
 }
 static void BakeTile(GameState*g,int tx,int ty){
@@ -419,6 +433,7 @@ static int BakePass(GameState*g,int budget,bool visOnly){
  return remaining;
 }
 void Px_Tick(GameState*g){
+ if(g->screen!=SCR_GAME)return; // bake so' do mapa classico
  int budget=g->dirty?200:40;
  int rem=BakePass(g,budget,true);
  if(rem>0)BakePass(g,rem*2,false);
@@ -451,6 +466,16 @@ static void ViewportOut(GameState*g,u16*d){
  }
 }
 // cursor: tile clareado + brackets gold pulsando
+static void Brackets(u16*d,int x,int y,u16 c){
+ for(int m=0;m<3;m++){
+  int xr=x+15-m,yb=y+15-m;
+  if(x+m>=0&&x+m<256&&y>=0&&y<192)d[y*256+x+m]=c;
+  if(x>=0&&x<256&&y+m>=0&&y+m<192)d[(y+m)*256+x]=c;
+  if(xr>=0&&xr<256&&y>=0&&y<192)d[y*256+xr]=c;
+  if(x>=0&&x<256&&yb>=0&&yb<192)d[yb*256+x]=c;
+  if(xr>=0&&xr<256&&yb>=0&&yb<192)d[yb*256+xr]=c;
+ }
+}
 static void CursorPaint(u16*d,GameState*g,int ph){
  int sx=(g->selX-(int)g->camX)*16, sy=(g->selY-(int)g->camY)*16;
  if(sx<0||sy<0||sx>=VIEW_W*16||sy>=VIEW_H*16)return;
@@ -459,20 +484,55 @@ static void CursorPaint(u16*d,GameState*g,int ph){
   int r=c&31,g2=(c>>5)&31,b=(c>>10)&31;
   d[(sy+j)*256+(sx+i)]=Px_Col((u8)Clamp31(r+2),(u8)Clamp31(g2+2),(u8)Clamp31(b+2));
  }
- u16 gold=ph?Shc(31,28,16,0):Shc(18,16,9,0);
- // brackets 4 cantos (L de 3px, 2 de espessura: leitura firme em 16px)
- for(int m=0;m<3;m++){
-  Lbrk(d,sx,sy,1,1,gold);Lbrk(d,sx+15,sy,-1,1,gold);
-  Lbrk(d,sx,sy+15,1,-1,gold);Lbrk(d,sx+15,sy+15,-1,-1,gold);
+ Brackets(d,sx,sy,ph?Shc(31,28,16,0):Shc(18,16,9,0));
+}
+// bandeira do evento: haste de tinta + bandeirola gold com veu vermelho
+static void Pennant(u16*d,GameState*g,int ph){
+ if(!g->lastEvt)return;
+ int ex=(g->evtX-(int)g->camX)*16, ey=(g->evtY-(int)g->camY)*16;
+ if(ex<-16||ey<-16||ex>=256||ey>=192)return;
+ u16 ink=Shc(10,10,11,0),gold=Shc(31,26,8,0),red=Shc(28,8,8,0);
+ for(int k=2;k<13;k++){
+  int py=ey+k;
+  if(py>=0&&py<192&&ex+3>=0&&ex+3<256)d[py*256+ex+3]=ink;
+ }
+ int wob=(ph&&(g->day&1))?1:0; // veia a cada mudanca de fase
+ for(int k=0;k<6;k++){
+  int hgt=5-k;
+  for(int m=0;m<hgt;m++){
+   int py=ey+2+m+wob,px=ex+4+k;
+   if(py<0||py>=192||px<0||px>=256)continue;
+   d[py*256+px]=(k==0)?red:gold;
+  }
  }
 }
-// canto "L" 3x3 no viewport (d, base x,y, sentido)
-static void Lbrk(u16*d,int x,int y,int sx,int sy,u16 c){
- for(int k=0;k<3;k++){
-  int hx=x+sx*k, hy=y;
-  int vy=0;
-  (void)vy;
-  if(hx>=0&&hx<256&&hy>=0&&hy<192)d[hy*256+hx]=c;
+// modo marcha: studs gold nos 4 alvos adjacentes validos
+static void PickStuds(u16*d,GameState*g){
+ if(g->uiPick!=1)return;
+ static const int DX[4]={1,-1,0,0},DY[4]={0,0,1,-1};
+ for(int i=0;i<4;i++){
+  int nx=g->selX+DX[i],ny=g->selY+DY[i];
+  if(nx<0||ny<0||nx>=MAP_W||ny>=MAP_H)continue;
+  if(!tileWalk(g->tiles[ny][nx].terrain))continue;
+  int vx=(nx-(int)g->camX)*16+6, vy=(ny-(int)g->camY)*16+6;
+  if(vx<0||vy<0||vx+3>256||vy+3>192)continue;
+  for(int m=0;m<3;m++)for(int n2=0;n2<3;n2++)
+   d[(vy+n2)*256+vx+m]=Shc(31,26,8,0);
  }
- Lbrk2 elsewhere...
+}
+// ============ orchestracao tela baixo ============
+void Px_Bot(GameState*g){
+ s_tick++;
+ u16*d=Px_BackBot();
+ if(Menu_Owns(g->screen)){
+  Menu_DrawBot(g,d);
+ }else{
+  ViewportOut(g,d);
+  int ph=(int)((s_tick>>2)&1);
+  CursorPaint(d,g,ph);
+  Pennant(d,g,ph);
+  PickStuds(d,g);
+  Ui_DrawBot(g,d);
+ }
+ Px_FlipBot();
 }

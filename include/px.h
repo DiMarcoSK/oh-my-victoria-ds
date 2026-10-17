@@ -25,10 +25,12 @@ void Px_Tick(GameState *g);
 // em buffer, com escala (1=3x5, 2=6x10) para numeros grandes.
 void Px_Text(int x,int y,const char *s,u16 col);
 void Px_TextTop(int x,int y,const char *s,u16 col);
+const u8 *Px_Glyph(char c); // acesso aos glifos da fonte 3x5 (px_ui desenha chips)
 void Px_TextSc(u16 *dst,int x,int y,const char *s,u16 col,int sc);
 // Barras: Px_Bar desenha no painel baixo; Px_BarT na tela cima.
 void Px_Bar(int x,int y,int w,int pct,u16 col);
 void Px_BarT(int x,int y,int w,int h,int pct,u16 col);
 int Px_Width(const char *s);
+u16 Px_MiniCol(GameState *g,u8 tx,u8 ty); // cor p/ minimapa (px_hud)
 // util de formato compartilhado (HUD/UI)
 void Px_Itoa(int v,char *out); // decimal, sem zeros a esquerda

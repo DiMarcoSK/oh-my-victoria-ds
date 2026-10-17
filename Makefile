@@ -6,7 +6,7 @@ include $(DEVKITARM)/ds_rules
 
 TARGET := ohmyvictoria_ds
 BUILD := build
-SOURCES := source
+SOURCES := source source/gen
 INCLUDES := include
 # ARM9 real: armv5te + arm946e-s (== template oficial; sem isso o GCC assume
 # armv4t e o codigo perde instrucoes DSP/BLX do ARM9). -O2 seguro p/ DS.
@@ -14,8 +14,8 @@ ARCH := -march=armv5te -mtune=arm946e-s -mthumb -mthumb-interwork
 # v0.7: -O2 p/ ARM9, ndstool gera .nds pronto p/ flashcard.
 # Uso: make  (limpa: make clean). Requer DEVKITARM+LIBNDS (+calico no r68+).
 GAME_TITLE := OH MY VICTORIA DS!
-GAME_SUBTITLE1 := v0.7 governo RTS
-GAME_SUBTITLE2 := 8 bens 23 obras 3 gov
+GAME_SUBTITLE1 := v0.8 caneta+mapa
+GAME_SUBTITLE2 := aba de obras/mercado   
 CFLAGS := -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections $(ARCH) $(INCLUDE) -DARM9
 CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
 ASFLAGS := -g $(ARCH)
@@ -57,7 +57,7 @@ export INCLUDE := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 	-I$(CURDIR)/$(BUILD)
 export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
-.PHONY: all clean
+.PHONY: all clean $(BUILD)
 all: $(BUILD)
 
 $(BUILD):

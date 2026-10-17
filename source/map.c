@@ -60,7 +60,7 @@ void Map_Init(GameState *g){
  g->day=1;g->selX=2;g->selY=2;g->camX=0;g->camY=0;
  g->diff=DIFF_NORMAL;g->speed=2;g->weather=0;g->evtCd=15;g->lastEvt=0;
  g->status[0]=0;g->evtMsg[0]=0;
- g->dirty=true;g->inMenu=true;Map_Recalc(g);
+ g->dirty=true;g->dirtyBot=true;g->screen=SCR_MAIN;g->scrPrev=SCR_MAIN;Map_Recalc(g);
 }
 Tile *Map_Get(GameState *g,int x,int y){return tileInside(x,y)?&g->tiles[y][x]:0;}
 void Map_Recalc(GameState *g){

@@ -9,6 +9,8 @@
 #include "gov.h"
 #include "ai.h"
 #include "save.h"
+#include "menu.h"
+#include "wgame.h"
 #include <stdio.h>
 static GameState G;
 GameState *Game_Ptr(void){return &G;}
@@ -21,13 +23,13 @@ void Game_Init(GameState *g){
  Map_Init(g);Dip_Init(g);Mkt_Init(g);Gov_Init(g);
  const char *m="L/R DIFICULDADE A COMECA";
  for(int i=0;m[i]&&i<63;i++)g->status[i]=m[i];
- g->status[63]=0;g->inMenu=true;
+ g->status[63]=0;g->screen=SCR_MAIN;g->scrPrev=SCR_MAIN;
 }
 void Game_New(GameState *g,u8 diff,u32 seed){
  Map_Init(g);Dip_Init(g);Mkt_Init(g);Gov_Init(g);
  g->diff=diff;g->seed=seed;
  if(seed!=DEFAULT_SEED)Map_Gen(g,seed);
- Map_Recalc(g);g->inMenu=false;g->paused=false;g->speed=2;g->dirty=true;
+ Map_Recalc(g);g->screen=SCR_GAME;g->scrPrev=SCR_MAIN;g->paused=false;g->speed=2;g->dirty=true;g->dirtyBot=true;
  const char *m="BOA GUERRA START PAUSA";
  for(int i=0;m[i]&&i<63;i++)g->status[i]=m[i];
  g->status[63]=0;
@@ -56,7 +58,9 @@ void Game_Day(GameState *g){
  Game_CheckEnd(g);
 }
 void Game_Frame(GameState *g){
- if(g->inMenu||g->gameOver||g->paused)return;
+ if(g->screen==SCR_WORLD||g->screen==SCR_CITY){WG_Frame(g);return;}
+ if(g->screen!=SCR_GAME){Menu_Frame(g);return;}
+ if(g->gameOver||g->paused)return;
  int fpd=FRAMES_PER_DAY_2;
  if(g->speed==1)fpd=FRAMES_PER_DAY_1;
  else if(g->speed==3)fpd=FRAMES_PER_DAY_3;
