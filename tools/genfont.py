@@ -64,8 +64,7 @@ def find_size(path, target_caph):
     best = None
     for sz in range(8, 24):
         f = ImageFont.truetype(path, sz)
-        b = f.getbbox("H")
-        h = b[3] - b[1]
+        h = render_glyph(path, sz, "H")["h"]
         d = abs(h - target_caph)
         if best is None or d < best[0]:
             best = (d, sz, f)
@@ -79,6 +78,9 @@ def render_glyph(path, size, ch):
     BASE_Y, PEN_X = 28, 6
     img = Image.new("L", (CANVAS, CANVAS), 0)
     d = ImageDraw.Draw(img)
+    # hinting monocromatico do FreeType: haste inteira em vez de limiar 50%
+    # sobre o antisserrilhado (que comia serifa e haste fina)
+    d.fontmode = "1"
     try:
         d.text((PEN_X, BASE_Y), ch, font=f, fill=255, anchor="ls")
     except Exception:
@@ -182,10 +184,32 @@ def make_preview(r12, b12, r8, b8, path):
     img.save(path)
     print("preview ->", path)
 
+def pixel8(extra):
+    # Serifa 8 = fonte desenhada a mao (tools/pixfont8.py): legivel em 7px
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import pixfont8
+    tab = pixfont8.glyphs()
+    want = sorted(set(range(32, 127)) | set(ord(c) for c in extra))
+    miss = [chr(c) for c in want if c not in tab]
+    if miss:
+        raise SystemExit("pixfont8 sem glifo: %r" % "".join(miss))
+    out = []
+    for cp in want:
+        t = tab[cp]
+        w, h = t["w"], t["h"]
+        stride = (w + 7) // 8
+        bits = bytearray(stride * h)
+        for yy, row in enumerate(t["rows"]):
+            for xx, c in enumerate(row):
+                if c == '#':
+                    bits[yy * stride + (xx >> 3)] |= (0x80 >> (xx & 7))
+        out.append((cp, dict(w=w, h=h, left=t["left"], top=t["top"], adv=t["adv"], bits=bytes(bits))))
+    return out
+
 def main():
     extra = EXTRA + SYMBOLS
     s12, g12 = build([first(PRIMARY), first(FALLBACK)], 9, extra)
-    s8, g8 = build([first(PRIMARY), first(FALLBACK)], 7, extra)
+    s8, g8 = 0, pixel8(extra)
     out = []
     out.append("// GERADO por tools/genfont.py — NAO EDITE A MAO.")
     out.append("// Serifa 12 (caixa alta 9px) e Serifa 8 (caixa alta 7px), 1bpp.")
@@ -194,7 +218,7 @@ def main():
     r8, b8 = emit("F_SERIF8", dict(caph=7, lineh=11), g8, out)
     path = os.path.join(ROOT, "source", "gen", "font_data.c")
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    open(path, "w", encoding="utf-8").write("\n".join(out) + "\n")
+    open(path, "w", encoding="utf-8", newline="\n").write("\n".join(out) + "\n")
     print("gerado %s (serifa12 px=%d, serifa8 px=%d, %d glifos cada)" % (path, s12, s8, len(g12)))
     make_preview(r12, b12, r8, b8, os.path.join(ROOT, "docs", "font_preview.png"))
 
