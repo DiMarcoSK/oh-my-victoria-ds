@@ -10,26 +10,30 @@ Saida: `ohmyvictoria_ds.nds` (melonDS ou DS real com flashcard).
 - **Visao (`DESIGN.md`):** Victoria 3 no bolso. Mapa politico estilo Victoria 3 com
   territorio pintado e frentes que avancam celula a celula como em frontwars.io. O jogador
   escolhe **mapa aleatorio** ou **mapa-mundi de 1800** com >=150 paises historicos e povos
-  indigenas, cada um com traits e flavor historicos, e a historia real acontecendo ate 1936
-  — a menos que o mundo divirja.
+  indigenas, cada um com traits e flavor historicos, e a historia real acontecendo ate 2025
+  (depois, Modo Eterno) — a menos que o mundo divirja.
 - **Hoje (v0.7):** tempo continuo, mapa 32x24, voce contra 2 bots, vitoria com 600 de
   prestigio ou 200 tiles. 8 bens em cadeia, 23 obras, 4 POPs, mercado interno/externo,
   tarifa, uniao aduaneira, 3 governos, clima, eventos, marcha com atraso.
+- **Plano ordenado (`docs/ROADMAP.md`, imagem `docs/roadmap.png`):** o que falta e em que
+  ordem — baseline honesto, fases e marcos, dependencias e riscos. Agrega as fases F1-F8
+  (SDD sec 14.9) e os marcos M1-M7 (`DESIGN.md` sec 9).
 
 ## Estado atual (2026-10-16)
 
 | Versao | Status |
 |---|---|
 | v0.7 | **Jogavel.** Descrita nas secs 1-10 do SDD. Bug da tela preta resolvido (ADR-13). |
-| v0.8 touch-first | **Em andamento no codigo**, ainda nao documentada: `include/ui.h`, `source/ui.c`, `source/px_map.c` (mapa "cozido" em buffer 512x384). `source/px_ui.c`, citado em `ui.h`, ainda nao existe; `input.c` segue no esquema v0.7. |
-| v0.9 UI da concept art | **Planejada.** `concept_arts/image.png` e o alvo visual; o contrato esta no **SDD sec 14** (fases F1-F8). |
-| v1.x o mundo | **Planejado.** Mapa celular Victoria 3 + frontwars, mapa-mundi 1800 ou aleatorio, catalogo de paises, historia viva: **`DESIGN.md`** (marcos M1-M6) + ADRs 18-20 do SDD. |
+| v0.8 touch-first | **Em andamento no codigo**, ainda nao documentada nas secs 1-10: `include/ui.h`, `source/ui.c`, `source/px_ui.c`, `source/px_hud.c`, `source/px_map.c` (mapa "cozido" em buffer 512x384; tela baixo tocavel). `source/px_tiles.c` foi removido; `input.c` e caneta-first (pan + tap por tabela). Build verde. **Tela preta de novo (mesmo sintoma, outra causa: laco infinito no `LineP` do bake + `SNAP`/`TileKey()==0`) RESOLVIDA em 2026-10-16 — ADR-21, postmortem sec 10.** |
+| v0.9 UI da concept art | **F1 (Fundacao) em andamento no codigo:** `include/pal.h` (tokens), `source/settings.c`, `source/str.c` (PT/EN), `source/px_art.c` (placeholder de arte), `source/px_font2.c` + `source/gen/font_data.c` (Serifa 8/12; preview `docs/font_preview.png`) e `g->screen`/`enum Screen` (ADR-17, migrou `inMenu`; `SAVE_VER` 63). Telas F2+ planejadas. Contrato: **SDD sec 14** (fases F1-F8). |
+| v0.9+M1 mapa-mundi jogavel | **Jogavel no codigo (2026-10-17):** Menu -> Modo -> Preparar -> Nacao -> `SCR_WORLD` (`source/menu.c`, `px_menu.c`, `wgame.c`, `px_world.c`). Mapa politico suave e realista em 5 zooms (pintura bilinear + cache incremental, `px_mapr.c`, ADR-24), cidades com obras/niveis/fundacao e cena viva por cultura (`city.c`, `px_city.c`, ADR-25, DESIGN 4.7), guerra por %, desembarque, paz, recrutar, historia ate 2025. SDD ADR-23. Falta screenshot/medida no melonDS. |
+| v1.x o mundo | **Planejado; o nucleo do M1 ja existe no codigo** (`source/world.c` mundo celular/frentes + `nations.c`/`history.c`/`calendar.c`/`traits.c`/`px_flag.c`/`earth_mask.c`), sem tela ainda. Mapa-mundi 1800 ou aleatorio, catalogo de paises, historia viva: **`DESIGN.md`** (marcos M1-M7) + ADRs 18-20 do SDD. |
 
 ## Ordem de leitura
 
 1. Este arquivo.
 2. **`DESIGN.md` sec 1-2** (visao e pilares). E a fonte de verdade de design: o *que* e o *por que*.
-3. `docs/SDD.md` sec 0 (60 segundos de contexto) e sec 1 (mapa dos arquivos): o *como* no codigo.
+3. `docs/SDD.md` sec 0 (60 segundos de contexto) e sec 1 (mapa dos arquivos): o *como* no codigo. O **plano ordenado** (o que falta, em que ordem: baseline, fases, riscos) esta em `docs/ROADMAP.md`.
 4. A secao do assunto da tarefa: economia (2), mercado (3), POPs (4), eventos (5), governo (6), combate/IA (7), controles (8), render (9), build (10), ADRs (11), guia de mudancas (12).
 5. **Tarefa de UI, menu, HUD, fonte, cor ou arte -> `DESIGN.md` sec 3 + SDD sec 14, sempre.** Abra `concept_arts/image.png` junto.
 6. **Tarefa de mapa, guerra, paises, traits, eventos historicos -> `DESIGN.md` sec 4-8.** Cadastro de pais/evento/trait segue os checklists da sec 8, incluindo a revisao de representacao de povos indigenas (8.2).
@@ -71,15 +75,17 @@ Hierarquia: em conflito de design, `DESIGN.md` vence e o SDD e corrigido; em con
 ## Testar
 
 - **Video so vale no melonDS ou no DS real.** Screendump do desmume em SDL dummy NAO e evidencia (postmortem sec 7.3). Se nao puder rodar, peca ao usuario o screenshot do melonDS.
+- **Smoke de render no host (antes de pedir screenshot):** `tools/hostpx/run.sh` navega o jogo como um jogador (teclas injetadas: menus, mapa-mundi, zooms, guerra, pausa, opcoes, classico); com `SHOTS=<dir>` salva cada tela em PPM p/ revisar layout. Roda o jogo no PC (stub de `nds.h`, sem libnds, ASan/UBSan) e falha se **travar** ou sobrar **pixel transparente**. Em segundos diz se "tela preta" e' "nunca desenhou" (trava/excecao) ou cor sem `BIT(15)` — ver `docs/POSTMORTEM-TELA-BRANCA.md` sec 10. Use sempre que mexer em `px_*`/`input.c`.
 - Playtest de 5 min: SDD sec 10.
 - Logica: sim host de 200 dias x 3 faccoes sem crash + replay deterministico (mesma seed, mesmo resultado).
-- Bug de video: rode os ROMs de bisect na ordem do postmortem sec 6.1 antes de inventar teoria nova; o teste minimo tem que vir de um caminho de codigo diferente do que falha.
+- Bug de video: rode `tools/hostpx/run.sh` primeiro; se ele passar e o hardware ainda estiver preto, rode os ROMs de bisect na ordem do postmortem sec 6.1 antes de inventar teoria nova; o teste minimo tem que vir de um caminho de codigo diferente do que falha.
 
 ## Pronto quer dizer
 
 1. `make` sem warnings nos nossos arquivos.
 2. Sim 200 dias + replay deterministico (se tocou logica).
 3. Playtest no melonDS (se tocou tela) e, para UI v0.9, o item da sec 14.10.
+3b. Se tocou `px_*`/`input.c`: `tools/hostpx/run.sh` verde (sem hang, sem pixel transparente).
 4. **`DESIGN.md` e SDD atualizados** (no SDD: tabela da sec 1, secao do sistema, ADR se houve decisao; no DESIGN: catalogo, traits, eventos, marcos) e `docs/diagramas/*.mmd` se mudou cadeia ou ordem do dia. O SDD e verboso de proposito (ADR-9): e ele que da contexto ao proximo agent.
 5. `BLD_COUNT`/`GOOD_COUNT`/`GOV_COUNT` consistentes em giro, desenho e IA.
 
@@ -88,5 +94,5 @@ Hierarquia: em conflito de design, `DESIGN.md` vence e o SDD e corrigido; em con
 - Idioma: PT-BR em tudo (codigo, comentarios, docs, mensagens). Comentarios de codigo sem acento; docs podem ter acento.
 - Estilo C do repo: compacto, funcoes `Modulo_Acao` (`Eco_Build`, `Mkt_CloseDay`), `static` para o que e interno, comentario curto explicando o porque.
 - Geometria de UI fica em tabelas (`ui.c`), nunca espalhada pelo codigo de desenho.
-- Repo ainda nao e git: nao assuma historico; descreva o que mudou na resposta e no SDD.
+- Repo tem git (branch atual `feat/mundo`): descreva o que mudou na resposta e no SDD; nao reescreva commits existentes.
 - `ref_*.nds` na raiz sao ROMs oficiais de referencia (dslink, ftpd) usados no diagnostico do boot. Nao apague.

@@ -16,26 +16,56 @@
 > (RAM, CPU, formato de pixel), o SDD e as restrições do DS vencem e este documento é
 > corrigido. Nunca deixe os dois se contradizendo.
 >
-> Status: **visão aprovada, nada do mundo 1800 implementado ainda.** O jogo jogável hoje
-> (v0.7) é um mapa procedural 32x24 com 3 facções. O caminho até aqui está na sec 9.
+> Status: **visão aprovada; implementação começou (branch `feat/mundo`).** O jogo jogável hoje
+> (v0.7/v0.8) é um mapa procedural 32x24 com 3 facções. Já existem, como módulos de núcleo
+> testados no PC: calendário 1800–2025, catálogo de países com traits, bandeiras procedurais,
+> motor de eventos (históricos + aleatórios) e o mundo celular com frentes (M1). O caminho
+> e o que falta estão na sec 9.
 
 ---
 
 ## 1. A visão em uma frase
 
-**Victoria 3 no bolso: o mundo de 1800 inteiro, com dezenas de países históricos e povos
-indígenas que têm identidade própria, pintado num mapa político vivo onde as fronteiras
-avançam como em frontwars.io — e a história real acontecendo ao seu redor até você mudá-la.**
+**Victoria 3 no bolso: o mundo inteiro de 1800 a 2025, com centenas de países históricos e
+povos indígenas que têm identidade própria, pintado num mapa político vivo onde as fronteiras
+avançam como em frontwars.io — e a história real acontecendo ao seu redor até você mudá-la.
+Chegou a 2025? Continue jogando o futuro, se quiser.**
 
 ## 2. Pilares (todo recurso novo tem que servir a pelo menos um, e não ferir nenhum)
 
 1. **Profundidade de Victoria.** Sociedade (POPs, felicidade, literacia, militância), economia em cadeia, mercados, leis/governos, diplomacia. Decisões têm consequências que levam anos para aparecer.
 2. **Legibilidade e ritmo de frontwars.io.** Território é cor pintada célula a célula; guerra é uma *frente* que avança e recua visivelmente; você manda "50% do exército para lá" e vê acontecer. Em 2 segundos olhando o mapa, o jogador sabe quem está ganhando.
-3. **História viva.** O modo Mapa-múndi começa em **1º de janeiro de 1800** e a história real acontece — Haiti independente em 1804, fim do Sacro Império em 1806, independências latino-americanas, unificações, partilha da África — **a menos que o mundo do jogo já tenha divergido**. Cada evento histórico tem condição; se ela não é verdade, a história segue outro rumo.
+3. **História viva.** O modo Mapa-múndi começa em **1º de janeiro de 1800** e vai até **31 de dezembro de 2025**. A história real acontece — Haiti independente em 1804, fim do Sacro Império em 1806, independências latino-americanas, unificações, partilha da África, guerras mundiais, descolonização, corrida espacial, fim da URSS — **a menos que o mundo do jogo já tenha divergido**. Cada evento histórico tem condição; se ela não é verdade, a história segue outro rumo. Em 2025 a partida termina com um balanço, e o jogador pode **continuar jogando** (Modo Eterno, sec 7.6).
 4. **Todos os povos importam.** O mundo de 1800 não tem "terra vazia". Impérios, reinos, sultanatos, confederações e povos indígenas são entidades com nome, território, traits, objetivos e voz. Ninguém é cenário.
 5. **Feito para o DS.** Duas telas de 256x192, D-pad + botões + caneta, 4MB de RAM, ARM9 de 67MHz. Se uma ideia não cabe legível em 256x192 ou não roda em 30ms por dia de jogo, ela é redesenhada — não espremida.
 
 **Teste do pilar:** antes de implementar algo, escreva em uma linha qual pilar ele serve. Se não conseguir, não implemente.
+
+### 2.1 Por que é divertido (os laços de jogo)
+
+Um grande estratégia de 225 anos só funciona se, em qualquer escala de tempo, houver algo para querer e algo para ver acontecer:
+
+| Laço | Duração | O que o jogador faz | O que ele sente |
+|---|---|---|---|
+| **Instante** | ~10 s | manda 50% do exército, vê a frente pintar o mapa | controle, impacto visível (frontwars) |
+| **Decisão** | ~2 min | responde a um evento, constrói, ajusta imposto, negocia | "minha escolha mudou algo" |
+| **Ambição** | 10–20 min | persegue a meta de 5–10 anos que escolheu | progresso claro, recompensa |
+| **Era** | 1–2 h | atravessa uma era, corre pelos "Primeiros" do mundo | o mundo muda ao redor; a história diverge |
+| **Partida** | dezenas de horas | chega a 2025 (ou ao Modo Eterno) com a *sua* história | orgulho, vontade de jogar de novo com outro povo |
+
+Recursos que alimentam esses laços (todos fazem parte do design, não são opcionais):
+
+1. **Ambições.** A cada ~5 anos de jogo o jogador escolhe 1 entre 3 metas sorteadas que façam sentido para o país e o momento ("Controlar 3 portos até 1820", "Unir os povos das Planícies", "Primeira ferrovia da Ásia", "Sobreviver à Partilha da África independente"). Cumpriu: prestígio e um bônus temporário. Sempre há um objetivo claro na tela.
+2. **Os Primeiros (corridas mundiais).** Marcos globais com troféu para quem chegar primeiro: primeira ferrovia, telégrafo, abolição total, sufrágio universal, avião, rádio, antibiótico, satélite, pessoa na Lua, internet, energia limpa. O mundo inteiro é avisado: "O Sião inaugurou a primeira ferrovia da Ásia!". Qualquer país pode vencer qualquer corrida.
+3. **Grandes Personagens.** Figuras históricas surgem nas datas e lugares reais como general, estadista, cientista ou artista, com um bônus forte e uma frase própria (Toussaint Louverture, Bolívar, Tecumseh, Shaka, Moshoeshoe, Garibaldi, Bismarck, Tȟatȟáŋka Íyotake, Menelik II, Taytu Betul, Rani Lakshmibai, Marie Curie, Santos-Dumont, Gandhi, Mandela...). Se o país dela não existe mais, ela pode surgir em outro lugar — ou não surgir. **Responsáveis por genocídio ou crimes contra a humanidade nunca são bônus jogáveis**: aparecem só em eventos históricos, com tom sóbrio.
+4. **Momentos decisivos.** Crises com contagem regressiva visível ("Ultimato: 30 dias", "A frota inimiga zarpou") e escolhas grandes. O jogo pausa sozinho para a decisão (opção nas Configurações).
+5. **A Gazeta.** A cada década, um jornal ilustrado de uma página na tela de baixo conta o que aconteceu: seus feitos, o maior império, as guerras, as corridas, curiosidades do mundo ("Mapuche e Chile assinam tratado de fronteira"). É o replay narrativo da partida e o que o jogador vai querer mostrar para os outros.
+6. **Rivais com personalidade.** Cada IA tem um arquétipo derivado dos traits (Expansionista, Mercador, Isolacionista, Revolucionário, Diplomata, Oportunista), manda despachos com tom próprio e toma decisões coerentes. O jogador sempre tem um **Rival** e um **Amigo** destacados no HUD.
+7. **Nunca um fim amargo.** Perdeu o país? Vire **governo no exílio** (revoltas para voltar) ou **jogue como outro país** a qualquer momento, como no Victoria.
+8. **Tempo que respeita o jogador.** Velocidades 1 a 5 e **"Avançar até o próximo evento"**: 225 anos passam rápido quando nada pede a sua atenção.
+9. **Conquistas com nome histórico.** "Adwa" (vença uma grande potência como Etiópia), "Zollverein" (união aduaneira com 5 países), "Waitangi honrado" (chegue a 2025 com os iwi māori soberanos), "Sol que nunca se põe" (território em todos os continentes).
+10. **Blitz.** Mapa aleatório pequeno, 8 países, ~15 minutos, só frentes e ouro: a experiência frontwars pura, para uma partida rápida no ônibus.
+11. **Modo Eterno.** Depois de 2025, o mundo continua: eventos aleatórios e as corridas do futuro (sec 7.6).
 
 ---
 
@@ -127,6 +157,7 @@ O mapa é o jogo. Ele combina duas coisas:
 |---|---|---|---|
 | **Z0 — Mundo** | mundo inteiro (512x192 -> 256x96, 1 pixel = 2x2 células) | **mapa de papel**: oceano em pergaminho azulado com hachuras de gravura, países em cor chapada | nomes só das grandes potências, frentes ativas como linha piscante |
 | **Z1 — Continente** | 1 pixel = 1 célula | papel + cor de país + **fronteiras grossas** | nomes de todos os países que couberem, tropas em número |
+| **Z2 — Países** (no código) | 1 célula = 2px | papel + cor de país, cantos suavizados, relevo só nas montanhas | nomes de países médios, tropas, capitais |
 | **Z2 — Região** | 1 célula = 4px | **terreno pintado** (floresta, montanha, deserto, estepe, selva, tundra) com a cor do país por cima a ~30% | nomes de regiões, cidades, capitais, exércitos como figurinhas |
 | **Z3 — Detalhe** | 1 célula = 8px | terreno detalhado no estilo da concept: castelos nas capitais com a bandeira tremulando, casinhas nas cidades, navios nos portos, pinheiros densos | prédios da região, frente célula a célula |
 
@@ -142,6 +173,7 @@ Afastado parece um mapa de chancelaria; aproximado parece o painel "JOGO EM ANDA
 - **Povos não estatais / autônomos** (sec 6.3): cor própria com **hachura diagonal leve** — território reconhecido, não vazio.
 - **Guerra:** células contestadas piscam entre as duas cores (dither 50%, 2 frames); a frente ganha seta na direção do avanço; célula recém-conquistada fica 1 tom mais clara por alguns dias (rastro do avanço, efeito frontwars).
 - **Cache:** como hoje no `px_map.c`, o mapa é "cozido" num buffer e só células alteradas são redesenhadas. Animação só em frente ativa, bandeira de capital e água.
+- **Suave e realista (no código, SDD ADR-24):** nada de célula quadrada na tela. Cada pixel mistura as células vizinhas com um leve "serpentear" da costa e da fronteira; relevo sombreado (luz de noroeste), mar do turquesa raso ao azul profundo com espuma na costa, praia, copas de árvore e areia em textura. Gradiente aqui é permitido, sempre pontilhado (Bayer) — a regra "sem gradiente" (sec 3.5) é da UI.
 
 ### 4.4 Modos de mapa (botão Y alterna; ícone no painel de baixo também)
 
@@ -158,7 +190,7 @@ Afastado parece um mapa de chancelaria; aproximado parece o painel "JOGO EM ANDA
 
 1. **Declarar guerra** é diplomacia: custa prestígio, gera **infâmia** (Victoria) proporcional ao tamanho do alvo, e chama os aliados dos dois lados.
 2. **Exército = reserva** por país (não mais tropas por tile). Regenera por dia conforme população, moral, quartéis e traits; tem teto conforme população e regiões. Mostrada como número grande sobre o país (frontwars).
-3. **Atacar:** botão Marchar -> toca/seleciona o país alvo no mapa -> escolhe **25/50/75/100%** da reserva (ESQ/DIR ou slider tocável). Abre-se uma **frente** em toda a fronteira comum.
+3. **Atacar:** botão Marchar -> toca/seleciona o país alvo no mapa -> escolhe **25/50/75/100%** da reserva (ESQ/DIR ou slider tocável). Abre-se uma **frente** em toda a fronteira comum. Sem fronteira terrestre, as tropas **desembarcam** na praia do alvo mais próxima da sua capital (até ~96 células de mar, custa 1/10 da reserva) — é assim que ilhas jogam (no código: `World_Landing`, ADR-23 do SDD).
 4. **A frente avança célula a célula.** A cada tick, as células da fronteira comparam força de ataque (tropas na frente x moral x armas x traits) com defesa (densidade defensiva x terreno x fortes x traits). Vence -> célula muda de dono e a frente anda. As tropas da frente se gastam ao avançar; frente sem tropas para.
 5. **Terreno importa como no Victoria:** montanha, floresta, pântano, deserto, rio cortam o avanço; fortes seguram regiões.
 6. **Paz:** tratado escolhendo exigências (regiões, indenização, independência de um povo, união aduaneira). Ocupação militar sem tratado não é posse definitiva.
@@ -174,14 +206,33 @@ O jogador escolhe na tela "Preparar partida" (SDD sec 14.5): **Mapa: `◂ Mapa-m
 | Tamanho | fixo | Pequeno 256x96 (partida rápida estilo frontwars, ~30 min) / Médio 384x144 / Grande 512x192 |
 | Países | os ≥150 de 1800, nas posições reais | 8 / 16 / 32 países sorteados do catálogo histórico, **com seus traits** ("e se o Japão e os Asante fossem vizinhos?") |
 | Terra sem dono | **não existe** — povos autônomos ocupam o que não é Estado (sec 6.3) | existe (neutra), como no frontwars |
-| História | trilho histórico ligado (sec 7) | sem trilho; só eventos genéricos (clima, colheita, revolta) e flavor de cada país |
-| Data | começa em 1/1/1800, termina em 31/12/1936 | sem calendário histórico (dia 1, 2, 3...) |
-| Vitória | ranking de **Grande Potência** em 1936 (ou antes por objetivos), mais objetivos históricos do seu país | % do território ou maior pontuação no limite de tempo |
-| Modos | **Campanha** (objetivos fixos do país) e **Contra IA** (sandbox) | **Contra IA**, **Multijogador** |
+| História | trilho histórico ligado (sec 7) | sem trilho; eventos aleatórios (sec 7.5), Os Primeiros e flavor de cada país |
+| Data | começa em 1/1/1800, termina em **31/12/2025**; depois, **Modo Eterno** opcional | calendário a partir de 1/1/1800, sem âncoras históricas; Blitz sem calendário |
+| Vitória | balanço de **Grande Potência** em 2025 (ou antes por objetivos), objetivos históricos do seu país, conquistas | % do território ou maior pontuação no limite de tempo |
+| Modos | **Campanha** (objetivos fixos do país) e **Contra IA** (sandbox) | **Contra IA**, **Blitz**, **Multijogador** |
 
 Na tela "Preparar partida" do mapa-múndi há também **História: `◂ Ligada ▸` / `◂ Só flavor ▸` / `◂ Desligada ▸`** (sec 7.4).
 
 ---
+
+### 4.7 Cidades (Victoria 3 + Imperator Rome)
+
+O território é célula; a **vida** está nas cidades. Cada país começa com as suas — no mapa-múndi, as cidades reais de 1800 (Londres, Paris, Edo, Kumasi, Cusco, Kororāreka...), mais vilas espalhadas pelo interior.
+
+| Nível | População | Slots de obra | Para subir |
+|---|---|---|---|
+| **Povoado** | < 10 mil | 2 | crescer |
+| **Vilarejo** | 10 mil | 3 | 50 mil + **Mercado** |
+| **Cidade** | 50 mil | 5 | 400 mil + **Universidade** ou **Fábrica** |
+| **Metrópole** | 400 mil | 8 | — |
+
+**Obras** (uma de cada por cidade; uma em construção por vez): Fazenda (comida), Mercado (ouro, exigido p/ cidade), Oficina -> Fábrica (ouro; fábrica a partir de 1830), Quartel (tropas, defesa), Porto (só no litoral), Templo (prestígio), Muralha (defesa), Universidade (prestígio; abre a metrópole), Estação (a partir de 1830), Palácio (só na capital). Tudo vira número no motor: ouro por dia, crescimento, teto de tropas, prestígio por ano, defesa da cidade na guerra.
+
+**Fundar cidade:** no seu território, a 5 células de qualquer outra cidade, por **200 + 120 de ouro por cidade que você já tem** — o preço aparece antes de confirmar. Começa como povoado com uma fazenda.
+
+**Ver a cidade viver (Imperator):** abrir a cidade mostra a cena dela na tela de cima. Cada obra aparece no seu lote quando fica pronta (com andaime enquanto constrói); o casario cresce com a população; gente anda na rua, a carroça vira carro depois de 1910, a chaminé solta fumaça, o trem passa se houver estação, barcos no porto. A arquitetura segue a cultura de quem governa (europeia, leste-asiática, islâmica, africana, indígena) e a era (madeira e estuque -> tijolo -> concreto e vidro). Na conquista, a cidade muda de dono, perde gente e a obra em curso.
+
+**IA:** constrói seguindo o caminho de nível e funda quando sobra ouro e terra — o mundo inteiro se urbaniza ao longo de 225 anos.
 
 ## 5. Linha do tempo de jogo e eras
 
@@ -193,9 +244,16 @@ O mapa-múndi é dividido em eras. A era muda música, molduras de evento, tecno
 | **Restauração** | 1815–1848 | Congresso de Viena, independências latino-americanas | eventos de independência; ferrovia aparece (anos 1830) |
 | **Primavera dos Povos** | 1848–1871 | revoluções de 1848, unificações italiana e alemã, Guerra Civil dos EUA | nacionalismo forte; telégrafo; aço |
 | **Imperialismo** | 1871–1914 | partilha da África, Meiji, corrida naval | colonização acelerada; resistência anticolonial; eletricidade |
-| **Crise** | 1914–1936 | Grande Guerra, revoluções, Depressão | guerras totais; novos países; colapso de impérios |
+| **Guerras Mundiais** | 1914–1945 | duas guerras mundiais, revoluções, Grande Depressão | guerras totais; aviação; tanques; colapso de impérios; novos países |
+| **Guerra Fria** | 1945–1991 | descolonização, dois blocos, corrida espacial, ONU | independências em massa; satélite e Lua; crises nucleares |
+| **Globalização** | 1991–2025 | fim da URSS, internet, grandes blocos econômicos, pandemia | uniões aduaneiras grandes; internet; crises financeiras e climáticas |
+| **Eterna** | 2026+ (opcional) | o futuro é seu | só eventos aleatórios e as corridas do futuro (sec 7.6) |
 
-Tecnologias (ferrovia, telégrafo, aço, eletricidade...) entram como **prédios novos liberados por era + literacia**, reaproveitando o sistema de obras. Detalhar no SDD quando chegar a hora; não crie árvore tecnológica separada (UI e RAM do DS).
+Tecnologias (ferrovia, telégrafo, aço, eletricidade, aviação, rádio, computação, internet...) entram como **prédios novos liberados por era + literacia**, reaproveitando o sistema de obras. Bens novos também chegam por era (petróleo a partir de 1860, borracha a partir de 1880, eletrônicos a partir de 1950); cada bem novo custa RAM por país e por região, então o SDD decide quantos cabem. Não crie árvore tecnológica separada (UI e RAM do DS).
+
+**Armas nucleares** existem só como **dissuasão diplomática** (crises, tratados, corrida) — nunca como bombardeio jogável de cidades. Mantém o tom do jogo e evita transformar tragédia em botão.
+
+**Ritmo:** 1800–2025 são ~82 mil dias. Na velocidade 5 (1 dia por frame), passam em ~23 minutos de tela sem pausa; na prática, a partida completa leva dezenas de horas com pausas e decisões. Save é obrigatório (SRAM, SDD F8).
 
 ---
 
@@ -204,7 +262,7 @@ Tecnologias (ferrovia, telégrafo, aço, eletricidade...) entram como **prédios
 ### 6.1 Metas de quantidade
 
 - **≥150 entidades no mapa em 1/1/1800**, de todos os continentes (grandes potências, Estados menores, súditos, povos indígenas, autônomos).
-- **≥250 no catálogo total**, incluindo os que **surgem por evento** (México, Grécia, Bélgica, Itália, Alemanha, Libéria, Transvaal...).
+- **≥300 no catálogo total**, incluindo os que **surgem por evento** (México, Grécia, Bélgica, Itália, Alemanha, Libéria, Transvaal...) e **todos os Estados-membros da ONU de 2025**, para a história poder chegar ao mundo de hoje.
 - Limite técnico: 254 donos simultâneos (dono da célula é `u8`; 0 = mar, 255 = reservado). Se passar disso, o SDD precisa decidir antes.
 - **Nenhum continente com menos de 15% das entidades.** O mundo não é só a Europa.
 
@@ -507,7 +565,39 @@ Abaixo, as entidades de partida já definidas, por região cultural (= cena de s
 | 1917 | Revoluções russas | RUS |
 | 1918–1923 | Fim dos impérios: Polônia, Tchecoslováquia, Iugoslávia, Irlanda, Turquia | HAB, OTT, RUS, GBR |
 | 1929 | Grande Depressão | mundo |
-| 31/12/1936 | **Fim da partida** | — |
+| 1935–1936 | Itália invade a Etiópia; Guerra Civil Espanhola | ETH, Itália, ESP |
+| 1937 | Japão invade a China | JAP, China |
+| 1939–1945 | **Segunda Guerra Mundial**; ONU fundada (1945) | potências, mundo |
+| 1947 | Independência e partição da Índia e do Paquistão | Raj britânico |
+| 1948 | Criação de Israel e guerra árabe-israelense; Declaração Universal dos Direitos Humanos | Oriente Médio, mundo |
+| 1949 | República Popular da China; OTAN; Indonésia independente | China, Ocidente, NED |
+| 1950–1953 | Guerra da Coreia | KOR, China, USA |
+| 1954 | Fim da Indochina francesa; início da Guerra da Argélia | Vietnã, FRA, Argélia |
+| 1956–1957 | Crise de Suez; **Sputnik** (corrida espacial); Gana independente | Egito, URSS, Gana |
+| 1959 | Revolução Cubana | Cuba |
+| 1960 | **Ano da África** (17 países independentes) | África |
+| 1961–1962 | Muro de Berlim; Crise dos Mísseis; Argélia independente | Alemanha, USA, URSS, Argélia |
+| 1965–1975 | Guerra do Vietnã; reunificação (1975) | Vietnã, USA |
+| 1967 | Guerra dos Seis Dias | Oriente Médio |
+| 1969 | **Pessoa na Lua** | corrida espacial |
+| 1973 | Crise do petróleo; golpe no Chile | mundo, Chile |
+| 1974–1975 | Revolução dos Cravos; independência de Angola, Moçambique, Guiné-Bissau, Cabo Verde, São Tomé | POR, África lusófona |
+| 1979 | Revolução Iraniana; guerra soviética no Afeganistão | Irã, AFG, URSS |
+| 1985–1988 | Redemocratização do Brasil; Constituição de 1988 reconhece direitos indígenas | BRA |
+| 1989–1991 | **Queda do Muro**; reunificação alemã; **fim da URSS** (15 países) | Europa, URSS |
+| 1992–1994 | Maastricht (União Europeia); Mercosul; fim do apartheid (Mandela presidente, 1994) | Europa, América do Sul, África do Sul |
+| 1997 | Hong Kong volta à China | GBR, China |
+| 2001 | Atentados de 11 de setembro; guerra no Afeganistão | USA, AFG |
+| 2003 | Guerra do Iraque | USA, Iraque |
+| 2007 | ONU adota a Declaração sobre os Direitos dos Povos Indígenas | povos indígenas, mundo |
+| 2008 | Crise financeira global | mundo |
+| 2010–2012 | Primavera Árabe; Sudão do Sul independente (2011) | Oriente Médio, África |
+| 2016 | Referendo do Brexit | GBR |
+| 2020 | **Pandemia de COVID-19** | mundo |
+| 2022 | Rússia invade a Ucrânia | RUS, Ucrânia |
+| 31/12/2025 | **Fim da história** — balanço e opção de continuar (sec 7.6) | — |
+
+Eventos do século XX e XXI envolvem guerras e tragédias recentes, com pessoas vivas que as sofreram: texto sóbrio, factual, sem glorificar, sem ridicularizar nenhum povo, e as mesmas regras da sec 6.6.
 
 ### 7.3 Padrão de evento
 
@@ -525,6 +615,34 @@ fonte (referência histórica)
 - **Ligada:** eventos e pressões históricas completos.
 - **Só flavor:** eventos nacionais e de era acontecem, mas não há pressão da IA para seguir a história.
 - **Desligada:** sandbox; só eventos genéricos.
+
+### 7.5 Eventos aleatórios (todos os mapas)
+
+Eventos aleatórios dão textura ao dia a dia e são os mesmos no mapa-múndi e no aleatório. Regras:
+
+- **Frequência:** cada país sorteia, em média, 1 evento a cada ~30 dias, com recarga de 20 dias depois de um evento (o jogador não é soterrado). Usa o RNG único do jogo (mesma seed = mesmos eventos).
+- **Filtros:** cada evento tem **era mínima/máxima**, e pode exigir terreno (costa, montanha, deserto), governo, trait ou situação (em guerra, tesouro baixo, militância alta). Um evento fora do contexto nunca aparece (nada de "greve geral" em 1805 ou "ataque hacker" em 1880).
+- **Escolha:** metade dos eventos tem 2 opções com troca real (dinheiro x felicidade, curto x longo prazo).
+- **Peso por trait:** traits aumentam a chance de eventos coerentes (Senhora dos Mares -> mais eventos navais; Fé Unificadora -> mais eventos religiosos).
+
+| Categoria | Eventos (era) |
+|---|---|
+| **Natureza** | Colheita farta · Seca · Enchente · Inverno rigoroso · Praga de gafanhotos · Terremoto · Erupção vulcânica ("ano sem verão", como em 1816) · Furacão (costa) · Incêndio na capital · Cometa no céu (só prestígio e superstição) |
+| **Saúde** | Varíola (até 1980; vacina reduz) · Cólera (1817+) · Febre amarela (trópicos) · Gripe pandêmica (1889+, forte em 1918) · Vacinação em massa (1850+) · Descoberta médica (1880+) |
+| **Economia** | Corrida do ouro · Descoberta de prata/carvão/ferro · Bolha especulativa · Pânico bancário · Boom de exportação · Praga na safra principal · Descoberta de petróleo (1859+) · Greve geral (1870+) · Grande invenção local (1830+) · Crise de dívida (1900+) |
+| **Sociedade** | Onda de imigração · Êxodo para o campo/cidade · Revolta camponesa · Movimento abolicionista (até a abolição) · Sufragistas (1860+) · Gênio nasce (cientista, artista, inventor -> Grande Personagem menor) · Festival nacional · Exposição universal (1851+) · Jogos olímpicos (1896+) · Movimento estudantil (1960+) |
+| **Política** | Escândalo na corte/no parlamento · Sucessão disputada (monarquias) · Golpe militar · Tentativa de assassinato · Reforma constitucional · Partido radical cresce · Rei vizinho pede exílio |
+| **Militar** | Motim · Desertores · Herói de guerra · Espiões descobertos · Fortaleza cai por traição · Avanço em táticas (nova doutrina) |
+| **Diplomacia** | Casamento real (monarquias) · Incidente de fronteira · Oferta de aliança · Pedido de asilo · Missão diplomática estrangeira · Tratado comercial proposto · Embargo |
+| **Povos indígenas** | Tratado oferecido ou quebrado · Renascimento cultural · Aliança entre povos · Retomada de território · Reconhecimento de direitos (1950+) |
+| **Moderno (1950+)** | Crise do petróleo local · Boom tecnológico · Ataque hacker (1990+) · Crise climática regional (1990+) · Bolha imobiliária · Mega-evento esportivo · Descoberta de lítio/terras raras (2000+) |
+
+### 7.6 Fim da história (2025) e Modo Eterno
+
+- **31/12/2025:** o jogo pausa e abre a tela **"Fim da história"**: balanço das Grandes Potências (prestígio, economia, exército, literacia, território), sua posição, objetivos e conquistas cumpridos, e a **Gazeta final** com os grandes momentos da sua partida.
+- Duas escolhas: **"Encerrar"** (vai aos créditos; o save fica marcado como concluído) ou **"Continuar jogando"** (Modo Eterno).
+- **Modo Eterno:** o calendário segue sem limite. Não há mais âncoras históricas; continuam os eventos aleatórios (eras Globalização e Eterna) e entram as **corridas do futuro**: energia de fusão, base lunar permanente, inteligência artificial geral, colônia em Marte, cura de uma grande doença, mundo neutro em carbono. A pontuação pós-2025 aparece separada da pontuação de 2025, para o balanço histórico não se perder.
+- O jogador também pode escolher **"Continuar jogando"** depois de perder seu país em qualquer ano (sec 2.1, item 7).
 
 ---
 
@@ -581,11 +699,16 @@ O SDD sec 14.9 tem as fases técnicas F1–F8 das telas. O mundo entra em marcos
 | **M2 — Mapa estilo Victoria** | zoom Z0–Z3, papel -> terreno, nomes espaçados, fronteiras de 3 pesos, modos de mapa | screenshot de cada zoom aprovado contra a sec 4.2–4.4 |
 | **M3 — Catálogo** | ficha de país, bandeira procedural, traits, ≥40 países do catálogo no aleatório | aleatório com 16 países sorteados; teste do flavor passa em 5 países |
 | **M4 — Mapa-múndi 1800** | Terra real, ~600 regiões, ≥150 entidades de 1800 | todos os continentes jogáveis; meta de 15% por continente |
-| **M5 — História viva** | eventos ancorados, pressões, alternativas, eras, bandeiras por era | 1800–1836 roda na velocidade 3 sem crash e com divergência visível entre seeds |
-| **M6 — Até 1936** | eventos completos até 1936, objetivos de Campanha, ranking de Grande Potência | partida completa termina com ranking |
+| **M5 — História viva** | eventos ancorados, pressões, alternativas, eras, bandeiras por era, eventos aleatórios (sec 7.5) | 1800–1836 roda na velocidade 5 sem crash e com divergência visível entre seeds |
+| **M6 — Até 2025** | eventos completos até 2025, países modernos, objetivos de Campanha, balanço de Grande Potência, tela "Fim da história" | partida completa chega a 2025 com balanço |
+| **M7 — Diversão** | Ambições, Os Primeiros, Grandes Personagens, Gazeta, Rivais com personalidade, Blitz, Modo Eterno, conquistas (sec 2.1) | playtest: em 30 minutos o jogador cumpre 1 Ambição, vê 1 corrida e lê 1 Gazeta |
+
+**Ja no codigo (branch `feat/mundo`), sem tela ainda:** o nucleo do mundo — calendario 1800-2025 + eras + Modo Eterno (`calendar.c`), 30 traits com efeitos (`traits.c`), texto UTF-8 -> 3x5 (`txt.c`), catalogo de paises e povos (`nations.c`, `include/nations.h`), bandeiras procedurais (`px_flag.c`), mascara de terra real (`earth_mask.c`), motor de historia viva + eventos aleatorios (`history.c`) e o mundo celular com frentes (`world.c`, M1). Testes de nucleo no PC em `host/` (`sh host/run_tests.sh`). O caminho ate a tela esta nos marcos M2-M7 acima e nas fases da v0.9 (SDD sec 14.9); o plano ordenado (baseline, ordem, dependencias, riscos) esta em `docs/ROADMAP.md` (+ `docs/roadmap.png`).
 
 ### 9.1 Impacto técnico que o SDD precisa resolver antes do M1
 - O mundo sai do `GameState` (limite de 14KB): a grade de células, as regiões e os países vão para um estado próprio em `.bss`. Estimativa do mapa-múndi: dono das células `u8` 512x192 = 96KB de RAM; região por célula e terreno em ROM; ~600 regiões x 4 fatias + ~250 países ≈ 90KB. Cabe nos 4MB, mas precisa de ADR e de novo `_Static_assert`.
 - Economia por fatia de região, **escalonada** (cada fatia atualiza 1x a cada N dias) para caber nos 30ms por dia; IA por país em rodízio.
 - Texto de eventos e nomes em PT + EN pode passar de centenas de KB: reavaliar NitroFS (ADR-14 do SDD prevê isso).
+- Em 2025 existem ~195 Estados, mais povos e entidades históricas: o catálogo passa de 300 e o limite de 254 donos simultâneos (`u8`) fica apertado. Se um mundo real chegar perto disso, o dono da célula vira `u16` (+96KB de RAM) — decisão do SDD.
+- 82 mil dias de partida: tudo que é "por dia" precisa ser barato ou escalonado; contadores de dia são `u32`.
 - Seleção de país com ≥150 opções: a tela "Escolha sua nação" vira **carrossel de 5 estandartes com filtro por continente**, mais a opção de escolher tocando no mapa (SDD sec 14.4).

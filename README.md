@@ -24,4 +24,5 @@ SELECT+B save | SELECT+R load | START pausa | SELECT vel | touch mapa 1:1.
 Mercado interno/faccao + externo unico + tarifa (0 com uniao) + uniao aduaneira (ALLY).
 7 terrenos transitaveis + 7 sites + clima seca/chuva + 8 eventos RNG por seed.
 2 bots, 4 dificuldades, marcha com delay+dado+moral, diplomacia paz/uniao.
-Docs: `docs/SDD.md` + `docs/diagramas/*.mmd`.
+Docs: `DESIGN.md` (design) + `docs/SDD.md` (codigo) + `docs/ROADMAP.md`
+(+ `docs/roadmap.png`) + `docs/diagramas/*.mmd`.
