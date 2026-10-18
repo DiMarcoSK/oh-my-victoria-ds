@@ -14,8 +14,8 @@ ARCH := -march=armv5te -mtune=arm946e-s -mthumb -mthumb-interwork
 # v0.7: -O2 p/ ARM9, ndstool gera .nds pronto p/ flashcard.
 # Uso: make  (limpa: make clean). Requer DEVKITARM+LIBNDS (+calico no r68+).
 GAME_TITLE := OH MY VICTORIA DS!
-GAME_SUBTITLE1 := v0.8 caneta+mapa
-GAME_SUBTITLE2 := aba de obras/mercado   
+GAME_SUBTITLE1 := v0.10 mapa-mundi 1800
+GAME_SUBTITLE2 := economia, crises e sociedade
 # -fno-tree-loop-distribute-patterns: o GCC NAO troca laco de pixel por
 # memset/memcpy da newlib, que desalinhados escrevem BYTE — e a VRAM ignora
 # escrita de 8 bits (a tela de cima e' desenhada direto na VRAM, ADR-36).
