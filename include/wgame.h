@@ -14,7 +14,7 @@
 // + botoes rapidos + % e velocidade.
 // Layout Invertida (Settings) poe o mapa embaixo, tocavel (lcdMainOnBottom).
 enum { WMAP_POL=0, WMAP_TER, WMAP_DIP, WMAP_COM, WMAP_IDEO, WMAP_COUNT };   // modos de mapa (Y)
-enum { LT_MERCADO=0, LT_COMERCIO, LT_DIPLO, LT_POLITICA, LT_FINANCAS, LT_LEIS, LT_GRAF, LT_SOCIEDADE, LT_COUNT };    // abas do Gabinete
+enum { LT_MERCADO=0, LT_COMERCIO, LT_DIPLO, LT_POLITICA, LT_FINANCAS, LT_LEIS, LT_GRAF, LT_SOCIEDADE, LT_ECONOMIA, LT_COUNT };    // abas do Gabinete
 // folha de acoes (A sobre a mira, ou botao bandeira): o que da' p/ fazer com o
 // alvo sob a mira — pais, sua terra, sua cidade ou terra livre. So' caneta.
 enum { DM_PAZ=0, DM_ALIANCA, DM_ROMPER, DM_ENTRAR, DM_CONVIDAR, DM_GUERRA, DM_CANCELAR,
@@ -68,6 +68,8 @@ typedef struct {
  u8 ledTab, ledSel;   // Gabinete: aba e acao destacada
  u8 lawCat, lawPick;  // aba Leis: assunto aberto (0xFF = grade de assuntos) e lei destacada
  u8 statSel;          // aba Graficos: serie (SR_*)
+ u8 goodSel;          // aba Economia: bem destacado (GD_*, ADR-47)
+ u16 ecoWhy;          // aba Economia: motivo da ultima politica recusada (StrId, 0 = nada)
  u8 rankTab;          // ranking: criterio (RK_*)
  s16 rankTop;         // ranking: primeira linha visivel
  u32 propSeen;        // dia da ultima proposta que ja pausou o jogo
@@ -78,7 +80,7 @@ typedef struct {
  u16 cityCamX, cityCamY; // camera do mapa da cidade (px; 20x12 lotes > tela, ADR-44)
 } WGame;
 // Gabinete (tela de baixo): geometria compartilhada por px_ledger.c e wgame.c
-// abas em 2 linhas (ADR-40): 4 em cima (64 px), 3 embaixo (85 px)
+// abas em 2 linhas (ADR-40): 4 em cima (64 px), 5 embaixo (51 px)
 enum { LG_TAB_Y=2, LG_TAB_RH=16, LG_TAB_H=33, LG_TAB_N0=4, LG_ACT_X=16, LG_ACT_Y=120, LG_ACT_W=224, LG_ACT_H=28, LG_BACK_Y=156 };
 static inline void Lg_TabRect(int i,int *x,int *y,int *w){
  if(i<LG_TAB_N0){*w=256/LG_TAB_N0;*x=i**w;*y=LG_TAB_Y;}
@@ -100,6 +102,8 @@ enum { CY_MINI_X=6, CY_MINI_Y=46, CY_CELL=6, CY_BTN_Y=120, CY_BTN_H=22, CY_PICK_
        CY_ARW_W=36, CY_OK_X=56, CY_OK_Y=162, CY_OK_W=96, CY_OK_H=24, CY_NO_X=158, CY_NO_W=90 };
 // faixa da crise/guerra com objetivo no lugar do despacho (painel do mapa, ADR-45)
 enum { CR_Y=106, CR_BY=131, CR_BH=16, CR_BX0=8, CR_BW=78, CR_BDX=80 };
+// aba Economia (painel, ADR-47): 13 bens em 2 linhas de 7 + 4 botoes de politica
+enum { EC_GX=2, EC_GY=38, EC_GW=36, EC_GH=22, EC_GN=7, EC_PX=4, EC_PY=94, EC_PW=62, EC_PH=22 };
 // aba Financas: botoes de juros (metades da linha de acao LG_ACT_*)
 enum { FN_HALF=LG_ACT_W/2 };
 // modal de proposta (painel do mapa): botoes Aceitar / Recusar

@@ -15,6 +15,7 @@ bool Menu_Owns(u8 s){return s!=SCR_GAME;}
 
 void Menu_Go(GameState *g,u8 scr){
  g->screen=scr;M.sel=0;M.confirm=0;g->dirty=true;g->dirtyBot=true;
+ Px_FadeIn(scr==SCR_WORLD||scr==SCR_LEDGER||scr==SCR_CITY||scr==SCR_RANK?6:10);   // corte suave (hardware, ADR-48)
  // Layout Invertida so' vale na partida do mundo: mapa embaixo, tocavel
  // (ADR-16). Menus ficam sempre como na concept.
  if(scr==SCR_WORLD&&Set_Ptr()->layout==LAYOUT_SWAP)lcdMainOnBottom();

@@ -21,6 +21,7 @@
 #include "wgame.h"
 #include "wwar.h"
 #include "wsoc.h"
+#include "wplan.h"
 #include "city.h"
 #include "wfort.h"
 #include "wlaw.h"
@@ -395,6 +396,31 @@ int main(void){
    printf("  sociedade: pobres %d medios %d ricos %d por mil, satisf %d/%d/%d, burguesia %d%%\n",so->share[0],so->share[1],so->share[2],so->sat[0],so->sat[1],so->sat[2],so->bourg);
    if(so->share[0]+so->share[1]+so->share[2]!=1000){printf("FALHA: estratos nao somam 1000\n");bad=1;}}
   Shot(g,"46_sociedade");
+  // Economia (ADR-47): doutrina mista, bem Texteis -> Subsidiar -> Meta; Mudar doutrina abre a lei
+  {int x,y,tw;Lg_TabRect(LT_ECONOMIA,&x,&y,&tw);Touch(g,x+tw/2,y+8);}
+  if(s->ledTab!=LT_ECONOMIA){printf("FALHA: toque na aba Economia nao abriu\n");bad=1;}
+  {WEco *e=&w->eco[s->me];u8 m0=e->law[LW_MODELO];
+   Shot(g,"47_economia_livre");
+   e->law[LW_MODELO]=Plan_LawOfCtl(2);Law_Apply(e);
+   u8 gd=GD_TEXTEIS;
+   Touch(g,EC_GX+(gd%EC_GN)*EC_GW+10,EC_GY+(gd/EC_GN)*EC_GH+8);
+   if(s->goodSel!=gd){printf("FALHA: toque no bem nao destacou (%d)\n",s->goodSel);bad=1;}
+   Touch(g,EC_PX+GP_SUBSIDIO*EC_PW+20,EC_PY+8);
+   if(e->gpol[gd]!=GP_SUBSIDIO){printf("FALHA: Subsidiar nao aplicou (motivo %d)\n",s->ecoWhy);bad=1;}
+   Touch(g,EC_PX+GP_META*EC_PW+20,EC_PY+8);
+   if(e->gpol[gd]!=GP_META){printf("FALHA: Meta nao aplicou (motivo %d)\n",s->ecoWhy);bad=1;}
+   Press(g,KEY_RIGHT);
+   Touch(g,EC_PX+GP_TETO*EC_PW+20,EC_PY+8);
+   Press(g,KEY_RIGHT);
+   Touch(g,EC_PX+GP_SUBSIDIO*EC_PW+20,EC_PY+8);   // 3a politica na mista: sem vaga -> motivo na pagina
+   if(e->gpol[GD_FERRAMENTAS]!=GP_TETO||e->gpol[GD_ARMAS]||s->ecoWhy!=STR_GP_SEM_VAGA){printf("FALHA: vagas da doutrina nao foram respeitadas\n");bad=1;}
+   Shot(g,"48_economia_mista");
+   printf("  economia: doutrina %d, politicas %d/%d, ciclo %d (fase %d), desemprego %d%%\n",Plan_Ctl(e),Plan_Used(e),Plan_Slots(e),Plan_Pct(e),e->cycPh,e->unemp);
+   Touch(g,LG_ACT_X+40,LG_ACT_Y+10);
+   if(s->ledTab!=LT_LEIS||s->lawCat!=LW_MODELO){printf("FALHA: Mudar doutrina nao abriu a lei Modelo economico\n");bad=1;}
+   Shot(g,"49_doutrina_lei");
+   e->law[LW_MODELO]=m0;Law_Apply(e);
+   if(Plan_Used(e)>Plan_Slots(e)){printf("FALHA: voltar a doutrina nao cortou as politicas\n");bad=1;}}
   // Leis (ADR-40): grade de assuntos -> Educacao -> outra lei -> Propor = debate -> aprovada
   {int x,y,tw;Lg_TabRect(LT_LEIS,&x,&y,&tw);Touch(g,x+tw/2,y+8);}
   if(s->ledTab!=LT_LEIS){printf("FALHA: toque na aba Leis nao abriu\n");bad=1;}

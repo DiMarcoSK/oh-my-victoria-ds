@@ -18,6 +18,7 @@
 #include "wecon.h"
 #include "wdiplo.h"
 #include "history.h"
+#include "wplan.h"
 
 static int fails=0, warns=0;
 #define CHECK(c,...) do{if(!(c)){printf("  FALHA: ");printf(__VA_ARGS__);printf("\n");fails++;}}while(0)
@@ -317,6 +318,17 @@ static void TestMundi(void){
   CHECK(!bad,"estratos somam 1000 por mil e juros em 0..20 (%d ruins)",bad);
   printf("  2025: classe media media %d por mil\n",n?(int)(mid/n):0);
   CHECK(n&&mid/n>150,"a classe media cresce ate 2025 (%d por mil)",n?(int)(mid/n):0);}
+ // controle da economia (ADR-47): ciclos com crises, politicas por bem, doutrinas
+ {int dout[CTL_COUNT]={0},pol=0,bad=0,un=0,n=0,cr=0;s32 life=0;
+  for(u8 i=1;i<W1.nC;i++){if(!W1.c[i].alive)continue;const WEco *e=&W1.eco[i];
+   dout[Plan_Ctl(e)]++;pol+=Plan_Used(e);n++;un+=e->unemp;life+=e->life;if(e->crashes)cr++;
+   if(Plan_Used(e)>Plan_Slots(e)||e->cyc<-6400||e->cyc>6400)bad++;}
+  printf("  economia: doutrinas livre %d/merc %d/mista %d/dirig %d/plano %d, %d politicas em uso (%u adotadas), %u crises financeiras (%d paises), desemprego medio %d%%, vida media %d\n",
+   dout[0],dout[1],dout[2],dout[3],dout[4],pol,W1.nPolicy,W1.nCrash,cr,n?un/n:0,n?(int)(life/n):0);
+  CHECK(!bad,"politicas cabem na doutrina e ciclo no intervalo (%d ruins)",bad);
+  CHECK(W1.nCrash>=20,"o ciclo economico produz crises financeiras (%u)",W1.nCrash);
+  CHECK(W1.nPolicy>=50,"a IA usa politicas por bem (%u)",W1.nPolicy);
+  CHECK(n&&life/n>=55,"vida media em 2025 aceitavel com o ciclo (%d)",n?(int)(life/n):0);}
  EcoDiag(&W1);
  CHECK(W1.nRevol>=5&&W1.nRevol<400,"revolucoes/separatismos acontecem mas nao sem parar (%u)",W1.nRevol);
  CHECK(W1.nAlliances>=10,"a IA forma aliancas (%u)",W1.nAlliances);

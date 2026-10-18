@@ -7,6 +7,7 @@
 #include "wlaw.h"
 #include "wsoc.h"
 #include "wwar.h"
+#include "wplan.h"
 // wecon.c — economia do mundo (ver wecon.h; DESIGN 4.8; SDD ADR-26).
 // Custo: 1x por semana, O(cidades) + O(paises x bens) + rotas O(portos x 3 x
 // paises). Buffers estaticos (.bss, ~27KB), zero malloc, sem float, sem RNG.
@@ -125,8 +126,8 @@ bool WEco_Blockaded(const World *w,u8 ci){
  return false;
 }
 
-s32 WEco_Revenue(const World *w,u8 ci){const WEco *e=&w->eco[ci];return e->rProd+e->rPop+e->rCity+e->rLand+e->rTariff+e->rExport+e->rArms+e->rBank;}
-s32 WEco_Expense(const World *w,u8 ci){const WEco *e=&w->eco[ci];return e->xArmy+e->xNavy+e->xAdmin+e->xEdu+e->xSoc+e->xUpkeep+e->xDebt+e->xCorrupt+e->xBank+e->xConc+e->mobX;}
+s32 WEco_Revenue(const World *w,u8 ci){const WEco *e=&w->eco[ci];return e->rProd+e->rPop+e->rCity+e->rLand+e->rTariff+e->rExport+e->rArms+e->rBank+e->rState;}
+s32 WEco_Expense(const World *w,u8 ci){const WEco *e=&w->eco[ci];return e->xArmy+e->xNavy+e->xAdmin+e->xEdu+e->xSoc+e->xUpkeep+e->xDebt+e->xCorrupt+e->xBank+e->xConc+e->mobX+e->xSubs;}
 s32 WEco_Nom(const World *w,u8 ci,s32 v){u32 p=w->eco[ci].cpi?w->eco[ci].cpi:CPI1;return (s32)((s64)v*p/CPI1);}
 s32 WEco_GoldWeek(const World *w,u8 ci){return WEco_Revenue(w,ci)-WEco_Expense(w,ci);}
 // limite de credito: meio ano de receita (minimo 300); cai a cada calote
@@ -350,7 +351,7 @@ HOT_ARM void WEco_Week(World *w){
   e->cap=(u16)Mn(cap,60000);
   u8 m=MarketOf(w,ci);MCAP[m]+=e->cap;
   for(int g=0;g<GD_COUNT;g++){
-   if(!Manuf(g))MS[m][g]+=e->sup[g];
+   if(!Manuf(g)){if(e->gpol[g])e->sup[g]=e->sup[g]*Plan_GoodPct(e,(u8)g)/100;MS[m][g]+=e->sup[g];}   // subsidio/tabela/meta (ADR-47)
    MD[m][g]+=e->dem[g];MN[m][g]+=NEED[ci][g];
   }
  }
@@ -374,9 +375,18 @@ HOT_ARM void WEco_Week(World *w){
   // classe media satisfeita produz mais (ADR-42)
   bonus+=(6-(int)e->bank)*3/2+Soc_ProdPct(w,ci);
   if(Y>=1870)bonus+=e->sat[GD_MAQUINAS]/4;   // maquinas da semana passada: ate' +25% (ADR-37)
+  bonus+=Plan_ProdPct(e);                    // ciclo economico e estagnacao do plano (ADR-47)
   e->ind=(u8)ef;e->lack=MLACK[m];
+  // meta do plano (ADR-47): o bem prioritario pega o insumo que falta primeiro;
+  // no dirigismo/planificacao o resto da industria cede o insumo desviado
+  int pri=Plan_MetaPri(e),nm=0;
+  for(int g=0;g<GD_COUNT;g++)if(e->gpol[g]==GP_META)nm++;
+  int efo=nm&&Plan_Ctl(e)>=3?ef*(100-3*nm)/100:ef;
   for(int g=0;g<GD_COUNT;g++){
-   if(Manuf(g)){s32 r=RUR[ci][g];e->sup[g]=r+(e->sup[g]-r)*ef/100*bonus/100;MS[m][g]+=e->sup[g];}
+   if(Manuf(g)){s32 r=RUR[ci][g];int eg=e->gpol[g]==GP_META?ef+(100-ef)*pri/100:efo;
+    e->sup[g]=r+(e->sup[g]-r)*eg/100*bonus/100;
+    if(e->gpol[g])e->sup[g]=e->sup[g]*Plan_GoodPct(e,(u8)g)/100;
+    MS[m][g]+=e->sup[g];}
    s32 used=NEED[ci][g]*ef/100;
    e->dem[g]+=used;MD[m][g]+=used;
    if(Y<Gd_Year((u8)g)){e->sup[g]=e->dem[g]=0;}
@@ -454,6 +464,7 @@ HOT_ARM void WEco_Week(World *w){
    u16 pl=PriceOf(g,D,S);
    e->price[g]=(u16)((IMP[m][g]||EXP[m][g])?(pl+2*w->wprice[g])/3:pl);
    if(Y<Gd_Year((u8)g)){e->sat[g]=100;e->price[g]=GD_BASE[g];}
+   if(e->gpol[g]==GP_TETO&&e->price[g]>GD_BASE[g])e->price[g]=GD_BASE[g];   // preco tabelado (ADR-47)
    // vende a sobra e compra a falta no preco do mercado: o que o bloco
    // nao absorve nem exporta encalha (e derruba o preco)
    s32 b=e->sup[g]-e->dem[g];
@@ -498,7 +509,7 @@ HOT_ARM void WEco_Week(World *w){
   e->jobs=(u8)(jWant?jFill*100/jWant:100);
   e->xArmy=NOM((c->troops+c->atkTroops)/60*Mx(10,100+F[LFX_ARMYX])/100);
   e->xNavy=NOM(c->ships);
-  e->xAdmin=NOM((s32)c->cells/60+c->nCity+(s32)(c->popK/2000));      // maquina do Estado
+  e->xAdmin=NOM(((s32)c->cells/60+c->nCity+(s32)(c->popK/2000))*Plan_AdminPct(e)/100);   // maquina do Estado (doutrina, ADR-47)
   {s32 cofre=NOM(2000);e->xCorrupt=c->gold>cofre?(c->gold-cofre)/100:0;} // cofre parado: desvio e corrupcao
   e->xEdu=NOM((s32)((u64)c->popK*Mx(0,F[LFX_EDU])/1000)/(Y<1870?3:1));
   e->xSoc=NOM((s32)((u64)c->popK*Mx(0,F[LFX_SOC])/1000)/(Y<1870?3:1)); // saude e trabalho (leis)
@@ -516,7 +527,10 @@ HOT_ARM void WEco_Week(World *w){
   e->xConc=e->concW?e->rCity*e->concPct/100:0;
   // mobilizacao (crise/guerra com objetivo, ADR-45): soldo de reservistas
   e->mobX=War_Mobilized(w,ci)?NOM((c->troops+c->atkTroops)/90+3):0;
-  e->inc=e->rProd+e->rPop+e->rCity+e->rLand+e->rExport+e->rArms+e->rBank;e->trade=e->rTariff;e->exp=WEco_Expense(w,ci);
+  // doutrina (ADR-47): subsidios saem do caixa; estatais rendem parte do PIB
+  e->xSubs=NOM(Plan_SubsCost(e));
+  e->rState=(s32)((s64)e->gdp*Plan_StatePct(e)/100);
+  e->inc=e->rProd+e->rPop+e->rCity+e->rLand+e->rExport+e->rArms+e->rBank+e->rState;e->trade=e->rTariff;e->exp=WEco_Expense(w,ci);
   s32 g=c->gold+e->inc+e->trade-e->exp;
   e->printed=0;
   // Emissao livre (lei de moeda 4): o deficit e' coberto com dinheiro novo —
@@ -543,6 +557,7 @@ HOT_ARM void WEco_Week(World *w){
    int tgt=F[LFX_INFL]+(e->printed>0?(int)Mn(400,(s64)e->printed*600/rv):0);
    if(c->warN&&e->law[LW_MOEDA]>=2)tgt+=8;              // guerra com papel-moeda
    tgt+=(5-(int)e->bank)*8;                              // juros (ADR-43): baixo aquece os precos, alto esfria (deflacao)
+   tgt+=Plan_InflPermil(e);                              // alta aquece, crise esfria, tabela segura (ADR-47)
    e->infl=(s16)((e->infl*3+tgt)/4);
    if(e->infl>0){u64 nc=(u64)e->cpi+(u64)e->cpi*(u32)e->infl/52000u;e->cpi=(u32)(nc>4000000000u?4000000000u:nc);}
    else if(e->infl<0){u32 d=(u32)((u64)e->cpi*(u32)(-e->infl)/52000u);e->cpi=e->cpi-d<CPI1/2?CPI1/2:e->cpi-d;}}
@@ -559,13 +574,14 @@ HOT_ARM void WEco_Week(World *w){
   if(Y>=1950){lw+=e->sat[GD_ELETRONICOS]*10;tw+=10;}
   e->life=(u8)(lw/tw);
   Requests(w,ci);
+  Plan_Week(w,ci);             // ciclo economico, desemprego, estagnacao (wplan.c, ADR-47)
   Soc_Week(w,ci);              // estratos, desejos e burguesia (wsoc.c, ADR-42)
   // investimento privado (ADR-37): parte do PIB vira fundo (imposto baixo
   // atrai mais; banco/bolsa multiplicam); o fundo ergue obras (City_Invest)
   {s32 add=(s32)((s64)e->gdp*Mx(0,4*(100+F[LFX_INV]))/100000)*(2+(banks>6?6:banks))/2;
    if(c->unrestT||c->warN>1)add/=2;
    // juros e burguesia (ADR-42/43): credito barato e ricos contentes reinvestem mais
-   add=(s32)((s64)add*Mx(10,130-6*(int)e->bank)/100*Soc_InvestPct(w,ci)/100);
+   add=(s32)((s64)add*Mx(10,130-6*(int)e->bank)/100*Soc_InvestPct(w,ci)/100*Plan_InvPct(e)/100);   // + ciclo (ADR-47)
    e->invest+=add+stInv;
    {s32 cap=NOM(30000);if(e->invest>cap)e->invest=cap;}
    if((((w->day/7)+ci)&3)==0)City_Invest(w,ci);}   // 1x a cada 4 semanas por pais (escalonado)
@@ -621,8 +637,10 @@ void WEco_AiPolicy(World *w,u8 ci){
  // vermelho sobem; povo pobre e guerra baixam. 1 ponto por mes.
  {int t=5+(e->infl-20)/15+((c->gold<0||e->debt>WEco_DebtLimit(w,ci)/2)?3:0)-(e->life<55?2:0)-(c->warN?1:0)-(e->ind<70?1:0);
   if(c->archetype==WA_MERCADOR)t++;
+  if(e->cycPh==CY_ALTA&&e->cyc>e->cycP*64*3/5)t+=2;else if(e->cycPh!=CY_ALTA)t-=2;   // ciclo (ADR-47)
   if(t<1)t=1;
   if(t>15)t=15;
   if(e->bank<t)e->bank++;else if(e->bank>t)e->bank--;}
  Law_Ai(w,ci);                // leis: 1 passo por mes rumo ao alvo (wlaw.c, ADR-40)
+ Plan_Ai(w,ci);               // politicas por bem da doutrina (wplan.c, ADR-47)
 }

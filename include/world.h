@@ -54,6 +54,9 @@ enum { LFX_REV=0, LFX_PROD, LFX_INV, LFX_HAPPY, LFX_MILIT, LFX_GROW, LFX_LIT, LF
  LFX_TARIFF, LFX_CAP, LFX_REGEN, LFX_ARMYX, LFX_ATK, LFX_EDU, LFX_SOC, LFX_INFL, LFX_DEBT,
  LFX_RATE, LFX_EXPORT, LFX_STATE, LFX_COL, LFX_COUNT };
 typedef struct { s16 v[LFX_COUNT]; } LawFx;
+// Controle da economia (wplan.c, ADR-47): politica de cada bem e fase do ciclo
+enum { GP_LIVRE=0, GP_SUBSIDIO, GP_TETO, GP_META, GP_COUNT };
+enum { CY_ALTA=0, CY_CRISE, CY_RETOMADA };
 // Economia de um pais (wecon.c), fechada 1x por semana. Unidades = cargas/semana.
 typedef struct {
  s32 sup[GD_COUNT], dem[GD_COUNT]; // oferta e demanda da semana
@@ -95,6 +98,15 @@ typedef struct {
  u8 ports, yards;         // cidades com porto / estaleiro
  u8 route[3], routeG[3];  // rotas: parceiro (pais) e bem
  u16 routeV[3];           // volume da rota
+ // controle da economia (ADR-47): a doutrina e' a lei LW_MODELO
+ u8 gpol[GD_COUNT];       // politica de cada bem (GP_*): subsidio, preco tabelado, meta do plano
+ s16 cyc;                 // ciclo economico em 1/64 de ponto: -100 (depressao) .. +100 (euforia)
+ s8 cycP;                 // pico da alta atual / fundo da crise atual (pontos)
+ u8 cycPh;                // CY_ALTA, CY_CRISE, CY_RETOMADA
+ u8 unemp;                // desemprego (% da forca de trabalho)
+ u8 crashes;              // crises financeiras ja' vividas
+ u16 planW;               // semanas de planificacao (estagnacao do plano)
+ s32 xSubs, rState;       // subsidios pagos e lucro das estatais na semana
 } WEco;
 typedef struct {
  u8 nat;                 // indice em NATIONS
@@ -249,6 +261,8 @@ typedef struct {
  WSoc soc[W_MAXC+1];       // estratos sociais por pais (wsoc.c, ADR-42)
  WCrisis cr[CR_MAX];       // crises e guerras com objetivo (wwar.c, ADR-45)
  u32 nCrises, nConcede, nBackdown, nDeals, nCoups, nLobby, nUpgrades; // contadores (testes/Gazeta)
+ u32 nCrash, nPolicy;      // crises financeiras e politicas de bem adotadas (ADR-47)
+ s8 cycH[52]; u8 cycHN;    // ciclo do jogador nas ultimas 52 semanas (aba Economia), anel
  u8 rankBest, rankGreat;   // melhor posicao ja' avisada (1-based, 0 = nada) e se esta' entre as 8 grandes
  s32 gdpMark; u32 popMark; // marcos: PIB dobrou / populacao dobrou desde o ultimo aviso
  u8 dirtyBlk[(W_BLK_W*W_BLK_H+7)/8]; // bloco 8x8 mudou de dono (px_world limpa)

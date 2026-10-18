@@ -303,7 +303,8 @@ O dinheiro vem do que o país **produz e vende**, não do tamanho do mapa.
 - **População e alfabetização reais:** cada país começa com a população e a alfabetização estimadas de 1800 (Maddison; Our World in Data). A população cresce pela transição demográfica (sobe com a era, cai com fome, guerra e, depois de 1950, com a alfabetização alta) e muda de dono junto com as células conquistadas. Alfabetização: escolas, universidades e o gasto em educação puxam até o teto da era; a difusão do mundo garante um piso. Letrados produzem até +25%.
 - **Portos e rotas:** cada porto dá capacidade de comércio; as 3 maiores rotas de cada país aparecem no **mapa comercial** como linhas tracejadas **pelo mar, de porto a porto** (contornam continentes; ADR-33), com navios mercantes andando por elas; as frotas ficam ancoradas na água.
 - **Marinha:** o Estaleiro (precisa de porto) lança navios de guerra. Frota protege as rotas, **bloqueia** os portos inimigos (o comércio deles cai a 1/3), garante desembarques e trava batalhas navais.
-- **Gabinete (X), 8 abas em 2 linhas de 4:** Mercado (tabela dos 13 bens, vagas, pedido do povo), Comércio e Frota (portos, rotas, lançar navio), Diplomacia (aliados, rival, mercado comum, guerras, quem gosta de você), Política (ideologia, felicidade, risco de revolução, ambições), **Finanças** (balanço linha a linha, dívida, **juros básicos** com Baixar/Subir, PIB, inflação e índice de preços), **Leis** (sec 4.10), **Gráficos** (sec 4.11) e **Sociedade** (sec 4.12).
+- **Gabinete (X), 9 abas em 2 linhas (4 + 5):** Mercado (tabela dos 13 bens com a marca da política de cada um, vagas, pedido do povo), Comércio e Frota (portos, rotas, lançar navio), Diplomacia (aliados, rival, mercado comum, guerras, quem gosta de você), Política (ideologia, felicidade, risco de revolução, ambições), **Finanças** (balanço linha a linha — estatais e subsídios entram quando existem —, dívida, **juros básicos** com Baixar/Subir, PIB, inflação e índice de preços), **Leis** (sec 4.10), **Gráficos** (sec 4.11), **Sociedade** (sec 4.12) e **Economia** (sec 4.13).
+- **Transições:** toda troca de tela clareia a partir do escuro em ~6 quadros, e a troca de aba do Gabinete dá uma piscada curta (brilho mestre do DS, custo zero de CPU).
 - **Barra de cima do mapa:** **PIB anual**, população, exército, alfabetização, prestígio e data. O **caixa** do Estado fica pequeno no canto de baixo à esquerda do mapa, com a seta do saldo da semana.
 - **Preços nominais e inflação (ADR-40):** cada país tem um **índice de preços** (1,00 em 1800). Receitas e custos (obras, recrutar, fortes, navios, fundar) saem em ouro de hoje; a **dívida antiga não sobe com os preços** — a inflação a dissolve. A inflação vem da lei de moeda (padrão-ouro 0; papel-moeda ~2%/ano; banco central ~1,5%/ano), da guerra com papel-moeda e, na **Emissão livre**, do déficit pago com dinheiro novo (sem dívida, mas a inflação dispara). Inflação alta derruba a felicidade (até -15).
 
@@ -346,6 +347,32 @@ A população tem **três camadas**, cada uma com fatia, satisfação e um **des
 - **Felicidade** = média das camadas pesada por tamanho x poder (pobre 1, médio 3, rico 12).
 - **Burguesia** = a parte dos ricos que investe (cresce com a indústria e o século; o laissez-faire a fortalece, a planificação a extingue). Ela **reinveste**: o fundo privado ergue e **amplia** negócios sozinho, mais rápido com ricos contentes e crédito barato. De tempos em tempos **oferece pagar uma obra pública** (ferrovia, escola, hospital, universidade, porto, teatro, parque) numa grande cidade **em troca de um favor**: baixar impostos, baixar juros, afrouxar a lei trabalhista, mudar a tarifa ou uma **concessão** de 15% da renda urbana por 2 anos. Aceitar aplica na hora; recusar irrita os ricos e parte do capital foge.
 - **Tela:** Gabinete > Sociedade mostra as três camadas (fatia, renda relativa, satisfação, desejo e semanas restantes), a cultura e a burguesia (fatia, fundo, ritmo, obras públicas já bancadas, concessão em curso).
+
+### 4.13 Controle da economia: do livre mercado ao comando (ADR-47)
+
+O jogador escolhe **quanto o Estado manda na economia**. A **doutrina** é a lei *Modelo econômico* (sec 4.10), lida como um espectro:
+
+| Doutrina | Controle | O que o Estado pode | Vantagem | Preço |
+|---|---|---|---|---|
+| **Laissez-faire** (libertário) | 0 | nada por bem | investimento privado forte (+80%), Estado barato (adm. −20%), burguesia forte | desemprego estrutural maior, **ciclos fortes** (bolhas e pânicos 1,5x) |
+| **Mercantilismo** | 1 | 1 subsídio | exportação +25% | investimento −20% |
+| **Economia mista** (1870) | 2 | 2 políticas: subsídio, preço tabelado ou meta | estatais rendem 1% do PIB, Estado investe 3% da receita | — |
+| **Dirigismo** (1900) | 3 | 4 políticas, metas fortes | estatais 3% do PIB, ciclos brandos (0,55x), menos desemprego | Estado +12%, investimento privado −30%, metas tiram insumo do resto |
+| **Planificação** (comando, 1917) | 4 | 6 políticas, metas +25% | **pleno emprego**, quase sem ciclo (0,15x), estatais 6% do PIB | sem burguesia, ricos furiosos, Estado +25% e **estagnação** que cresce ~1% a cada 16 meses (até −15% de produção) |
+
+**Políticas por bem** (Gabinete > Economia: toque no bem, depois na política):
+- **Subsidiar:** +25% de produção; o Estado paga 1/4 do valor produzido (linha "Subsídios").
+- **Tabelar o preço:** preço preso no de 1800 — pobres e classe média gostam (pão e roupa baratos), a inflação esfria; mas a oferta cai 15% (mercado negro) e os ricos chiam.
+- **Meta do plano:** o bem pega o insumo que falta primeiro (40/60/80% do que faltaria) e produz +10/+15/+25%; as obras que o produzem passam na frente do investimento. No dirigismo e na planificação, o resto da indústria cede insumo (−3% por meta).
+- Mudar a doutrina (o botão "Mudar doutrina" abre a lei) corta na hora as políticas que deixam de caber.
+
+**Ciclo econômico** (todo país, toda semana): a economia passa por **alta → pânico → crise → retomada**.
+- Na alta, crédito barato (juros baixos) e o laissez-faire inflam a bolha; quando ela passa de um pico escondido (sorteado pela semente), estoura: **pânico financeiro** (um terço do fundo privado evapora, a produção cai até −12%, o investimento até a metade, o desemprego dispara). **Juro alto na alta = pouso suave** (a bolha murcha sem estourar), mas a economia anda mais devagar — é a escolha do jogador.
+- Na crise, juro baixo e um Estado que gasta (doutrinas de controle) encurtam a retomada.
+- **Contágio:** o pânico de uma potência (mais de 10% do PIB do mundo) chega pelos portos a quem comercia muito com o mundo. As crises históricas (1816, 1929, 1973, 2008, 2020) também viram crise do ciclo.
+- **Desemprego** (aba Economia): estrutural da doutrina + o da crise; pesa na satisfação dos pobres e da classe média. A alta anima a classe média e os ricos.
+- **Tela:** a aba Economia mostra a doutrina num espectro Livre mercado → Comando, o que ela permite, o ciclo com a linha das últimas 52 semanas (aviso de **bolha**), desemprego, efeito na produção e no investimento, a estagnação do plano e a política do bem destacado.
+- **IA:** escolhe as políticas pela doutrina 1x por mês (armas na guerra, o insumo que trava a indústria, comida em falta, aço e máquinas no dirigismo, preço tabelado na planificação) e sobe os juros quando a própria bolha esquenta.
 
 ### 4.9 Ranking das potências (Victoria 3)
 

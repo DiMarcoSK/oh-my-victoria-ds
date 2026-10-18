@@ -14,6 +14,7 @@
 #include "wlaw.h"
 #include "wwar.h"
 #include "wsoc.h"
+#include "wplan.h"
 // wgame.c — partida no mundo celular (SCR_WORLD). Ver wgame.h.
 // O World e as grades W_* sao estaticos (.bss); nada aqui conta nos 14KB do
 // GameState. Toda regra de jogo esta em world.c/history.c; este arquivo so'
@@ -580,6 +581,29 @@ static void LedgerAct(GameState *g,int tx){
  }
  g->dirty=true;g->dirtyBot=true;
 }
+// aba Economia (ADR-47): toque no bem destaca; toque na politica aplica (ou
+// mostra o motivo na pagina); "Mudar doutrina" abre a lei Modelo economico
+static bool EcoTap(int tx,int ty,u32 *d){
+ if(ty>=EC_GY&&ty<EC_GY+2*EC_GH&&tx>=EC_GX&&tx<EC_GX+EC_GN*EC_GW){
+  int g=(tx-EC_GX)/EC_GW+EC_GN*((ty-EC_GY)/EC_GH);
+  if(g>=GD_COUNT)return false;
+  S.goodSel=(u8)g;S.ecoWhy=0;return true;
+ }
+ if(ty>=EC_PY&&ty<EC_PY+EC_PH&&tx>=EC_PX&&tx<EC_PX+GP_COUNT*EC_PW){
+  if(S.dead)return false;
+  u8 p=(u8)((tx-EC_PX)/EC_PW),g=S.goodSel%GD_COUNT;
+  u16 why=Plan_Why(&W,S.me,g,p);
+  S.ecoWhy=why;
+  if(!why)Plan_Set(&W,S.me,g,p);
+  return true;
+ }
+ if(ty>=LG_ACT_Y&&ty<LG_ACT_Y+LG_ACT_H&&tx>=LG_ACT_X&&tx<LG_ACT_X+LG_ACT_W){
+  WEco *e=&W.eco[S.me];
+  S.ledTab=LT_LEIS;S.lawCat=LW_MODELO;S.lawPick=e->lawCat==LW_MODELO?e->lawTo:e->law[LW_MODELO];return true;
+ }
+ if(ty>=LG_BACK_Y&&ty<LG_BACK_Y+LG_ACT_H)*d|=KEY_B;
+ return false;
+}
 // aba Leis (ADR-40): grade de assuntos -> 5 leis -> Propor/Retirar. So' caneta;
 // CIMA/BAIXO trocam a lei destacada como atalho. Devolve true se algo mudou.
 static bool LawTap(int tx,int ty,u32 *d){
@@ -605,6 +629,7 @@ static bool LawTap(int tx,int ty,u32 *d){
 }
 void WG_LedgerInput(GameState *g,u32 d,bool tDown,int tx,int ty){
  bool moved=false;
+ u8 tab0=S.ledTab;
  if(d&KEY_L){S.ledTab=(u8)((S.ledTab+LT_COUNT-1)%LT_COUNT);S.lawCat=0xFF;moved=true;}
  if(d&KEY_R){S.ledTab=(u8)((S.ledTab+1)%LT_COUNT);S.lawCat=0xFF;moved=true;}
  if(S.ledTab==LT_LEIS&&S.lawCat<LW_COUNT){
@@ -612,12 +637,21 @@ void WG_LedgerInput(GameState *g,u32 d,bool tDown,int tx,int ty){
   if(d&KEY_DOWN){S.lawPick=(u8)((S.lawPick+1)%LW_OPTS);moved=true;}
   if(d&KEY_B){S.lawCat=0xFF;d&=~(u32)KEY_B;moved=true;}   // B volta a' grade de assuntos
  }
+ if(S.ledTab==LT_ECONOMIA){   // setas andam pela grade de bens (7 por linha)
+  int g=S.goodSel%GD_COUNT,o=g;
+  if(d&KEY_LEFT)g=(g+GD_COUNT-1)%GD_COUNT;
+  if(d&KEY_RIGHT)g=(g+1)%GD_COUNT;
+  if(d&KEY_UP)g=g>=EC_GN?g-EC_GN:g;
+  if(d&KEY_DOWN)g=g+EC_GN<GD_COUNT?g+EC_GN:g;
+  if(g!=o){S.goodSel=(u8)g;S.ecoWhy=0;moved=true;}
+ }
  // abas e acao na tela de baixo: so' caneta (L/R trocam a aba como atalho)
  bool act=false;
  if(tDown){
   int tb=Lg_TabAt(tx,ty);
   if(tb>=0){S.ledTab=(u8)tb;S.lawCat=0xFF;moved=true;}
   else if(S.ledTab==LT_LEIS){if(LawTap(tx,ty,&d))moved=true;}
+  else if(S.ledTab==LT_ECONOMIA){if(EcoTap(tx,ty,&d))moved=true;}
   else if(S.ledTab==LT_GRAF){
    if(ty>=GR_BY&&ty<GR_BY+2*(GR_BH+4)&&tx>=GR_BX&&tx<GR_BX+4*GR_BW){S.statSel=(u8)((tx-GR_BX)/GR_BW+4*((ty-GR_BY)/(GR_BH+4)));moved=true;}
    else if(ty>=LG_BACK_Y&&ty<LG_BACK_Y+LG_ACT_H)d|=KEY_B;
@@ -628,6 +662,7 @@ void WG_LedgerInput(GameState *g,u32 d,bool tDown,int tx,int ty){
  if(act){LedgerAct(g,tx);if(g->screen!=SCR_LEDGER)return;}
  if(d&(KEY_B|KEY_START|KEY_X)){Menu_Go(g,SCR_WORLD);return;}
  if(d&KEY_SELECT){S.paused=!S.paused;}
+ if(S.ledTab!=tab0){Px_FadeIn(3);S.ecoWhy=0;}   // troca de aba: piscada curta (ADR-48)
  if(moved){g->dirty=true;g->dirtyBot=true;}
 }
 

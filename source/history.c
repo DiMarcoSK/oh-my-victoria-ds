@@ -1,6 +1,7 @@
 #include "history.h"
 #include "wdiplo.h"
 #include "str.h"
+#include "wplan.h"
 // history.c — linha do tempo 1801-2025 (DESIGN.md sec 7.2) e eventos
 // aleatorios por era (sec 7.5). Datas verificadas; efeitos sao proposta de
 // design. Regras de texto: DESIGN.md sec 3.4 e 6.6 (tom sobrio, sem
@@ -516,7 +517,9 @@ static void Apply(World *w,const HOp *o,u8 self){
   if(!has)for(int i=0;i<NAT_TRAITS;i++)if(!ca->traits[i]){ca->traits[i]=(u8)o->v;break;}
   World_SetTraits(w,a);}break;
  case HE_DELTRAIT:if(ca){for(int i=0;i<NAT_TRAITS;i++)if(ca->traits[i]==o->v)ca->traits[i]=0;World_SetTraits(w,a);}break;
- case HE_WORLD_GOLD:for(u8 i=1;i<w->nC;i++)if(w->c[i].alive){w->c[i].gold+=w->c[i].gold*o->v/100;if(w->c[i].gold<0)w->c[i].gold=0;}break;
+ case HE_WORLD_GOLD:for(u8 i=1;i<w->nC;i++)if(w->c[i].alive){w->c[i].gold+=w->c[i].gold*o->v/100;if(w->c[i].gold<0)w->c[i].gold=0;
+   if(o->v<0)Plan_Shock(w,i,-o->v*2);}   // crise mundial vira crise do ciclo (ADR-47)
+  break;
  case HE_WORLD_HAPPY:for(u8 i=1;i<w->nC;i++)if(w->c[i].alive)w->c[i].happy=(u8)Clamp100(w->c[i].happy+o->v);break;
  case HE_DECOLONIZE:for(u8 i=1;i<w->nC;i++){WCountry *c=&w->c[i];
   if(c->alive&&c->kind==NK_SUDITO&&NATIONS[c->nat].cont==o->v){c->kind=NK_ESTADO;c->overlord=0;}}break;

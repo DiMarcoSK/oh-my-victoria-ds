@@ -3,6 +3,7 @@
 #include "earth.h"
 #include "str.h"
 #include "wecon.h"
+#include "wplan.h"
 // city.c — cidades (DESIGN.md sec 4.7). Ver city.h.
 // Custo: City_Day e' O(cidades) (<=512) por dia; buscas por celula passam
 // antes pelo bitmap W_CITYB (12KB) e so' entao varrem a lista. Nenhuma
@@ -592,6 +593,15 @@ static u8 StyleOf(const World *w,u8 owner){
 // o produz; o caminho de nivel (mercado -> cidade, universidade/fabrica ->
 // metropole) e a guerra (quartel, muralha, arsenal) somam pontos.
 static int Want(const WEco *e,u8 g){return e->price[g]*100/GD_BASE[g]+(100-e->sat[g]);}
+// bem principal que a obra produz (politica por bem, ADR-47); 0xFF = nenhum
+u8 City_BldGood(u8 k){
+ switch(k){
+  case BK_FAZENDA:return GD_GRAOS;case BK_SERRARIA:return GD_MADEIRA;case BK_MINA:return GD_MINERIO;
+  case BK_OFICINA:return GD_FERRAMENTAS;case BK_FABRICA:return GD_TEXTEIS;case BK_ARSENAL:case BK_ARMAMENTOS:return GD_ARMAS;
+  case BK_POCO:return GD_PETROLEO;case BK_SIDERURGICA:return GD_ACO;case BK_MANUFATURA:return GD_BENS;
+  case BK_MAQUINARIA:return GD_MAQUINAS;case BK_ELETRONICA:return GD_ELETRONICOS;default:return 0xFF;
+ }
+}
 static int AiScore(const World *w,int i,u8 k){
  const WCity *c=&w->city[i];const WCountry *C=&w->c[c->owner];const WEco *e=&w->eco[c->owner];
  int s=0;
@@ -626,6 +636,7 @@ static int AiScore(const World *w,int i,u8 k){
   case BK_USINA:s=70+Want(e,GD_TEXTEIS)/4;break;
   default:break;
  }
+ if(s>0)s+=Plan_Score(e,City_BldGood(k));   // meta do plano passa na frente; bem tabelado afasta (ADR-47)
  // a 2a/3a copia so' vale se o mercado ainda pede (e se ha' gente p/ as vagas)
  int n=Count(c,k);
  if(n){s=s*2/(2+n*2);if(WEco_CityJobs(c,0)<90)s/=2;}

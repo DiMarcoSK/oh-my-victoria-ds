@@ -65,7 +65,16 @@ void Px_FlipTop(void){topPend=true;}
 void Px_FlipBot(void){botPend=true;}
 // chamado logo apos swiWaitForVBlank: troca a pagina de cima, sobe o painel
 // e mede quantos VBlanks o quadro levou (o ritmo da camera/simulacao).
+static s8 fadeLv;                    // brilho mestre (0 = normal; -16 = preto)
+void Px_FadeIn(int lv){if(lv<1)lv=1;if(lv>12)lv=12;if(-lv<fadeLv)fadeLv=(s8)-lv;}
+int Px_Fade(void){return fadeLv;}
 void Px_VSync(void){
+ // transicao de tela: clareia 2 niveis por VBlank (~6 quadros do mais escuro)
+ if(fadeLv<0){fadeLv=(s8)(fadeLv+2>0?0:fadeLv+2);
+#ifdef ARM9
+  setBrightness(3,fadeLv);
+#endif
+ }
 #ifdef OMV_ARMBENCH
  vsT=Px_Ticks();
 #endif

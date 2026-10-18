@@ -2,6 +2,7 @@
 #include "wecon.h"
 #include "wdiplo.h"
 #include "str.h"
+#include "wplan.h"
 // wlaw.c — leis (ver wlaw.h; SDD ADR-40). Tabela de efeitos: proposta de
 // design com fundamento historico; balancear aqui. Unidades dos campos:
 //  REV/PROD/INV/TRADE/CAP/REGEN/ARMYX/ATK/DEBT/EXPORT/COL = % (soma sobre 100)
@@ -88,6 +89,7 @@ bool Law_FxBad(u8 f,int v){
 }
 void Law_Apply(WEco *e){
  for(int f=0;f<LFX_COUNT;f++){int s=0;for(int c=0;c<LW_COUNT;c++)s+=FX[c][e->law[c]%LW_OPTS][f];e->fx.v[f]=(s16)s;}
+ Plan_Fix(e);                 // a doutrina (LW_MODELO) define quantas politicas por bem cabem (ADR-47)
 }
 // preferencia das ideologias (DESIGN 6.5.1): a lei "deles" alegra, a do outro extremo irrita
 static const u8 PREF[ID_COUNT][LW_COUNT]={

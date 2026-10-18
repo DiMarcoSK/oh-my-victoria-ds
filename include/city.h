@@ -71,3 +71,4 @@ bool City_Upgrade(World *w,int city,int slot);      // paga e poe a ampliacao na
 bool City_Grant(World *w,int city,u8 k);            // obra doada (burguesia): fila sem cobrar
 u8 City_StyleOf(const World *w,u8 owner);           // estilo/cultura de um pais (ST_*)
 enum { ST_EURO=0, ST_ASIA, ST_ISLAM, ST_AFRICA, ST_NATIVE, ST_COUNT };
+u8 City_BldGood(u8 k);                  // bem principal da obra (GD_*, 0xFF = nenhum; ADR-47)

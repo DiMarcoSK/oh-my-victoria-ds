@@ -7,7 +7,7 @@ mkdir -p host/out
 gcc -std=gnu11 -O2 -Wall -Wextra -Ihost -Iinclude \
   source/calendar.c source/txt.c source/traits.c source/nations.c \
   source/px_flag.c source/earth_mask.c source/world.c source/history.c \
-  source/city.c source/str.c source/settings.c source/wecon.c source/wdiplo.c source/wfort.c source/wlaw.c source/wstat.c source/wrank.c source/wwar.c source/wsoc.c source/hflags.c \
+  source/city.c source/str.c source/settings.c source/wecon.c source/wdiplo.c source/wfort.c source/wlaw.c source/wstat.c source/wrank.c source/wwar.c source/wsoc.c source/wplan.c source/hflags.c \
   host/stub_px.c host/test_core.c -o host/out/test_core
 ./host/out/test_core
 if command -v python3 >/dev/null 2>&1; then

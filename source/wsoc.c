@@ -4,6 +4,7 @@
 #include "wdiplo.h"
 #include "city.h"
 #include "str.h"
+#include "wplan.h"
 // wsoc.c — estratos sociais e burguesia (ver wsoc.h; SDD ADR-42).
 // Custo: Soc_Prep e' 1 passada nas cidades por semana; Soc_Week e' O(1) por pais.
 
@@ -150,6 +151,7 @@ static int Base(const World *w,u8 ci,int k){
   break;
  }
  v+=s->mood[k];
+ v+=Plan_HappyFx(e,(u8)k);                            // desemprego, ciclo e precos tabelados (ADR-47)
  if(s->want[k])v-=3;                                  // desejo em aberto incomoda
  return Cl(v,0,100);
 }

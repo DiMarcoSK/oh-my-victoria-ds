@@ -22,6 +22,11 @@ void Px_FlipTop(void);
 void Px_FlipBot(void);
 void Px_VSync(void);    // main.c: logo apos swiWaitForVBlank
 void Px_Present(void);  // espera o VBlank e troca ja' (tela antes de trabalho longo)
+// transicao: as duas telas comecam escurecidas `lv` (1..16) e clareiam no
+// VBlank (brilho mestre do hardware, custo zero de CPU). Px_VSync sempre
+// devolve o brilho a 0 em poucos quadros: nunca fica preto (postmortem).
+void Px_FadeIn(int lv);
+int Px_Fade(void);      // brilho atual (0 = normal; negativo = escurecendo)
 int Px_Vb(void);        // VBlanks do ultimo quadro (1 = 60 fps; teto 4): passo da camera/simulacao
 u32 Px_Ticks(void);      // relogio de orcamento (523656/s no DS; 0 no host)
 u32 Px_FrameTicks(void); // ticks desde o ultimo VBlank (quanto o quadro ja' gastou)
